@@ -1,0 +1,353 @@
+/* styles.css - MAY Connect clean mobile-first layout */
+
+/* Basic reset */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html,body { height:100%; }
+
+body.home {
+  font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background: linear-gradient(135deg,#005bea 0%, #00c6ff 100%);
+  color: #fff;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+/* Hero header containing logo + card */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 28px 20px 10px;
+}
+
+/* Circular white background for logo */
+.logo-container {
+  width: 140px;
+  height: 140px;
+  background: #ffffff;
+  border-radius: 999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+}
+
+/* Actual logo image inside the circle */
+.logo {
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+  display:block;
+}
+
+/* Welcome card under the logo */
+.welcome-card {
+  width: min(940px, 92%);
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+  border-radius: 18px;
+  padding: 28px 22px;
+  margin-top: -10px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.18);
+}
+
+/* Headings */
+.welcome-card h1 {
+  font-size: 28px;
+  line-height: 1.05;
+  margin-bottom: 8px;
+  color: #ffffff;
+  font-weight: 700;
+}
+.brand { color: #ffffff; }
+
+.subtitle {
+  font-size: 15px;
+  margin-bottom: 18px;
+  opacity: 0.95;
+  color: #e9f6ff;
+}
+
+/* Buttons */
+.auth-buttons {
+  display:flex;
+  gap:12px;
+  justify-content:center;
+  align-items:center;
+}
+
+.btn {
+  display:inline-block;
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  text-decoration: none;
+  min-width: 120px;
+  text-align: center;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+}
+
+.btn.login {
+  background: rgba(255,255,255,0.92);
+  color: #0a66d1;
+}
+
+.btn.signup {
+  background: transparent;
+  border: 2px solid rgba(255,255,255,0.9);
+  color: #ffffff;
+}
+
+/* Main section under the card */
+.lead {
+  padding: 32px 20px 80px;
+  text-align:center;
+}
+
+.lead h2 {
+  font-size: 22px;
+  color: #ffffff;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+.lead-note {
+  color: rgba(255,255,255,0.95);
+  margin-top: 6px;
+  font-size: 15px;
+}
+
+/* Footer */
+.site-footer {
+  text-align: center;
+  padding: 18px 10px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.85);
+}
+
+/* Make sure layout looks great on wide screens too */
+@media (min-width: 768px) {
+  .welcome-card { padding: 36px 42px; }
+  .logo-container { width: 160px; height: 160px; }
+  .logo { width: 94px; height: 94px; }
+  .welcome-card h1 { font-size: 36px; }
+  .lead h2 { font-size: 28px; }
+}
+cat >> styles.css <<'CSS'
+
+/* ========== AUTH PAGES (Login & Signup) ========== */
+.auth-page {
+  font-family: "Poppins", sans-serif;
+  background: linear-gradient(135deg,#005bea 0%, #00c6ff 100%);
+  color: #fff;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+}
+
+.auth-container {
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 18px;
+  padding: 28px 22px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+}
+
+.auth-logo {
+  width: 100px;
+  height: 100px;
+  background: #fff;
+  border-radius: 50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin: 0 auto 14px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+}
+
+.auth-logo img {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+}
+
+.auth-container h2 {
+  margin-bottom: 18px;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.auth-container form {
+  display:flex;
+  flex-direction:column;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.auth-container input {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  outline: none;
+  width: 100%;
+}
+
+.btn.login-btn, .btn.signup-btn {
+  width: 100%;
+  background: #fff;
+  color: #0a66d1;
+  font-weight: 600;
+  border: none;
+  padding: 10px 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn.signup-btn {
+  background: transparent;
+  border: 2px solid #fff;
+  color: #fff;
+}
+
+.switch-text {
+  font-size: 14px;
+  color: rgba(255,255,255,0.9);
+}
+.switch-text a {
+  color: #fff;
+  font-weight: 600;
+  text-decoration: underline;
+}
+/* AUTH PAGE LAYOUT */
+.auth-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #007bff, #0099ff);
+}
+
+.auth-container {
+  background: white;
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.auth-container img {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 1rem;
+}
+
+.auth-container h2 {
+  margin-bottom: 1rem;
+  color: #007bff;
+}
+
+.auth-container input {
+  width: 100%;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.auth-container .btn {
+  width: 100%;
+  padding: 0.75rem;
+  margin-top: 1rem;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.auth-container .btn:hover {
+  background: #005ecb;
+}
+
+.switch-text {
+  margin-top: 1rem;
+}
+
+.site-footer {
+  text-align: center;
+  color: white;
+  font-size: 0.8rem;
+  position: absolute;
+  bottom: 10px;
+  width: 100%;
+}
+/* HOME PAGE LAYOUT */
+.home {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #007bff, #0099ff);
+  text-align: center;
+  color: white;
+  font-family: 'Poppins', sans-serif;
+}
+
+.main-logo {
+  width: 100px;
+  height: 100px;
+  margin-bottom: 1rem;
+}
+
+.welcome-container h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.highlight {
+  color: #ffdd00;
+  font-weight: bold;
+}
+
+.welcome-container p {
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.button-group {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.btn {
+  background: white;
+  color: #007bff;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: 0.3s;
+}
+
+.btn:hover {
+  background: #e6e6e6;
+}
+
+footer {
+  position: absolute;
+  bottom: 10px;
+  width: 100%;
+  text-align: center;
+  color: white;
+  font-size: 0.8rem;
+}
