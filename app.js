@@ -47,6 +47,7 @@ async function fetchPlans() {
 // ===============================
 // SIGNUP FUNCTION
 // ===============================
+
 async function signup(event) {
   event.preventDefault();
 
@@ -54,7 +55,7 @@ async function signup(event) {
   const password = document.getElementById("signup-password").value;
 
   try {
-    const response = await fetch(`${backendUrl}/signup`, {
+    const response = await fetch(`${backendUrl}/api/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -74,7 +75,6 @@ async function signup(event) {
     console.error("Signup error:", error);
   }
 }
-
 
 // ===============================
 // LOGIN FUNCTION
