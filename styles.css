@@ -1,5 +1,18 @@
 /* styles.css - MAY Connect clean mobile-first layout */
+.password-field {
+  position: relative;
+}
 
+.toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 14px;
+  color: #007bff;
+  user-select: none;
+}
 /* Basic reset */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html,body { height:100%; }

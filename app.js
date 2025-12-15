@@ -1,8 +1,36 @@
+
+
 // ===============================
 // CONFIG
-const backendUrl = "https://mayconnect-backend-1.onrender.com"; // <-- make sure this matches your deployed backend
+     const backendUrl = "https://mayconnect-backend-1.onrender.com"; // <-- make sure this matches your deployed backend
 // ===============================
+// SOUND EFFECTS
+// ===============================
+const welcomeSound = new Audio("sounds/welcome.mp3");
+const successSound = new Audio("sounds/success.mp3");
 
+function playWelcomeSound() {
+  welcomeSound.currentTime = 0;
+  welcomeSound.play().catch(() => {});
+}
+
+function playSuccessSound() {
+  successSound.currentTime = 0;
+  successSound.play().catch(() => {});
+}
+
+// ===============================
+// SHOW / HIDE PASSWORD
+function togglePassword(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (input.type === "password") {
+    input.type = "text";
+    btn.textContent = "Hide";
+  } else {
+    input.type = "password";
+    btn.textContent = "Show";
+  }
+}
 // FETCH PLANS
 async function fetchPlans() {
   const container = document.getElementById("plans-container");
@@ -45,10 +73,13 @@ async function signup(event) {
       body: JSON.stringify({ email, password }),
     });
     const data = await response.json();
-    if (response.ok) {
-      alert("Signup successful!");
-      window.location.href = "login.html";
-    } else {
+       if (response.ok) {
+  playWelcomeSound(); // 🔊 welcome sound
+
+  setTimeout(() => {
+    window.location.href = "login.html";
+  }, 800);
+} else {
       alert(data.error || data.message || "Signup failed.");
     }
   } catch (error) {
@@ -69,11 +100,14 @@ async function login(event) {
       body: JSON.stringify({ email, password }),
     });
     const data = await response.json();
-    if (response.ok) {
-      alert("Login successful!");
-      localStorage.setItem("token", data.token);
-      window.location.href = "plans.html";
-    } else {
+      if (response.ok) {
+  playWelcomeSound(); // 🔊 welcome sound
+  localStorage.setItem("token", data.token);
+
+  setTimeout(() => {
+    window.location.href = "plans.html";
+  }, 800); // small delay so sound can play
+} else {
       alert(data.error || data.message || "Invalid login details.");
     }
   } catch (error) {
