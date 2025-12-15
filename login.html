@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Login - MAY Connect</title>
   <link rel="stylesheet" href="styles.css" />
+  <script src="app.js" defer></script>
 </head>
 <body class="auth-page">
 
@@ -15,11 +16,34 @@
 
     <h2>Login to Your Account</h2>
 
-    
-  <div class="password-box">
-  <input type="password" id="login-password" placeholder="Password" required />
-  <button type="button" onclick="togglePassword('login-password', this)">Show</button>
-</div>
+    <!-- ✅ FORM ADDED -->
+    <form onsubmit="login(event)">
+
+      <!-- ✅ EMAIL FIELD RESTORED -->
+      <input
+        type="email"
+        id="login-email"
+        placeholder="Email"
+        required
+      />
+
+      <!-- ✅ PASSWORD + SHOW -->
+      <div class="password-box">
+        <input
+          type="password"
+          id="login-password"
+          placeholder="Password"
+          required
+        />
+        <button
+          type="button"
+          onclick="togglePassword('login-password', this)">
+          Show
+        </button>
+      </div>
+
+      <button type="submit" class="auth-btn">Login</button>
+    </form>
 
     <p class="switch-text">
       Don't have an account?
@@ -27,10 +51,5 @@
     </p>
   </div>
 
-  <footer class="site-footer">
-    <p>© 2025 MAY Connect. All rights reserved.</p>
-  </footer>
-
-  <script src="app.js" defer></script>
 </body>
 </html>
