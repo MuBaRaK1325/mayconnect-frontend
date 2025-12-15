@@ -1,4 +1,4 @@
-/* ================== GLOBAL RESET ================== */
+/* ================= RESET ================= */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -10,71 +10,70 @@ html, body {
   font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* ================== WELCOME PAGE (FIXED & CENTERED) ================== */
+/* ================= WELCOME PAGE (HOME) ================= */
 body.home {
   min-height: 100vh;
+  background: linear-gradient(180deg, #007bff, #00aaff);
   display: flex;
-  align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, #0a86ff, #00b3ff);
-  color: #ffffff;
+  align-items: center;
+  color: #fff;
 }
 
-/* Main wrapper */
 .hero {
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
+  justify-content: center;
 }
 
-/* Logo circle */
 .logo-container {
   width: 140px;
   height: 140px;
-  background: #ffffff;
+  background: #fff;
   border-radius: 50%;
   display: flex;
-  align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+  align-items: center;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
 }
 
 .logo {
-  width: 85px;
-  height: 85px;
+  width: 80px;
+  height: 80px;
   object-fit: contain;
 }
 
-/* Welcome card */
+/* === THIS IS THE CARD IN YOUR PHOTO === */
 .welcome-card {
-  width: min(420px, 92%);
-  background: #ffffff;
+  width: 90%;
+  max-width: 420px;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(12px);
   border-radius: 22px;
-  padding: 36px 26px;
+  padding: 28px 22px;
   text-align: center;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
 }
 
-/* Text inside card */
 .welcome-card h1 {
-  font-size: 26px;
-  color: #0a66d1;
-  margin-bottom: 10px;
+  font-size: 28px;
   font-weight: 700;
+  margin-bottom: 8px;
 }
 
-.welcome-card .brand {
-  color: #007bff;
+.brand {
+  color: #ffffff;
 }
 
 .subtitle {
   font-size: 15px;
-  color: #555;
+  opacity: 0.95;
   margin-bottom: 20px;
 }
 
-/* Buttons */
 .auth-buttons {
   display: flex;
   justify-content: center;
@@ -82,64 +81,47 @@ body.home {
 }
 
 .btn {
-  padding: 10px 24px;
+  padding: 10px 26px;
   border-radius: 10px;
   font-weight: 600;
   text-decoration: none;
-  min-width: 120px;
-  text-align: center;
-  transition: 0.2s ease;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.2);
 }
 
 .btn.login {
-  background: #007bff;
-  color: #ffffff;
+  background: #ffffff;
+  color: #007bff;
 }
 
 .btn.signup {
   background: transparent;
-  border: 2px solid #007bff;
-  color: #007bff;
+  border: 2px solid #ffffff;
+  color: #ffffff;
 }
 
-.btn:hover {
-  transform: translateY(-2px);
-}
-
-/* Footer */
-.site-footer {
-  position: absolute;
-  bottom: 12px;
-  width: 100%;
-  text-align: center;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-/* ================== AUTH PAGES (UNCHANGED) ================== */
+/* ================= AUTH PAGES (LOGIN / SIGNUP) ================= */
 .auth-page {
-  background: linear-gradient(135deg, #005bea, #00c6ff);
   min-height: 100vh;
+  background: linear-gradient(180deg, #007bff, #0099ff);
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   color: #fff;
 }
 
 .auth-container {
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(10px);
-  border-radius: 18px;
+  background: #ffffff;
   padding: 28px 22px;
   width: 90%;
   max-width: 400px;
+  border-radius: 20px;
   text-align: center;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
 }
 
 .auth-logo {
-  width: 100px;
-  height: 100px;
+  width: 90px;
+  height: 90px;
   background: #fff;
   border-radius: 50%;
   display: flex;
@@ -149,12 +131,13 @@ body.home {
 }
 
 .auth-logo img {
-  width: 60px;
-  height: 60px;
+  width: 55px;
+  height: 55px;
 }
 
 .auth-container h2 {
-  margin-bottom: 18px;
+  color: #007bff;
+  margin-bottom: 16px;
 }
 
 .auth-container form {
@@ -166,46 +149,40 @@ body.home {
 .auth-container input {
   padding: 10px 14px;
   border-radius: 8px;
-  border: none;
+  border: 1px solid #ccc;
   font-size: 15px;
 }
 
 .auth-btn {
+  margin-top: 12px;
   padding: 10px;
   border-radius: 8px;
   border: none;
+  background: #007bff;
+  color: #fff;
   font-weight: 600;
   cursor: pointer;
 }
 
-.password-box {
-  position: relative;
+.auth-btn:hover {
+  background: #005ecb;
 }
 
-.password-box button {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
+.switch-text {
+  margin-top: 14px;
+  font-size: 14px;
+}
+
+.switch-text a {
   color: #007bff;
-  cursor: pointer;
+  font-weight: 600;
+  text-decoration: none;
 }
 
-/* ================== RESPONSIVE ================== */
-@media (min-width: 768px) {
-  .welcome-card h1 {
-    font-size: 32px;
-  }
-
-  .logo-container {
-    width: 160px;
-    height: 160px;
-  }
-
-  .logo {
-    width: 95px;
-    height: 95px;
-  }
+/* ================= FOOTER ================= */
+.site-footer {
+  text-align: center;
+  font-size: 13px;
+  color: rgba(255,255,255,0.85);
+  margin-top: 20px;
 }
