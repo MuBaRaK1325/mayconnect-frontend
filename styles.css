@@ -1,94 +1,108 @@
-/* ===== RESET ===== */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+/* ================= WELCOME PAGE ================= */
 
-/* ===== WELCOME PAGE ===== */
 .welcome-page {
   min-height: 100vh;
+  background: linear-gradient(180deg, #0a86ff, #00c6ff);
+  font-family: "Poppins", sans-serif;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(180deg, #007bff, #00b3ff);
-  font-family: 'Poppins', Arial, sans-serif;
 }
 
 .welcome-wrapper {
   text-align: center;
   width: 100%;
-  max-width: 420px;
   padding: 20px;
 }
 
 /* Logo */
-.logo-circle {
+.logo-box {
   width: 140px;
   height: 140px;
-  margin: 0 auto 20px;
-  background: white;
+  background: rgba(255,255,255,0.95);
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+  margin: 0 auto 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
 }
 
-.logo-circle img {
+.logo-box img {
   width: 80px;
+  height: auto;
 }
 
 /* Card */
 .welcome-card {
-  background: white;
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(14px);
   border-radius: 22px;
-  padding: 30px 24px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.18);
+  padding: 35px 25px;
+  max-width: 420px;
+  margin: 0 auto;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
 }
 
 .welcome-card h1 {
-  font-size: 26px;
-  color: #007bff;
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: 700;
   margin-bottom: 10px;
 }
 
-.welcome-card h1 span {
-  color: #0056b3;
+.welcome-card span {
+  color: #ffeb3b;
 }
 
-.welcome-card p {
+.subtitle {
+  color: #eaf6ff;
   font-size: 15px;
-  color: #555;
-  margin-bottom: 25px;
+  margin-bottom: 22px;
 }
 
 /* Buttons */
-.welcome-buttons {
+.auth-buttons {
   display: flex;
-  gap: 12px;
   justify-content: center;
+  gap: 14px;
 }
 
 .btn {
-  padding: 12px 24px;
+  padding: 12px 26px;
   border-radius: 10px;
-  font-weight: 600;
   text-decoration: none;
+  font-weight: 600;
   font-size: 15px;
-  min-width: 120px;
-  text-align: center;
+  transition: 0.3s ease;
 }
 
 .btn.primary {
-  background: #007bff;
-  color: white;
+  background: #ffffff;
+  color: #0a86ff;
+}
+
+.btn.primary:hover {
+  background: #e6f2ff;
 }
 
 .btn.outline {
-  border: 2px solid #007bff;
-  color: #007bff;
+  border: 2px solid #ffffff;
+  color: #ffffff;
 }
+
+.btn.outline:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+/* Footer */
+.welcome-footer {
+  margin-top: 28px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.85);
+}
+
+/* ================= END WELCOME PAGE ================= */
 
 /* ===== AUTH PAGES (UNCHANGED & STABLE) ===== */
 .auth-page {
