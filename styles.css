@@ -8,64 +8,88 @@ html, body {
   height: 100%;
   font-family: "Poppins", Arial, sans-serif;
 }
-/* ========== WELCOME PAGE ONLY (FIXED & CENTERED) ========== */
+
+/* ================= WELCOME PAGE (FIXED & CENTERED) ================= */
 
 body.home {
   margin: 0;
   min-height: 100vh;
   display: flex;
-  justify-content: center;
   align-items: center;
-  background: linear-gradient(180deg, #007bff, #00b3ff);
-  font-family: 'Poppins', sans-serif;
-  color: #fff;
+  justify-content: center;
+  background: linear-gradient(180deg, #0a86ff, #00b3ff);
+  font-family: "Poppins", sans-serif;
 }
 
-/* Main wrapper */
-.welcome-wrapper {
-  width: 100%;
-  max-width: 420px;
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  padding: 20px;
+  gap: 20px;
 }
 
-/* Logo circle */
 .logo-container {
-  width: 130px;
-  height: 130px;
-  margin: 0 auto 20px;
+  width: 140px;
+  height: 140px;
   background: #fff;
   border-radius: 50%;
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   box-shadow: 0 10px 25px rgba(0,0,0,0.2);
 }
 
-.logo-container img {
-  width: 70px;
+.logo {
+  width: 80px;
 }
 
-/* Welcome card */
 .welcome-card {
-  background: #ffffff;
-  border-radius: 20px;
-  padding: 30px 22px;
+  width: min(420px, 90%);
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(12px);
+  border-radius: 22px;
+  padding: 32px 24px;
+  color: white;
   box-shadow: 0 20px 40px rgba(0,0,0,0.25);
 }
 
-/* Text */
 .welcome-card h1 {
-  color: #007bff;
-  font-size: 26px;
-  margin-bottom: 8px;
+  font-size: 30px;
+  margin-bottom: 10px;
 }
 
-.welcome-card p {
-  color: #444;
+.subtitle {
   font-size: 15px;
+  opacity: 0.95;
   margin-bottom: 20px;
 }
+
+.auth-buttons {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+}
+
+.auth-buttons .btn {
+  padding: 10px 22px;
+  border-radius: 10px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-buttons .login {
+  background: white;
+  color: #0a66d1;
+}
+
+.auth-buttons .signup {
+  border: 2px solid white;
+  color: white;
+}
+
+
+
 
 /* Buttons */
 .welcome-actions {
