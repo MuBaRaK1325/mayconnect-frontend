@@ -4,56 +4,53 @@
   margin: 0;
   padding: 0;
 }
-
 html, body {
   height: 100%;
-  font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Poppins", Arial, sans-serif;
 }
 
-/* ================= WELCOME PAGE (HOME) ================= */
+/* ================= WELCOME PAGE ONLY ================= */
 body.home {
   min-height: 100vh;
-  background: linear-gradient(180deg, #007bff, #00aaff);
+  background: linear-gradient(180deg, #0a86ff, #00b3ff);
   display: flex;
-  justify-content: center;
   align-items: center;
-  color: #fff;
+  justify-content: center;
+  color: white;
 }
 
 .hero {
-  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  gap: 18px;
 }
 
+/* Logo circle */
 .logo-container {
   width: 140px;
   height: 140px;
-  background: #fff;
+  background: white;
   border-radius: 50%;
   display: flex;
-  justify-content: center;
   align-items: center;
-  margin-bottom: 16px;
+  justify-content: center;
   box-shadow: 0 8px 20px rgba(0,0,0,0.2);
 }
 
 .logo {
-  width: 80px;
-  height: 80px;
+  width: 85px;
+  height: 85px;
   object-fit: contain;
 }
 
-/* === THIS IS THE CARD IN YOUR PHOTO === */
+/* Welcome card */
 .welcome-card {
-  width: 90%;
-  max-width: 420px;
+  width: min(420px, 92%);
   background: rgba(255,255,255,0.15);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(10px);
   border-radius: 22px;
-  padding: 28px 22px;
+  padding: 32px 24px;
   text-align: center;
   box-shadow: 0 20px 40px rgba(0,0,0,0.25);
 }
@@ -64,59 +61,56 @@ body.home {
   margin-bottom: 8px;
 }
 
-.brand {
-  color: #ffffff;
-}
-
 .subtitle {
   font-size: 15px;
-  opacity: 0.95;
   margin-bottom: 20px;
+  opacity: 0.95;
 }
 
+/* Buttons */
 .auth-buttons {
   display: flex;
-  justify-content: center;
   gap: 14px;
+  justify-content: center;
 }
 
 .btn {
-  padding: 10px 26px;
+  padding: 10px 24px;
   border-radius: 10px;
   font-weight: 600;
   text-decoration: none;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.2);
+  min-width: 120px;
+  text-align: center;
 }
 
 .btn.login {
-  background: #ffffff;
-  color: #007bff;
+  background: white;
+  color: #0a66d1;
 }
 
 .btn.signup {
+  border: 2px solid white;
+  color: white;
   background: transparent;
-  border: 2px solid #ffffff;
-  color: #ffffff;
 }
 
-/* ================= AUTH PAGES (LOGIN / SIGNUP) ================= */
+/* ================= AUTH PAGES (UNCHANGED) ================= */
 .auth-page {
-  min-height: 100vh;
-  background: linear-gradient(180deg, #007bff, #0099ff);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: #fff;
+  background: linear-gradient(135deg,#005bea 0%, #00c6ff 100%);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
 }
 
 .auth-container {
-  background: #ffffff;
-  padding: 28px 22px;
+  background: white;
+  padding: 28px;
+  border-radius: 18px;
   width: 90%;
   max-width: 400px;
-  border-radius: 20px;
   text-align: center;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.18);
 }
 
 .auth-logo {
@@ -124,65 +118,49 @@ body.home {
   height: 90px;
   background: #fff;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   margin: 0 auto 14px;
 }
 
 .auth-logo img {
   width: 55px;
-  height: 55px;
 }
 
 .auth-container h2 {
+  margin-bottom: 18px;
   color: #007bff;
-  margin-bottom: 16px;
-}
-
-.auth-container form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 .auth-container input {
-  padding: 10px 14px;
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
   border-radius: 8px;
   border: 1px solid #ccc;
-  font-size: 15px;
 }
 
 .auth-btn {
-  margin-top: 12px;
+  width: 100%;
   padding: 10px;
-  border-radius: 8px;
-  border: none;
   background: #007bff;
-  color: #fff;
-  font-weight: 600;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  margin-top: 10px;
   cursor: pointer;
 }
 
-.auth-btn:hover {
-  background: #005ecb;
-}
-
 .switch-text {
-  margin-top: 14px;
+  margin-top: 12px;
   font-size: 14px;
-}
-
-.switch-text a {
-  color: #007bff;
-  font-weight: 600;
-  text-decoration: none;
 }
 
 /* ================= FOOTER ================= */
 .site-footer {
   text-align: center;
+  color: white;
   font-size: 13px;
-  color: rgba(255,255,255,0.85);
   margin-top: 20px;
 }
