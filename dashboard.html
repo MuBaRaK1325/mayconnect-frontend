@@ -3,51 +3,61 @@
 <head>
   <meta charset="UTF-8" />
   <title>MAY Connect Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
+  <script src="app.js" defer></script>
 </head>
 
 <body class="dashboard-page">
 
-  <!-- TOP BAR -->
+  <!-- HEADER -->
   <header class="dashboard-header">
-    <h1>MAY Connect</h1>
-    <span class="user-name">Hi, Mubarak</span>
+    <div class="user-info">
+      <div class="avatar">👤</div>
+      <div>
+        <p class="welcome-text">Welcome</p>
+        <h3 id="user-name">User</h3>
+      </div>
+    </div>
+
+    <button class="logout-btn" onclick="logout()">Logout</button>
   </header>
 
-  <!-- WALLET CARD -->
+  <!-- WALLET -->
   <section class="wallet-card">
     <p class="wallet-label">Wallet Balance</p>
-    <h2 class="wallet-amount">₦0.00</h2>
-    <button class="wallet-btn">Fund Wallet</button>
+    <h1 class="wallet-amount">₦0.00</h1>
+    <button class="fund-btn">Fund Wallet</button>
   </section>
 
   <!-- SERVICES -->
   <section class="services">
-    <h3>Services</h3>
-    <div class="service-grid">
-      <div class="service-card">
-        <img src="airtime.png" alt="Airtime" />
-        <p>Airtime</p>
-      </div>
-      <div class="service-card">
-        <img src="data.png" alt="Data" />
-        <p>Data</p>
-      </div>
+    <div class="service-card">
+      <h3>📱 Airtime</h3>
+      <p>Buy cheap airtime</p>
+      <button>Open</button>
+    </div>
+
+    <div class="service-card">
+      <h3>📶 Data</h3>
+      <p>Buy data bundles</p>
+      <button>Open</button>
     </div>
   </section>
 
-  <!-- MENU -->
-  <section class="menu">
-    <a href="#">Enable Biometrics</a>
-    <a href="#">Change Password</a>
-    <a href="#">Contact Support</a>
-    <a href="#" class="logout">Logout</a>
+  <!-- SETTINGS -->
+  <section class="settings">
+    <h3>Account Settings</h3>
+    <ul>
+      <li>Enable Biometrics (Coming soon)</li>
+      <li>Change Password</li>
+      <li>Contact Support</li>
+      <li>Delete Account</li>
+    </ul>
   </section>
 
-  <!-- FOOTER -->
   <footer class="dashboard-footer">
-    © MAY Connect 2025. All rights reserved.
+    © 2025 MAY Connect. All rights reserved.
   </footer>
 
 </body>
