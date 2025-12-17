@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MAY Connect Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
   <script src="app.js" defer></script>
 </head>
@@ -11,52 +11,38 @@
 <body class="dashboard-page">
 
   <!-- HEADER -->
-  <header class="dashboard-header">
-    <div class="user-info">
-      <div class="avatar">👤</div>
-      <div>
-        <p class="welcome-text">Welcome</p>
-        <h3 id="user-name">User</h3>
-      </div>
+  <header class="dash-header">
+    <img src="logo.png" class="dash-logo" />
+    <div class="dash-user">
+      <span>Welcome 👋</span>
     </div>
-
-    <button class="logout-btn" onclick="logout()">Logout</button>
   </header>
 
   <!-- WALLET -->
   <section class="wallet-card">
     <p class="wallet-label">Wallet Balance</p>
-    <h1 class="wallet-amount">₦0.00</h1>
-    <button class="fund-btn">Fund Wallet</button>
+    <h2 class="wallet-amount">₦0.00</h2>
+    <button class="wallet-btn">Fund Wallet</button>
   </section>
 
-  <!-- SERVICES -->
-  <section class="services">
-    <div class="service-card">
-      <h3>📱 Airtime</h3>
-      <p>Buy cheap airtime</p>
-      <button>Open</button>
-    </div>
-
-    <div class="service-card">
-      <h3>📶 Data</h3>
-      <p>Buy data bundles</p>
-      <button>Open</button>
-    </div>
+  <!-- QUICK ACTIONS -->
+  <section class="quick-actions">
+    <div class="action-card">📶 Data</div>
+    <div class="action-card">📞 Airtime</div>
+    <div class="action-card">📜 History</div>
+    <div class="action-card">💼 Wallet</div>
   </section>
 
   <!-- SETTINGS -->
   <section class="settings">
-    <h3>Account Settings</h3>
-    <ul>
-      <li>Enable Biometrics (Coming soon)</li>
-      <li>Change Password</li>
-      <li>Contact Support</li>
-      <li>Delete Account</li>
-    </ul>
+    <button>🔐 Enable Biometrics</button>
+    <button>🔑 Change Password</button>
+    <button>📞 Contact Support</button>
+    <button class="danger">🚪 Logout</button>
+    <button class="danger">🗑 Delete Account</button>
   </section>
 
-  <footer class="dashboard-footer">
+  <footer class="dash-footer">
     © 2025 MAY Connect. All rights reserved.
   </footer>
 

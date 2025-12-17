@@ -119,7 +119,8 @@ async function login(event) {
       if (response.ok) {
   playWelcomeSound(); // 🔊 welcome sound
   localStorage.setItem("token", data.token);
-
+  window.location.href = "dashboard.html";
+}
   setTimeout(() => {
     window.location.href = "plans.html";
   }, 800); // small delay so sound can play
@@ -132,7 +133,8 @@ async function login(event) {
   }
 }
 
-// AUTO LOAD PLANS
-if (document.getElementById("plans-container")) {
-  fetchPlans();
+function logout() {
+  localStorage.removeItem("token");
+  window.location.href = "login.html";
 }
+
