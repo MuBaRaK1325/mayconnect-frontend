@@ -107,30 +107,33 @@ async function signup(event) {
 // LOGIN
 async function login(event) {
   event.preventDefault();
+
   const email = document.getElementById("login-email").value;
   const password = document.getElementById("login-password").value;
-  try {
-    const response = await fetch(`${backendUrl}/api/login`, {   // <-- /api/login
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await response.json();
-      if (response.ok) {
-  playWelcomeSound(); // 🔊 welcome sound
-  localStorage.setItem("token", data.token);
-  window.location.href = "dashboard.html";
-}
-  setTimeout(() => {
-    window.location.href = "plans.html";
-  }, 800); // small delay so sound can play
-} else {
-      alert(data.error || data.message || "Invalid login details.");
-    }
-  } catch (error) {
-    alert("Network error.");
-    console.error("Login error:", error);
+
+  const response = await fetch(`${backendUrl}/api/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+
+  const data = await response.json();
+
+  if (response.ok) {
+    const sound = new Audio("sounds/welcome.mp3");
+    sound.play();
+
+    localStorage.setItem("token", data.token);
+
+    setTimeout(() => {
+      window.location.href = "dashboard.html";
+    }, 800);
+  } else {
+    alert(data.message || "Login failed");
   }
+}
+
+
 }
 
 function logout() {
