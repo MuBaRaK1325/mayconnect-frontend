@@ -1,3 +1,77 @@
+/* AUTH PAGES FIX */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(180deg, #007bff, #00b3ff);
+  font-family: 'Poppins', sans-serif;
+}
+
+.auth-container {
+  background: #ffffff;
+  padding: 28px 22px;
+  width: 90%;
+  max-width: 380px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+
+.auth-logo {
+  width: 90px;
+  height: 90px;
+  background: #fff;
+  border-radius: 50%;
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-logo img {
+  width: 55px;
+}
+
+.auth-container input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+}
+
+.password-box {
+  position: relative;
+}
+
+.password-box button {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  color: #007bff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: #007bff;
+  color: white;
+  font-weight: 600;
+}
+
+.switch-text {
+  margin-top: 12px;
+}
+
+
 /* ================= DASHBOARD ================= */
 
 .dashboard-page {
