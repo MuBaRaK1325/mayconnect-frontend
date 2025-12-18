@@ -80,27 +80,32 @@ async function fetchPlans() {
 // SIGNUP
 async function signup(event) {
   event.preventDefault();
+
+  const name = document.getElementById("signup-name").value;
   const email = document.getElementById("signup-email").value;
   const password = document.getElementById("signup-password").value;
+
   try {
-    const response = await fetch(`${backendUrl}/api/signup`, {   // <-- note /api/signup
+    const response = await fetch(`${backendUrl}/api/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ name, email, password }),
     });
-    const data = await response.json();
-       if (response.ok) {
-  playWelcomeSound(); // 🔊 welcome sound
 
-  setTimeout(() => {
-    window.location.href = "login.html";
-  }, 800);
-} else {
-      alert(data.error || data.message || "Signup failed.");
+    const data = await response.json();
+
+    if (response.ok) {
+      welcomeSound.play(); // 🔊 welcome
+      setTimeout(() => {
+        window.location.href = "login.html";
+      }, 500);
+    } else {
+      alert(data.error || data.message || "Signup failed");
     }
-  } catch (error) {
-    alert("Network error.");
-    console.error("Signup error:", error);
+
+  } catch (err) {
+    alert("Network error");
+    console.error(err);
   }
 }
 
@@ -111,28 +116,32 @@ async function login(event) {
   const email = document.getElementById("login-email").value;
   const password = document.getElementById("login-password").value;
 
-  const response = await fetch(`${backendUrl}/api/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
+  try {
+    const response = await fetch(`${backendUrl}/api/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
 
-  const data = await response.json();
+    const data = await response.json();
 
-  if (response.ok) {
-    const sound = new Audio("sounds/welcome.mp3");
-    sound.play();
+    if (response.ok) {
+      localStorage.setItem("token", data.token);
 
-    localStorage.setItem("token", data.token);
+      successSound.play(); // 🔊 login success
+      setTimeout(() => {
+        window.location.href = "dashboard.html";
+      }, 500);
 
-    setTimeout(() => {
-      window.location.href = "dashboard.html";
-    }, 800);
-  } else {
-    alert(data.message || "Login failed");
+    } else {
+      alert(data.error || data.message || "Login failed");
+    }
+
+  } catch (err) {
+    alert("Network error");
+    console.error(err);
   }
 }
-
 
 }
 
