@@ -1,44 +1,21 @@
-// DASHBOARD USER NAME
-if (document.getElementById("user-name")) {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    window.location.href = "login.html";
-  } else {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    document.getElementById("user-name").innerText =
-      payload.email.split("@")[0];
-  }
-}
-
-// LOGOUT
-function logout() {
-  localStorage.removeItem("token");
-  window.location.href = "login.html";
-}
-
 // ===============================
 // CONFIG
-     const backendUrl = "https://mayconnect-backend-1.onrender.com"; // <-- make sure this matches your deployed backend
 // ===============================
-// SOUND EFFECTS
+const backendUrl = "https://mayconnect-backend-1.onrender.com";
+
+// ===============================
+// SOUNDS
 // ===============================
 const welcomeSound = new Audio("sounds/welcome.mp3");
 const successSound = new Audio("sounds/success.mp3");
 
-function playWelcomeSound() {
-  welcomeSound.currentTime = 0;
-  welcomeSound.play().catch(() => {});
-}
-
-function playSuccessSound() {
-  successSound.currentTime = 0;
-  successSound.play().catch(() => {});
-}
-
 // ===============================
-// SHOW / HIDE PASSWORD
+// TOGGLE PASSWORD
+// ===============================
 function togglePassword(inputId, btn) {
   const input = document.getElementById(inputId);
+  if (!input) return;
+
   if (input.type === "password") {
     input.type = "text";
     btn.textContent = "Hide";
@@ -47,106 +24,79 @@ function togglePassword(inputId, btn) {
     btn.textContent = "Show";
   }
 }
-// FETCH PLANS
-async function fetchPlans() {
-  const container = document.getElementById("plans-container");
-  try {
-    const response = await fetch(`${backendUrl}/api/plans`);
-    const plans = await response.json();
-    container.innerHTML = "";
-    plans.forEach(plan => {
-      let logo = "default.png";
-      if (plan.network === "MTN") logo = "mtn.png";
-      if (plan.network === "Airtel") logo = "airtel.png";
-      if (plan.network === "Glo") logo = "glo.png";
-      if (plan.network === "9mobile") logo = "9mobile.png";
-      const div = document.createElement("div");
-      div.classList.add("plan-card");
-      div.innerHTML = `
-        <img src="${logo}" class="plan-logo" />
-        <h3>${plan.name}</h3>
-        <p><strong>₦${plan.price}</strong></p>
-        <p>${plan.network} — ${plan.type}</p>
-        <button class="buy-btn">Buy Now</button>
-      `;
-      container.appendChild(div);
-    });
-  } catch (error) {
-    container.innerHTML = "<p style='color:red;'>Unable to load plans. Check connection.</p>";
-    console.error("Error fetching plans:", error);
-  }
-}
 
-// SIGNUP
+// ===============================
+// SIGN UP
+// ===============================
 async function signup(event) {
   event.preventDefault();
 
-  const name = document.getElementById("signup-name").value;
-  const email = document.getElementById("signup-email").value;
-  const password = document.getElementById("signup-password").value;
+  const name = document.getElementById("signup-name")?.value;
+  const email = document.getElementById("signup-email")?.value;
+  const password = document.getElementById("signup-password")?.value;
+
+  if (!name || !email || !password) {
+    alert("All fields are required");
+    return;
+  }
 
   try {
     const response = await fetch(`${backendUrl}/api/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password })
     });
 
     const data = await response.json();
 
     if (response.ok) {
-      welcomeSound.play(); // 🔊 welcome
-      setTimeout(() => {
-        window.location.href = "login.html";
-      }, 500);
+      welcomeSound.play();
+      alert("Signup successful!");
+      window.location.href = "login.html";
     } else {
-      alert(data.error || data.message || "Signup failed");
+      alert(data.error || "Signup failed");
     }
-
   } catch (err) {
-    alert("Network error");
     console.error(err);
+    alert("Network error");
   }
 }
 
+// ===============================
 // LOGIN
+// ===============================
 async function login(event) {
   event.preventDefault();
 
-  const email = document.getElementById("login-email").value;
-  const password = document.getElementById("login-password").value;
+  const email = document.getElementById("login-email")?.value;
+  const password = document.getElementById("login-password")?.value;
+
+  if (!email || !password) {
+    alert("All fields are required");
+    return;
+  }
 
   try {
     const response = await fetch(`${backendUrl}/api/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password })
     });
 
     const data = await response.json();
 
     if (response.ok) {
       localStorage.setItem("token", data.token);
+      successSound.play();
 
-      successSound.play(); // 🔊 login success
       setTimeout(() => {
         window.location.href = "dashboard.html";
       }, 500);
-
     } else {
-      alert(data.error || data.message || "Login failed");
+      alert(data.error || "Invalid login");
     }
-
   } catch (err) {
-    alert("Network error");
     console.error(err);
+    alert("Network error");
   }
 }
-
-}
-
-function logout() {
-  localStorage.removeItem("token");
-  window.location.href = "login.html";
-}
-
