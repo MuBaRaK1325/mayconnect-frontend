@@ -2,49 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MAY Connect Dashboard</title>
   <link rel="stylesheet" href="styles.css" />
-  <script src="app.js" defer></script>
 </head>
 
 <body class="dashboard-page">
 
-  <!-- HEADER -->
   <header class="dash-header">
-    <img src="logo.png" class="dash-logo" />
-    <div class="dash-user">
-      <span>Welcome 👋</span>
-    </div>
+    <h2>Welcome 👋</h2>
+    <p id="user-email"></p>
   </header>
 
-  <!-- WALLET -->
   <section class="wallet-card">
-    <p class="wallet-label">Wallet Balance</p>
-    <h2 class="wallet-amount">₦0.00</h2>
-    <button class="wallet-btn">Fund Wallet</button>
+    <h3>Wallet Balance</h3>
+    <p class="balance">₦0.00</p>
+    <button class="fund-btn">Fund Wallet</button>
   </section>
 
-  <!-- QUICK ACTIONS -->
-  <section class="quick-actions">
-    <div class="action-card">📶 Data</div>
-    <div class="action-card">📞 Airtime</div>
-    <div class="action-card">📜 History</div>
-    <div class="action-card">💼 Wallet</div>
+  <section class="services">
+    <div class="service-card airtime">Airtime</div>
+    <div class="service-card data">Data</div>
   </section>
 
-  <!-- SETTINGS -->
   <section class="settings">
-    <button>🔐 Enable Biometrics</button>
-    <button>🔑 Change Password</button>
-    <button>📞 Contact Support</button>
-    <button class="danger">🚪 Logout</button>
-    <button class="danger">🗑 Delete Account</button>
+    <button>Enable Biometrics</button>
+    <button>Change Password</button>
+    <button>Contact Support</button>
+    <button class="danger">Logout</button>
   </section>
 
   <footer class="dash-footer">
-    © 2025 MAY Connect. All rights reserved.
+    © MAY Connect 2025. All rights reserved.
   </footer>
+
+  <script>
+    document.getElementById("user-email").innerText =
+      localStorage.getItem("userEmail") || "";
+  </script>
 
 </body>
 </html>
