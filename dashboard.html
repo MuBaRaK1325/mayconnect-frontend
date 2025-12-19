@@ -3,42 +3,44 @@
 <head>
   <meta charset="UTF-8" />
   <title>MAY Connect Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
+  <script src="app.js" defer></script>
 </head>
 
-<body class="dashboard-page">
+<body class="dashboard-page" onload="initDashboard()">
 
-  <header class="dash-header">
+  <!-- TOP BAR -->
+  <header class="dashboard-header">
     <h2>Welcome 👋</h2>
-    <p id="user-email"></p>
+    <span id="user-email"></span>
   </header>
 
+  <!-- WALLET -->
   <section class="wallet-card">
     <h3>Wallet Balance</h3>
     <p class="balance">₦0.00</p>
-    <button class="fund-btn">Fund Wallet</button>
+    <button class="primary-btn">Fund Wallet</button>
   </section>
 
-  <section class="services">
-    <div class="service-card airtime">Airtime</div>
-    <div class="service-card data">Data</div>
+  <!-- SERVICES -->
+  <section class="service-grid">
+    <div class="service-card blue">📶 Data</div>
+    <div class="service-card green">📞 Airtime</div>
+    <div class="service-card purple">💳 Wallet</div>
   </section>
 
+  <!-- SETTINGS -->
   <section class="settings">
     <button>Enable Biometrics</button>
     <button>Change Password</button>
     <button>Contact Support</button>
-    <button class="danger">Logout</button>
+    <button class="danger" onclick="logout()">Logout</button>
   </section>
 
-  <footer class="dash-footer">
-    © MAY Connect 2025. All rights reserved.
+  <footer class="footer">
+    © 2025 MAY Connect. All rights reserved.
   </footer>
-
-  <script>
-    document.getElementById("user-email").innerText =
-      localStorage.getItem("userEmail") || "";
-  </script>
 
 </body>
 </html>

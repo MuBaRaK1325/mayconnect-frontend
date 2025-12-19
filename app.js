@@ -1,86 +1,104 @@
 // ===============================
 // CONFIG
+// ===============================
 const backendUrl = "https://mayconnect-backend-1.onrender.com";
-// ===============================
 
 // ===============================
-// PASSWORD TOGGLE
-function togglePassword(id, btn) {
-  const input = document.getElementById(id);
-  if (!input) return;
-
-  if (input.type === "password") {
-    input.type = "text";
-    btn.innerText = "Hide";
-  } else {
-    input.type = "password";
-    btn.innerText = "Show";
-  }
+// AUTH HELPERS
+// ===============================
+function saveSession(data) {
+  localStorage.setItem("token", data.token);
+  localStorage.setItem("email", data.email || "");
 }
-// ===============================
+
+function isLoggedIn() {
+  return !!localStorage.getItem("token");
+}
+
+function logout() {
+  localStorage.clear();
+  window.location.href = "login.html";
+}
 
 // ===============================
 // SIGN UP
-async function signup(e) {
-  e.preventDefault();
+// ===============================
+async function signup(event) {
+  event.preventDefault();
 
   const name = document.getElementById("signup-name").value;
   const email = document.getElementById("signup-email").value;
   const password = document.getElementById("signup-password").value;
 
-  try {
-    const res = await fetch(`${backendUrl}/api/signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password })
-    });
+  const response = await fetch(`${backendUrl}/api/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, email, password })
+  });
 
-    const data = await res.json();
+  const data = await response.json();
 
-    if (!res.ok) return alert(data.error || "Signup failed");
-
-    window.location.href = "login.html";
-  } catch {
-    alert("Network error");
+  if (response.ok) {
+    saveSession(data);
+    window.location.href = "dashboard.html";
+  } else {
+    alert(data.error || "Signup failed");
   }
 }
-// ===============================
 
 // ===============================
 // LOGIN
-async function login(e) {
-  e.preventDefault();
+// ===============================
+async function login(event) {
+  event.preventDefault();
 
   const email = document.getElementById("login-email").value;
   const password = document.getElementById("login-password").value;
 
-  try {
-    const res = await fetch(`${backendUrl}/api/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password })
-    });
+  const response = await fetch(`${backendUrl}/api/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password })
+  });
 
-    const data = await res.json();
+  const data = await response.json();
 
-    if (!res.ok) return alert(data.error || "Login failed");
-
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("userEmail", email);
-
+  if (response.ok) {
+    saveSession(data);
     window.location.href = "dashboard.html";
-  } catch {
-    alert("Network error");
+  } else {
+    alert(data.error || "Invalid login");
   }
 }
-// ===============================
 
 // ===============================
-// DASHBOARD LOAD
-document.addEventListener("DOMContentLoaded", () => {
-  if (document.body.classList.contains("dashboard-page")) {
-    const audio = new Audio("sounds/welcome.mp3");
-    audio.play().catch(() => {});
-  }
-});
+// DASHBOARD INIT
 // ===============================
+function initDashboard() {
+  if (!isLoggedIn()) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const email = localStorage.getItem("email");
+  const emailEl = document.getElementById("user-email");
+  if (emailEl) emailEl.textContent = email;
+
+  // 🔊 PLAY WELCOME SOUND ONCE (FULL)
+  const audio = new Audio("sounds/welcome.mp3");
+  audio.play().catch(() => {});
+}
+
+// ===============================
+// PASSWORD TOGGLE
+// ===============================
+function togglePassword(id, btn) {
+  const input = document.getElementById(id);
+  if (input.type === "password") {
+    input.type = "text";
+    btn.textContent = "Hide";
+  } else {
+    input.type = "password";
+    btn.textContent = "Show";
+  }
+}
