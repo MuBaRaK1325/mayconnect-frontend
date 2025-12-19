@@ -5,48 +5,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MAY Connect</title>
 
-  <!-- Google Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MAY Connect</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
 </head>
-<audio id="welcomeSound" src="sounds/welcome.mp3"></audio>
 
-<script>
-  window.addEventListener("load", () => {
-    const sound = document.getElementById("welcomeSound");
+<body class="home">
 
-    // Required for mobile browsers
-    document.body.addEventListener("click", () => {
-      sound.play().catch(() => {});
-    }, { once: true });
-  });
-</script>
-<body class="welcome-page">
+  <!-- Welcome Sound (plays once on first user interaction) -->
+  <audio id="welcomeSound" src="sounds/welcome.mp3" preload="auto"></audio>
 
-  <div class="welcome-wrapper">
-
-    <div class="logo-box">
-      <img src="logo.png" alt="MAY Connect Logo">
+  <main class="hero">
+    <div class="logo-container">
+      <img src="logo.png" class="logo" alt="MAY Connect Logo" />
     </div>
 
     <div class="welcome-card">
-      <h1>Welcome to <span>MAY-Connect</span></h1>
+      <h1>Welcome to <span class="brand">MAY-Connect</span></h1>
       <p class="subtitle">
-        Fast & secure airtime and data recharge platform
+        Fast, affordable and reliable airtime & data services
       </p>
 
       <div class="auth-buttons">
-        <a href="login.html" class="btn primary">Login</a>
-        <a href="signup.html" class="btn outline">Sign Up</a>
+        <a href="login.html" class="btn login">Login</a>
+        <a href="signup.html" class="btn signup">Sign Up</a>
       </div>
     </div>
+  </main>
 
-    <footer class="welcome-footer">
-      © MAY-Connect 2025 · All rights reserved
-    </footer>
+  <footer class="site-footer">
+    © 2025 MAY-Connect. All rights reserved.
+  </footer>
 
-  </div>
+  <script>
+    // Play welcome sound ONCE after first tap/click (browser safe)
+    const audio = document.getElementById("welcomeSound");
+    const playOnce = () => {
+      audio.play().catch(() => {});
+      document.removeEventListener("click", playOnce);
+    };
+    document.addEventListener("click", playOnce);
+  </script>
 
 </body>
 </html>

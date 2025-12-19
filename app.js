@@ -4,13 +4,7 @@
 const backendUrl = "https://mayconnect-backend-1.onrender.com";
 
 // ===============================
-// SOUNDS
-// ===============================
-const welcomeSound = new Audio("sounds/welcome.mp3");
-const successSound = new Audio("sounds/success.mp3");
-
-// ===============================
-// TOGGLE PASSWORD
+// PASSWORD TOGGLE
 // ===============================
 function togglePassword(inputId, btn) {
   const input = document.getElementById(inputId);
@@ -18,10 +12,10 @@ function togglePassword(inputId, btn) {
 
   if (input.type === "password") {
     input.type = "text";
-    btn.innerText = "Hide";
+    btn.textContent = "Hide";
   } else {
     input.type = "password";
-    btn.innerText = "Show";
+    btn.textContent = "Show";
   }
 }
 
@@ -31,26 +25,32 @@ function togglePassword(inputId, btn) {
 async function signup(event) {
   event.preventDefault();
 
-  const name = document.getElementById("signup-name").value;
-  const email = document.getElementById("signup-email").value;
-  const password = document.getElementById("signup-password").value;
+  const name = document.getElementById("signup-name").value.trim();
+  const email = document.getElementById("signup-email").value.trim();
+  const password = document.getElementById("signup-password").value.trim();
+
+  if (!name || !email || !password) {
+    alert("All fields are required");
+    return;
+  }
 
   try {
-    const response = await fetch(`${backendUrl}/api/signup`, {
+    const res = await fetch(`${backendUrl}/api/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, password }),
     });
 
-    const data = await response.json();
+    const data = await res.json();
 
-    if (response.ok) {
-
-      alert("Signup successful!");
-      window.location.href = "login.html";
-    } else {
-      alert(data.error || data.message || "Signup failed");
+    if (!res.ok) {
+      alert(data.error || "Signup failed");
+      return;
     }
+
+    // Redirect to login (NO SOUND HERE)
+    window.location.href = "login.html";
+
   } catch (err) {
     alert("Network error");
     console.error(err);
@@ -63,25 +63,68 @@ async function signup(event) {
 async function login(event) {
   event.preventDefault();
 
-  const email = document.getElementById("login-email").value;
-  const password = document.getElementById("login-password").value;
+  const email = document.getElementById("login-email").value.trim();
+  const password = document.getElementById("login-password").value.trim();
+
+  if (!email || !password) {
+    alert("All fields are required");
+    return;
+  }
 
   try {
-    const response = await fetch(`${backendUrl}/api/login`, {
+    const res = await fetch(`${backendUrl}/api/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
 
-    const data = await response.json();
-if (response.ok) {
-  localStorage.setItem("token", data.token);
-  window.location.href = "dashboard.html";
-}
-      alert(data.error || data.message || "Login failed");
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || "Login failed");
+      return;
     }
+
+    localStorage.setItem("token", data.token);
+
+    // Redirect to dashboard (NO SOUND)
+    window.location.href = "dashboard.html";
+
   } catch (err) {
     alert("Network error");
     console.error(err);
   }
 }
+
+// ===============================
+// FETCH DATA PLANS (USED LATER)
+// ===============================
+async function fetchPlans() {
+  const container = document.getElementById("plans-container");
+  if (!container) return;
+
+  try {
+    const res = await fetch(`${backendUrl}/api/plans`);
+    const plans = await res.json();
+
+    container.innerHTML = "";
+
+    plans.forEach(plan => {
+      const div = document.createElement("div");
+      div.className = "plan-card";
+      div.innerHTML = `
+        <h3>${plan.name}</h3>
+        <p>₦${plan.price}</p>
+        <p>${plan.network}</p>
+        <button>Buy</button>
+      `;
+      container.appendChild(div);
+    });
+
+  } catch (err) {
+    container.innerHTML = "<p>Error loading plans</p>";
+  }
+}
+
+// Auto load plans if page needs it
+document.addEventListener("DOMContentLoaded", fetchPlans);
