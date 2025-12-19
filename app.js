@@ -45,7 +45,7 @@ async function signup(event) {
     const data = await response.json();
 
     if (response.ok) {
-      successSound.play();
+
       alert("Signup successful!");
       window.location.href = "login.html";
     } else {
