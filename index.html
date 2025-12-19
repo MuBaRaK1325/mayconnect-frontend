@@ -10,7 +10,18 @@
 
   <link rel="stylesheet" href="styles.css" />
 </head>
+<audio id="welcomeSound" src="sounds/welcome.mp3"></audio>
 
+<script>
+  window.addEventListener("load", () => {
+    const sound = document.getElementById("welcomeSound");
+
+    // Required for mobile browsers
+    document.body.addEventListener("click", () => {
+      sound.play().catch(() => {});
+    }, { once: true });
+  });
+</script>
 <body class="welcome-page">
 
   <div class="welcome-wrapper">

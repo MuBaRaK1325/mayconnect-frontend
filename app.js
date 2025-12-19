@@ -74,12 +74,10 @@ async function login(event) {
     });
 
     const data = await response.json();
-
-    if (response.ok) {
-      localStorage.setItem("token", data.token);
-      successSound.play();
-      window.location.href = "dashboard.html";
-    } else {
+if (response.ok) {
+  localStorage.setItem("token", data.token);
+  window.location.href = "dashboard.html";
+}
       alert(data.error || data.message || "Login failed");
     }
   } catch (err) {
