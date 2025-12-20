@@ -2,34 +2,42 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Dashboard - MAY Connect</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="dashboard">
 
+  <audio id="welcomeSound" src="sounds/welcome.mp3"></audio>
+
   <header class="dashboard-header">
     <span>Welcome 👋</span>
-    <span id="user-email"></span>
+    <span id="userEmail"></span>
   </header>
 
-  <section class="wallet-card">
-    <h3>Wallet Balance</h3>
-    <p class="balance">₦0.00</p>
-    <button class="btn primary">Fund Wallet</button>
-  </section>
+  <main class="dashboard-container">
 
-  <section class="services">
-    <div class="service-card">📱 Airtime</div>
-    <div class="service-card">📶 Data</div>
-  </section>
+    <div class="wallet-card">
+      <h3>Wallet Balance</h3>
+      <h1>₦0.00</h1>
+      <button class="btn primary">Fund Wallet</button>
+    </div>
 
-  <section class="settings">
-    <button>Enable Biometrics</button>
-    <button>Change Password</button>
-    <button>Contact Support</button>
-    <button class="danger" onclick="logout()">Logout</button>
-  </section>
+    <div class="service-grid">
+      <div class="service-card">📶 Data</div>
+      <div class="service-card">📞 Airtime</div>
+      <div class="service-card">💼 Wallet</div>
+      <div class="service-card">⚙ Settings</div>
+    </div>
+
+    <div class="settings">
+      <button>Enable Biometrics</button>
+      <button>Change Password</button>
+      <button>Contact Support</button>
+      <button class="danger" onclick="logout()">Logout</button>
+    </div>
+
+  </main>
 
   <footer>
     © 2025 MAY Connect. All rights reserved.
