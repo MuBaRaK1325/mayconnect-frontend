@@ -2,35 +2,28 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MAY Connect Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard - MAY Connect</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="styles.css" />
-  <script src="app.js" defer></script>
 </head>
+<body class="dashboard">
 
-<body class="dashboard-page" onload="initDashboard()">
-
-  <!-- TOP BAR -->
   <header class="dashboard-header">
-    <h2>Welcome 👋</h2>
+    <span>Welcome 👋</span>
     <span id="user-email"></span>
   </header>
 
-  <!-- WALLET -->
   <section class="wallet-card">
     <h3>Wallet Balance</h3>
     <p class="balance">₦0.00</p>
-    <button class="primary-btn">Fund Wallet</button>
+    <button class="btn primary">Fund Wallet</button>
   </section>
 
-  <!-- SERVICES -->
-  <section class="service-grid">
-    <div class="service-card blue">📶 Data</div>
-    <div class="service-card green">📞 Airtime</div>
-    <div class="service-card purple">💳 Wallet</div>
+  <section class="services">
+    <div class="service-card">📱 Airtime</div>
+    <div class="service-card">📶 Data</div>
   </section>
 
-  <!-- SETTINGS -->
   <section class="settings">
     <button>Enable Biometrics</button>
     <button>Change Password</button>
@@ -38,9 +31,10 @@
     <button class="danger" onclick="logout()">Logout</button>
   </section>
 
-  <footer class="footer">
+  <footer>
     © 2025 MAY Connect. All rights reserved.
   </footer>
 
+  <script src="app.js"></script>
 </body>
 </html>

@@ -1,104 +1,69 @@
-// ===============================
-// CONFIG
-// ===============================
 const backendUrl = "https://mayconnect-backend-1.onrender.com";
 
-// ===============================
-// AUTH HELPERS
-// ===============================
-function saveSession(data) {
-  localStorage.setItem("token", data.token);
-  localStorage.setItem("email", data.email || "");
-}
-
-function isLoggedIn() {
-  return !!localStorage.getItem("token");
-}
-
-function logout() {
-  localStorage.clear();
-  window.location.href = "login.html";
-}
-
-// ===============================
-// SIGN UP
-// ===============================
-async function signup(event) {
-  event.preventDefault();
-
-  const name = document.getElementById("signup-name").value;
-  const email = document.getElementById("signup-email").value;
-  const password = document.getElementById("signup-password").value;
-
-  const response = await fetch(`${backendUrl}/api/signup`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, email, password })
-  });
-
-  const data = await response.json();
-
-  if (response.ok) {
-    saveSession(data);
-    window.location.href = "dashboard.html";
-  } else {
-    alert(data.error || "Signup failed");
-  }
-}
-
-// ===============================
-// LOGIN
-// ===============================
+/* ---------- LOGIN ---------- */
 async function login(event) {
   event.preventDefault();
 
   const email = document.getElementById("login-email").value;
   const password = document.getElementById("login-password").value;
 
-  const response = await fetch(`${backendUrl}/api/login`, {
+  const res = await fetch(`${backendUrl}/api/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password })
   });
 
-  const data = await response.json();
+  const data = await res.json();
 
-  if (response.ok) {
-    saveSession(data);
+  if (res.ok) {
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("email", email);
     window.location.href = "dashboard.html";
   } else {
-    alert(data.error || "Invalid login");
+    alert(data.error || "Login failed");
   }
 }
 
-// ===============================
-// DASHBOARD INIT
-// ===============================
-function initDashboard() {
-  if (!isLoggedIn()) {
+/* ---------- SIGNUP ---------- */
+async function signup(event) {
+  event.preventDefault();
+
+  const email = document.getElementById("signup-email").value;
+  const password = document.getElementById("signup-password").value;
+
+  const res = await fetch(`${backendUrl}/api/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password })
+  });
+
+  const data = await res.json();
+
+  if (res.ok) {
     window.location.href = "login.html";
-    return;
+  } else {
+    alert(data.error || "Signup failed");
   }
-
-  const email = localStorage.getItem("email");
-  const emailEl = document.getElementById("user-email");
-  if (emailEl) emailEl.textContent = email;
-
-  // 🔊 PLAY WELCOME SOUND ONCE (FULL)
-  const audio = new Audio("sounds/welcome.mp3");
-  audio.play().catch(() => {});
 }
 
-// ===============================
-// PASSWORD TOGGLE
-// ===============================
+/* ---------- DASHBOARD LOAD ---------- */
+if (window.location.pathname.includes("dashboard.html")) {
+  const email = localStorage.getItem("email");
+  document.getElementById("user-email").textContent = email || "";
+
+  const welcomeSound = new Audio("sounds/welcome.mp3");
+  welcomeSound.play().catch(() => {});
+}
+
+/* ---------- LOGOUT ---------- */
+function logout() {
+  localStorage.clear();
+  window.location.href = "index.html";
+}
+
+/* ---------- SHOW PASSWORD ---------- */
 function togglePassword(id, btn) {
   const input = document.getElementById(id);
-  if (input.type === "password") {
-    input.type = "text";
-    btn.textContent = "Hide";
-  } else {
-    input.type = "password";
-    btn.textContent = "Show";
-  }
+  input.type = input.type === "password" ? "text" : "password";
+  btn.textContent = input.type === "password" ? "Show" : "Hide";
 }

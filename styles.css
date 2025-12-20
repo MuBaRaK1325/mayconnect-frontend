@@ -1,767 +1,55 @@
-/* ================= DASHBOARD ================= */
-
-.dashboard-page {
-  background: #f4f7fb;
+* {
+  box-sizing: border-box;
   font-family: "Poppins", sans-serif;
-  min-height: 100vh;
 }
 
-.dashboard-header {
-  background: linear-gradient(135deg, #005bea, #00c6ff);
-  color: #fff;
-  padding: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+body {
+  margin: 0;
 }
 
-.wallet-card {
-  background: #fff;
-  margin: 20px;
-  padding: 20px;
-  border-radius: 16px;
-  text-align: center;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-}
-
-.balance {
-  font-size: 26px;
-  font-weight: bold;
-  margin: 10px 0;
-}
-
-.primary-btn {
-  background: #007bff;
-  color: white;
-  border: none;
-  padding: 10px 22px;
-  border-radius: 8px;
-}
-
-.service-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  padding: 0 20px;
-}
-
-.service-card {
-  padding: 18px;
-  border-radius: 14px;
-  color: #fff;
-  text-align: center;
-  font-weight: 600;
-}
-
-.blue { background: #007bff; }
-.green { background: #28a745; }
-.purple { background: #6f42c1; }
-
-.settings {
-  margin: 24px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.settings button {
-  padding: 12px;
-  border-radius: 10px;
-  border: none;
-  background: #fff;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-}
-
-.settings .danger {
-  background: #ffe5e5;
-  color: #d60000;
-}
-
-.footer {
-  text-align: center;
-  padding: 18px;
-  color: #666;
-  font-size: 13px;
-}
-
-/* AUTH PAGES FIX */
-.auth-page {
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: linear-gradient(180deg, #007bff, #00b3ff);
-  font-family: 'Poppins', sans-serif;
-}
-
-.auth-container {
-  background: #ffffff;
-  padding: 28px 22px;
-  width: 90%;
-  max-width: 380px;
-  border-radius: 20px;
-  text-align: center;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-}
-
-.auth-logo {
-  width: 90px;
-  height: 90px;
-  background: #fff;
-  border-radius: 50%;
-  margin: 0 auto 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.auth-logo img {
-  width: 55px;
-}
-
-.auth-container input {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 12px;
-  border-radius: 10px;
-  border: 1px solid #ddd;
-}
-
-.password-box {
-  position: relative;
-}
-
-.password-box button {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  border: none;
-  background: none;
-  color: #007bff;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.auth-btn {
-  width: 100%;
-  padding: 12px;
-  border-radius: 10px;
-  border: none;
-  background: #007bff;
-  color: white;
-  font-weight: 600;
-}
-
-.switch-text {
-  margin-top: 12px;
-}
-
-
-/* ================= DASHBOARD ================= */
-
-.dashboard-page {
-  font-family: "Poppins", sans-serif;
-  background: #f4f7fb;
-  min-height: 100vh;
-}
-
-.dashboard-header {
-  background: linear-gradient(135deg, #005bea, #00c6ff);
-  padding: 20px;
-  text-align: center;
-  color: white;
-}
-
-.dashboard-logo {
-  width: 70px;
-  margin-bottom: 8px;
-}
-
-.wallet-card {
-  background: white;
-  margin: 20px;
-  padding: 20px;
-  border-radius: 16px;
-  text-align: center;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-}
-
-.wallet-label {
-  color: #666;
-  font-size: 14px;
-}
-
-.wallet-balance {
-  font-size: 28px;
-  margin: 10px 0;
-}
-
-.wallet-btn {
-  background: #005bea;
-  color: white;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 10px;
-}
-
-.services {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-  padding: 20px;
-}
-
-.service-card {
-  background: white;
-  padding: 20px;
-  border-radius: 14px;
-  text-align: center;
-  font-weight: 600;
-  box-shadow: 0 6px 15px rgba(0,0,0,0.08);
-}
-
-.settings {
-  margin: 20px;
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.settings a {
-  display: block;
-  padding: 14px;
-  border-bottom: 1px solid #eee;
-  text-decoration: none;
-  color: #333;
-}
-
-.settings a.danger {
-  color: red;
-}
-
-.dashboard-footer {
-  text-align: center;
-  padding: 14px;
-  color: #777;
-  font-size: 13px;
-}
-
-/* ================= DASHBOARD ================= */
-
-.dashboard-page {
-  font-family: "Poppins", sans-serif;
-  background: #f4f7fb;
-  min-height: 100vh;
-}
-
-.dashboard-header {
-  background: linear-gradient(135deg, #005bea, #00c6ff);
-  padding: 20px;
-  text-align: center;
-  color: white;
-}
-
-.dashboard-logo {
-  width: 70px;
-  margin-bottom: 8px;
-}
-
-.wallet-card {
-  background: white;
-  margin: 20px;
-  padding: 20px;
-  border-radius: 16px;
-  text-align: center;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-}
-
-.wallet-label {
-  color: #666;
-  font-size: 14px;
-}
-
-.wallet-balance {
-  font-size: 28px;
-  margin: 10px 0;
-}
-
-.wallet-btn {
-  background: #005bea;
-  color: white;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 10px;
-}
-
-.services {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-  padding: 20px;
-}
-
-.service-card {
-  background: white;
-  padding: 20px;
-  border-radius: 14px;
-  text-align: center;
-  font-weight: 600;
-  box-shadow: 0 6px 15px rgba(0,0,0,0.08);
-}
-
-.settings {
-  margin: 20px;
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.settings a {
-  display: block;
-  padding: 14px;
-  border-bottom: 1px solid #eee;
-  text-decoration: none;
-  color: #333;
-}
-
-.settings a.danger {
-  color: red;
-}
-
-.dashboard-footer {
-  text-align: center;
-  padding: 14px;
-  color: #777;
-  font-size: 13px;
-}
-
-/* ========== DASHBOARD ========== */
-.dashboard-page {
-  background: #f4f8fc;
-  font-family: 'Poppins', sans-serif;
-  min-height: 100vh;
-  padding-bottom: 40px;
-}
-
-/* Header */
-.dash-header {
-  background: linear-gradient(135deg,#005bea,#00c6ff);
-  color: white;
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.dash-logo {
-  height: 40px;
-}
-
-/* Wallet */
-.wallet-card {
-  background: linear-gradient(135deg,#0047ff,#0099ff);
-  color: white;
-  margin: 20px;
-  padding: 20px;
-  border-radius: 18px;
-  text-align: center;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-}
-
-.wallet-label {
-  opacity: 0.9;
-}
-
-.wallet-amount {
-  font-size: 28px;
-  margin: 10px 0;
-}
-
-.wallet-btn {
-  background: white;
-  color: #005bea;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-weight: 600;
-}
-
-/* Actions */
-.quick-actions {
-  display: grid;
-  grid-template-columns: repeat(2,1fr);
-  gap: 15px;
-  padding: 0 20px;
-}
-
-.action-card {
-  background: white;
-  border-radius: 14px;
-  padding: 20px;
-  text-align: center;
-  font-size: 16px;
-  font-weight: 600;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
-}
-
-/* Settings */
-.settings {
-  margin: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.settings button {
-  padding: 12px;
-  border-radius: 12px;
-  border: none;
-  background: white;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  font-weight: 500;
-}
-
-.settings .danger {
-  background: #ffeded;
-  color: #cc0000;
-}
-
-/* Footer */
-.dash-footer {
-  text-align: center;
-  font-size: 13px;
-  color: #666;
-  margin-top: 30px;
-}
-
-
-/* ========== DASHBOARD ========== */
-
-.dashboard-page {
-  min-height: 100vh;
-  background: linear-gradient(180deg, #007bff, #0099ff);
-  font-family: "Poppins", sans-serif;
-  color: #fff;
-}
-
-/* Header */
-.dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.avatar {
-  width: 42px;
-  height: 42px;
-  background: #fff;
-  color: #007bff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-}
-
-.welcome-text {
-  font-size: 13px;
-  opacity: 0.9;
-}
-
-.logout-btn {
-  background: rgba(255,255,255,0.2);
-  border: none;
-  color: #fff;
-  padding: 8px 14px;
-  border-radius: 8px;
-}
-
-/* Wallet */
-.wallet-card {
-  background: #fff;
-  color: #007bff;
-  margin: 20px;
-  padding: 22px;
-  border-radius: 20px;
-  text-align: center;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-}
-
-.wallet-label {
-  font-size: 14px;
-  opacity: 0.8;
-}
-
-.wallet-amount {
-  margin: 12px 0;
-  font-size: 32px;
-}
-
-.fund-btn {
-  background: #007bff;
-  color: #fff;
-  border: none;
-  padding: 10px 22px;
-  border-radius: 10px;
-  font-weight: 600;
-}
-
-/* Services */
-.services {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  padding: 0 20px;
-}
-
-.service-card {
-  background: rgba(255,255,255,0.15);
-  padding: 18px;
-  border-radius: 16px;
-  text-align: center;
-}
-
-.service-card button {
-  margin-top: 10px;
-  background: #fff;
-  color: #007bff;
-  border: none;
-  padding: 8px 18px;
-  border-radius: 8px;
-  font-weight: 600;
-}
-
-/* Settings */
-.settings {
-  margin: 24px 20px;
-}
-
-.settings h3 {
-  margin-bottom: 10px;
-}
-
-.settings ul {
-  list-style: none;
-}
-
-.settings li {
-  padding: 12px;
-  background: rgba(255,255,255,0.15);
-  margin-bottom: 10px;
-  border-radius: 12px;
-}
-
-/* Footer */
-.dashboard-footer {
-  text-align: center;
-  font-size: 13px;
-  opacity: 0.85;
-  padding: 20px;
-}
-
-/* ================= DASHBOARD PAGE ================= */
-
-.dashboard-page {
-  background: #f4f7fb;
-  font-family: "Poppins", system-ui, sans-serif;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Header */
-.dashboard-header {
-  background: linear-gradient(135deg, #005bea, #00c6ff);
-  color: #fff;
-  padding: 18px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.dashboard-header h1 {
-  font-size: 20px;
-}
-
-.user-name {
-  font-size: 14px;
-  opacity: 0.95;
-}
-
-/* Wallet */
-.wallet-card {
-  background: #fff;
-  margin: 20px;
-  padding: 20px;
-  border-radius: 18px;
-  text-align: center;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-}
-
-.wallet-label {
-  font-size: 14px;
-  color: #777;
-}
-
-.wallet-amount {
-  font-size: 32px;
-  margin: 10px 0;
-  color: #0a66d1;
-}
-
-.wallet-btn {
-  background: #0a66d1;
-  color: #fff;
-  border: none;
-  padding: 10px 24px;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-/* Services */
-.services {
-  margin: 10px 20px;
-}
-
-.services h3 {
-  margin-bottom: 12px;
-  color: #333;
-}
-
-.service-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-}
-
-.service-card {
-  background: #fff;
-  padding: 16px;
-  border-radius: 16px;
-  text-align: center;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-  cursor: pointer;
-}
-
-.service-card img {
-  width: 40px;
-  margin-bottom: 8px;
-}
-
-/* Menu */
-.menu {
-  margin: 20px;
-  background: #fff;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-}
-
-.menu a {
-  display: block;
-  padding: 14px 18px;
-  border-bottom: 1px solid #eee;
-  color: #333;
-  text-decoration: none;
-  font-size: 15px;
-}
-
-.menu a:last-child {
-  border-bottom: none;
-}
-
-.menu a.logout {
-  color: #e53935;
-  font-weight: 600;
-}
-
-/* Footer */
-.dashboard-footer {
-  margin-top: auto;
-  text-align: center;
-  padding: 14px;
-  font-size: 13px;
-  color: #777;
-}
-
-
-/* ================= WELCOME PAGE ================= */
-
+/* ===== WELCOME PAGE ===== */
 .welcome-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #0a86ff, #00c6ff);
-  font-family: "Poppins", sans-serif;
+  background: linear-gradient(180deg, #007bff, #00b3ff);
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
+  color: white;
 }
 
 .welcome-wrapper {
   text-align: center;
-  width: 100%;
-  padding: 20px;
 }
 
-/* Logo */
-.logo-box {
+.logo-circle {
+  background: white;
   width: 140px;
   height: 140px;
-  background: rgba(255,255,255,0.95);
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
   margin: 0 auto 20px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
 }
 
-.logo-box img {
+.logo-circle img {
   width: 80px;
-  height: auto;
 }
 
-/* Card */
-.welcome-card {
-  background: rgba(255,255,255,0.12);
-  backdrop-filter: blur(14px);
-  border-radius: 22px;
-  padding: 35px 25px;
-  max-width: 420px;
-  margin: 0 auto;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
-}
-
-.welcome-card h1 {
-  color: #ffffff;
-  font-size: 28px;
+h1 span {
   font-weight: 700;
-  margin-bottom: 10px;
 }
 
-.welcome-card span {
-  color: #ffeb3b;
+.tagline {
+  opacity: 0.9;
 }
 
-.subtitle {
-  color: #eaf6ff;
-  font-size: 15px;
-  margin-bottom: 22px;
-}
-
-/* Buttons */
-.auth-buttons {
+.welcome-buttons {
+  margin-top: 25px;
   display: flex;
+  gap: 15px;
   justify-content: center;
-  gap: 14px;
 }
 
 .btn {
@@ -769,101 +57,80 @@
   border-radius: 10px;
   text-decoration: none;
   font-weight: 600;
-  font-size: 15px;
-  transition: 0.3s ease;
 }
 
-.btn.primary {
-  background: #ffffff;
-  color: #0a86ff;
-}
-
-.btn.primary:hover {
-  background: #e6f2ff;
-}
-
-.btn.outline {
-  border: 2px solid #ffffff;
-  color: #ffffff;
-}
-
-.btn.outline:hover {
-  background: rgba(255,255,255,0.15);
-}
-
-/* Footer */
-.welcome-footer {
-  margin-top: 28px;
-  font-size: 13px;
-  color: rgba(255,255,255,0.85);
-}
-
-/* ================= END WELCOME PAGE ================= */
-
-/* ===== AUTH PAGES (UNCHANGED & STABLE) ===== */
-.auth-page {
-  min-height: 100vh;
-  background: linear-gradient(180deg, #007bff, #00b3ff);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-family: 'Poppins', Arial, sans-serif;
-}
-
-.auth-container {
+.primary {
   background: white;
-  width: 90%;
-  max-width: 400px;
-  padding: 30px;
-  border-radius: 20px;
+  color: #007bff;
+}
+
+.outline {
+  border: 2px solid white;
+  color: white;
+}
+
+/* ===== DASHBOARD ===== */
+.dashboard {
+  background: #f2f6fc;
+  min-height: 100vh;
+}
+
+.dashboard-header {
+  background: linear-gradient(90deg, #007bff, #00b3ff);
+  color: white;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.wallet-card {
+  background: white;
+  margin: 20px;
+  padding: 20px;
+  border-radius: 14px;
   text-align: center;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 }
 
-.auth-logo img {
-  width: 70px;
-  margin-bottom: 10px;
+.balance {
+  font-size: 26px;
+  font-weight: bold;
 }
 
-.auth-container h2 {
-  margin-bottom: 15px;
-  color: #007bff;
+.services {
+  display: flex;
+  gap: 15px;
+  padding: 0 20px;
 }
 
-.auth-container input {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 12px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-}
-
-.password-box {
-  position: relative;
-}
-
-.password-box button {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  border: none;
-  background: none;
-  color: #007bff;
-  cursor: pointer;
-}
-
-.auth-btn {
-  width: 100%;
-  padding: 12px;
-  border-radius: 8px;
-  border: none;
+.service-card {
+  flex: 1;
   background: #007bff;
   color: white;
-  font-weight: bold;
-  cursor: pointer;
+  padding: 20px;
+  border-radius: 14px;
+  text-align: center;
+  font-weight: 600;
 }
 
-.switch-text {
-  margin-top: 15px;
+.settings {
+  padding: 20px;
+}
+
+.settings button {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+}
+
+.settings .danger {
+  background: #ffdddd;
+}
+
+footer {
+  text-align: center;
+  padding: 15px;
+  font-size: 13px;
+  color: #555;
 }

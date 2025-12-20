@@ -2,54 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MAY Connect</title>
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>MAY Connect</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="styles.css" />
 </head>
+<body class="welcome-page">
 
-<body class="home">
-
-  <!-- Welcome Sound (plays once on first user interaction) -->
-  <audio id="welcomeSound" src="sounds/welcome.mp3" preload="auto"></audio>
-
-  <main class="hero">
-    <div class="logo-container">
-      <img src="logo.png" class="logo" alt="MAY Connect Logo" />
+  <div class="welcome-wrapper">
+    <div class="logo-circle">
+      <img src="logo.png" alt="MAY Connect Logo">
     </div>
 
-    <div class="welcome-card">
-      <h1>Welcome to <span class="brand">MAY-Connect</span></h1>
-      <p class="subtitle">
-        Fast, affordable and reliable airtime & data services
-      </p>
+    <h1>Welcome to <span>MAY Connect</span></h1>
+    <p class="tagline">Fast • Reliable • Affordable</p>
 
-      <div class="auth-buttons">
-        <a href="login.html" class="btn login">Login</a>
-        <a href="signup.html" class="btn signup">Sign Up</a>
-      </div>
+    <div class="welcome-buttons">
+      <a href="login.html" class="btn primary">Login</a>
+      <a href="signup.html" class="btn outline">Sign Up</a>
     </div>
-  </main>
+  </div>
 
-  <footer class="site-footer">
-    © 2025 MAY-Connect. All rights reserved.
+  <footer>
+    © 2025 MAY Connect. All rights reserved.
   </footer>
-
-  <script>
-    // Play welcome sound ONCE after first tap/click (browser safe)
-    const audio = document.getElementById("welcomeSound");
-    const playOnce = () => {
-      audio.play().catch(() => {});
-      document.removeEventListener("click", playOnce);
-    };
-    document.addEventListener("click", playOnce);
-  </script>
 
 </body>
 </html>
