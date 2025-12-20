@@ -2,47 +2,37 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard - MAY Connect</title>
   <link rel="stylesheet" href="styles.css" />
+  <script src="app.js" defer></script>
 </head>
-<body class="dashboard">
+<body class="dashboard-page">
 
-  <audio id="welcomeSound" src="sounds/welcome.mp3"></audio>
-
-  <header class="dashboard-header">
-    <span>Welcome 👋</span>
-    <span id="userEmail"></span>
+  <header>
+    <div class="logo-container">
+      <img src="logo.png" alt="MAY Connect Logo" class="logo" />
+    </div>
+    <h2>Welcome, <span id="user-name"></span></h2>
   </header>
 
-  <main class="dashboard-container">
+  <section class="wallet">
+    <h3>Wallet Balance: ₦<span id="wallet-balance">0</span></h3>
+  </section>
 
-    <div class="wallet-card">
-      <h3>Wallet Balance</h3>
-      <h1>₦0.00</h1>
-      <button class="btn primary">Fund Wallet</button>
-    </div>
+  <section class="tabs">
+    <button onclick="showTab('data')" class="tab-btn active">Data Plans</button>
+    <button onclick="showTab('airtime')" class="tab-btn">Airtime</button>
+    <button onclick="showTab('transactions')" class="tab-btn">Transactions</button>
+  </section>
 
-    <div class="service-grid">
-      <div class="service-card">📶 Data</div>
-      <div class="service-card">📞 Airtime</div>
-      <div class="service-card">💼 Wallet</div>
-      <div class="service-card">⚙ Settings</div>
-    </div>
+  <section id="data" class="tab-content active"></section>
+  <section id="airtime" class="tab-content"></section>
+  <section id="transactions" class="tab-content"></section>
 
-    <div class="settings">
-      <button>Enable Biometrics</button>
-      <button>Change Password</button>
-      <button>Contact Support</button>
-      <button class="danger" onclick="logout()">Logout</button>
-    </div>
-
-  </main>
-
-  <footer>
-    © 2025 MAY Connect. All rights reserved.
+  <footer class="site-footer">
+    © MAY Connect 2025. All rights reserved.
   </footer>
 
-  <script src="app.js"></script>
 </body>
 </html>
