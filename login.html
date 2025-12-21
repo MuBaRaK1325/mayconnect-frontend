@@ -3,22 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <title>Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
 </head>
-
 <body class="auth-page">
 
   <div class="auth-box">
     <img src="logo.png" class="auth-logo">
-
     <h2>Login</h2>
 
     <form onsubmit="login(event)">
-      <input id="login-email" type="email" placeholder="Email" required>
+      <input type="email" id="login-email" placeholder="Email" required>
 
       <div class="password-box">
-        <input id="login-password" type="password" placeholder="Password" required>
+        <input type="password" id="login-password" placeholder="Password" required>
         <span onclick="togglePassword('login-password', this)">Show</span>
       </div>
 

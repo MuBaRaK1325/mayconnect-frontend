@@ -3,34 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <title>Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
 </head>
-
 <body class="dashboard-page">
 
   <audio id="welcomeSound" src="sounds/welcome.mp3"></audio>
 
   <div class="dashboard">
+    <h2>Welcome 👋</h2>
 
-    <h1>Welcome 👋</h1>
-
-    <div class="cards">
+    <div class="dashboard-grid">
       <div class="card blue">Wallet<br><strong>₦0.00</strong></div>
-      <div class="card green">Airtime</div>
-      <div class="card purple">Data</div>
+      <div class="card green">Buy Airtime</div>
+      <div class="card purple">Buy Data</div>
       <div class="card orange">Transactions</div>
     </div>
 
-    <button onclick="logout()" class="logout">Logout</button>
-
+    <button class="logout" onclick="logout()">Logout</button>
   </div>
-
-  <script>
-    window.onload = () => {
-      document.getElementById("welcomeSound").play();
-    }
-  </script>
 
 </body>
 </html>
