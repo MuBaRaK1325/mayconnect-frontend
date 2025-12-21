@@ -1,38 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard - MAY Connect</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
 </head>
+
 <body class="dashboard-page">
 
-  <header>
-    <div class="logo-container">
-      <img src="logo.png" alt="MAY Connect Logo" class="logo" />
+  <audio id="welcomeSound" src="sounds/welcome.mp3"></audio>
+
+  <div class="dashboard">
+
+    <h1>Welcome 👋</h1>
+
+    <div class="cards">
+      <div class="card blue">Wallet<br><strong>₦0.00</strong></div>
+      <div class="card green">Airtime</div>
+      <div class="card purple">Data</div>
+      <div class="card orange">Transactions</div>
     </div>
-    <h2>Welcome, <span id="user-name"></span></h2>
-  </header>
 
-  <section class="wallet">
-    <h3>Wallet Balance: ₦<span id="wallet-balance">0</span></h3>
-  </section>
+    <button onclick="logout()" class="logout">Logout</button>
 
-  <section class="tabs">
-    <button onclick="showTab('data')" class="tab-btn active">Data Plans</button>
-    <button onclick="showTab('airtime')" class="tab-btn">Airtime</button>
-    <button onclick="showTab('transactions')" class="tab-btn">Transactions</button>
-  </section>
+  </div>
 
-  <section id="data" class="tab-content active"></section>
-  <section id="airtime" class="tab-content"></section>
-  <section id="transactions" class="tab-content"></section>
-
-  <footer class="site-footer">
-    © MAY Connect 2025. All rights reserved.
-  </footer>
+  <script>
+    window.onload = () => {
+      document.getElementById("welcomeSound").play();
+    }
+  </script>
 
 </body>
 </html>

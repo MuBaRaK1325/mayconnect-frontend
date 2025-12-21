@@ -1,38 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
   <title>MAY Connect</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css">
 </head>
+
 <body class="welcome-page">
 
-  <div class="welcome-container">
-    <div class="logo-container">
-      <img src="logo.png" alt="MAY Connect Logo" class="logo" />
+  <div class="welcome-wrapper">
+
+    <div class="logo-circle">
+      <img src="logo.png" alt="MAY Connect">
     </div>
 
     <div class="welcome-card">
-      <h1>Welcome to <span class="brand">MAY Connect</span></h1>
-      <p class="subtitle">Recharge Airtime, Buy Data & Manage Wallet Effortlessly</p>
-      <div class="button-group">
-        <a href="signup.html" class="btn signup">Sign Up</a>
-        <a href="login.html" class="btn login">Login</a>
+      <h1>Welcome to <span>MAY Connect</span></h1>
+      <p>Affordable Airtime & Data Made Simple</p>
+
+      <div class="welcome-buttons">
+        <a href="signup.html" class="btn primary">Sign Up</a>
+        <a href="login.html" class="btn outline">Login</a>
       </div>
     </div>
+
+    <footer>© MAY Connect 2025. All rights reserved.</footer>
+
   </div>
 
-  <footer class="site-footer">
-    © MAY Connect 2025. All rights reserved.
-  </footer>
-
-  <script>
-    // Play welcome sound once page loads
-    window.addEventListener("load", () => {
-      const audio = new Audio("sounds/welcome.mp3");
-      audio.play();
-    });
-  </script>
 </body>
 </html>
