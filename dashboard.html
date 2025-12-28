@@ -10,18 +10,57 @@
 <body class="dashboard-page">
 
   <audio id="welcomeSound" src="sounds/welcome.mp3"></audio>
+  <audio id="successSound" src="sounds/success.mp3"></audio>
 
   <div class="dashboard">
     <h2>Welcome 👋</h2>
 
     <div class="dashboard-grid">
       <div class="card blue">Wallet<br><strong>₦0.00</strong></div>
-      <div class="card green">Buy Airtime</div>
-      <div class="card purple">Buy Data</div>
-      <div class="card orange">Transactions</div>
+      <div class="card green" onclick="showModal('fundModal')">Buy Airtime</div>
+      <div class="card purple" onclick="showModal('purchaseDataModal')">Buy Data</div>
+      <div class="card orange" onclick="showModal('transactionsModal')">Transactions</div>
     </div>
 
     <button class="logout" onclick="logout()">Logout</button>
+  </div>
+
+  <!-- PIN Modal -->
+  <div id="pinModal" class="modal">
+    <div class="modal-content">
+      <h3 class="modal-title">Enter PIN</h3>
+      <input type="password" id="pinInput" placeholder="Enter your PIN">
+      <button id="pinSubmit">Submit</button>
+      <button onclick="closeModal('pinModal')">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Receipt Modal -->
+  <div id="receiptModal" class="modal">
+    <div class="modal-content">
+      <div class="receipt-body"></div>
+      <button onclick="closeModal('receiptModal')">Close</button>
+    </div>
+  </div>
+
+  <!-- Transactions Modal -->
+  <div id="transactionsModal" class="modal">
+    <div class="modal-content">
+      <h3>Transaction History</h3>
+      <div class="transactions-list"></div>
+      <button onclick="closeModal('transactionsModal')">Close</button>
+    </div>
+  </div>
+
+  <!-- Fund Modal -->
+  <div id="fundModal" class="modal">
+    <div class="modal-content">
+      <h3>Fund Wallet</h3>
+      <input type="number" id="fundAmount" placeholder="Enter amount">
+      <button onclick="fundWalletPaystack()">Fund via Paystack</button>
+      <button onclick="fundWalletFlutterwave()">Fund via Flutterwave</button>
+      <button onclick="closeModal('fundModal')">Close</button>
+    </div>
   </div>
 
 </body>
