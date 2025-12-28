@@ -14,13 +14,15 @@
     <h2>Create Account</h2>
 
     <form id="signupForm">
-      <input type="text" id="signupName" placeholder="Full Name" required>
-      <input type="email" id="signupEmail" placeholder="Email" required>
+      <input type="text" id="signup-name" placeholder="Full Name" required>
+      <input type="email" id="signup-email" placeholder="Email" required>
+
       <div class="password-box">
-        <input type="password" id="signupPassword" placeholder="Password" required>
-        <span onclick="togglePassword('signupPassword', this)">Show</span>
+        <input type="password" id="signup-password" placeholder="Password" required>
+        <span onclick="togglePassword('signup-password', this)">Show</span>
       </div>
-      <button type="submit" id="signupBtn">Sign Up</button>
+
+      <button type="submit">Sign Up</button>
     </form>
 
     <p>Already have an account? <a href="login.html">Login</a></p>
@@ -28,3 +30,4 @@
 
 </body>
 </html>
+

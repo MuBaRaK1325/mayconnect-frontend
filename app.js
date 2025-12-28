@@ -13,46 +13,64 @@ function togglePassword(id, el) {
 }
 
 /* ---------------- SIGNUP ---------------- */
-async function signup(e) {
-  e.preventDefault();
-  const name = document.getElementById("signup-name").value;
-  const email = document.getElementById("signup-email").value;
-  const password = document.getElementById("signup-password").value;
+const signupForm = document.getElementById("signupForm");
+  if (signupForm) {
+    signupForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-  const res = await fetch(`${backendUrl}/api/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, email, password })
-  });
+      const name = document.getElementById("signup-name").value;
+      const email = document.getElementById("signup-email").value;
+      const password = document.getElementById("signup-password").value;
 
-  if (res.ok) {
-    localStorage.setItem("email", email);
-    window.location.href = "dashboard.html";
-  } else {
-    const data = await res.json();
-    alert(data.error || "Signup failed");
+      const res = await fetch(`${backendUrl}/api/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("email", email);
+        window.location.href = "dashboard.html"; ✅
+      } else {
+        alert(data.error || "Signup failed");
+      }
+    });
+  }
+
+});
   }
 }
 
 /* ---------------- LOGIN ---------------- */
-async function login(e) {
-  e.preventDefault();
-  const email = document.getElementById("login-email").value;
-  const password = document.getElementById("login-password").value;
+document.addEventListener("DOMContentLoaded", () => {
 
-  const res = await fetch(`${backendUrl}/api/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password })
-  });
+  const loginForm = document.getElementById("loginForm");
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-  const data = await res.json();
-  if (res.ok) {
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("email", email);
-    window.location.href = "dashboard.html";
-  } else alert(data.error || "Login failed");
-}
+      const email = document.getElementById("login-email").value;
+      const password = document.getElementById("login-password").value;
+
+      const res = await fetch(`${backendUrl}/api/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("email", email);
+        window.location.href = "dashboard.html"; ✅
+      } else {
+        alert(data.error || "Login failed");
+      }
+    });
+  }
+x
 
 /* ---------------- DASHBOARD WELCOME SOUND ---------------- */
 window.onload = () => {
