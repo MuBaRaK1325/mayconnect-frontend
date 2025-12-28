@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Dashboard</title>
+  <title>Dashboard - MAY-Connect</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
 </head>
 <body class="dashboard-page">
 
+  <!-- Sounds -->
   <audio id="welcomeSound" src="sounds/welcome.mp3"></audio>
   <audio id="successSound" src="sounds/success.mp3"></audio>
 
@@ -17,49 +18,50 @@
 
     <div class="dashboard-grid">
       <div class="card blue">Wallet<br><strong>₦0.00</strong></div>
-      <div class="card green" onclick="showModal('fundModal')">Buy Airtime</div>
-      <div class="card purple" onclick="showModal('purchaseDataModal')">Buy Data</div>
-      <div class="card orange" onclick="showModal('transactionsModal')">Transactions</div>
+      <div class="card green">
+        Buy Airtime
+        <input type="number" id="airtimeAmount" placeholder="Amount">
+        <input type="text" id="airtimeDetails" placeholder="Phone / Network">
+        <button onclick="purchase('airtime')">Purchase</button>
+      </div>
+      <div class="card purple">
+        Buy Data
+        <input type="number" id="dataAmount" placeholder="Amount">
+        <input type="text" id="dataDetails" placeholder="Plan / Network">
+        <button onclick="purchase('data')">Purchase</button>
+      </div>
+      <div class="card orange">
+        Transactions
+        <div id="transactionsList"></div>
+      </div>
+    </div>
+
+    <div class="fund-wallet">
+      <h3>Fund Wallet</h3>
+      <input type="number" id="fundAmount" placeholder="Enter amount">
+      <button onclick="fundWalletPaystack()">Fund via Paystack</button>
+      <button onclick="fundWalletFlutterwave()">Fund via Flutterwave</button>
     </div>
 
     <button class="logout" onclick="logout()">Logout</button>
   </div>
 
-  <!-- PIN Modal -->
+  <!-- PIN/Biometric Modal -->
   <div id="pinModal" class="modal">
     <div class="modal-content">
-      <h3 class="modal-title">Enter PIN</h3>
-      <input type="password" id="pinInput" placeholder="Enter your PIN">
-      <button id="pinSubmit">Submit</button>
-      <button onclick="closeModal('pinModal')">Cancel</button>
+      <span class="close" onclick="closeModal('pinModal')">&times;</span>
+      <h3 id="modalActionText">Action</h3>
+      <input type="password" id="pinInput" placeholder="Enter PIN">
+      <button id="pinSubmitBtn">Verify PIN</button>
+      <button id="biometricBtn">Use Biometric</button>
     </div>
   </div>
 
   <!-- Receipt Modal -->
   <div id="receiptModal" class="modal">
     <div class="modal-content">
-      <div class="receipt-body"></div>
-      <button onclick="closeModal('receiptModal')">Close</button>
-    </div>
-  </div>
-
-  <!-- Transactions Modal -->
-  <div id="transactionsModal" class="modal">
-    <div class="modal-content">
-      <h3>Transaction History</h3>
-      <div class="transactions-list"></div>
-      <button onclick="closeModal('transactionsModal')">Close</button>
-    </div>
-  </div>
-
-  <!-- Fund Modal -->
-  <div id="fundModal" class="modal">
-    <div class="modal-content">
-      <h3>Fund Wallet</h3>
-      <input type="number" id="fundAmount" placeholder="Enter amount">
-      <button onclick="fundWalletPaystack()">Fund via Paystack</button>
-      <button onclick="fundWalletFlutterwave()">Fund via Flutterwave</button>
-      <button onclick="closeModal('fundModal')">Close</button>
+      <span class="close" onclick="closeModal('receiptModal')">&times;</span>
+      <div id="receiptContent"></div>
     </div>
   </div>
 
