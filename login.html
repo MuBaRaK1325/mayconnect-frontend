@@ -13,15 +13,15 @@
     <img src="logo.png" class="auth-logo">
     <h2>Login</h2>
 
-    <form onsubmit="login(event)">
-      <input type="email" id="login-email" placeholder="Email" required>
-
+    <form id="loginForm">
+      <input type="email" id="loginEmail" placeholder="Email" required>
+      
       <div class="password-box">
-        <input type="password" id="login-password" placeholder="Password" required>
-        <span onclick="togglePassword('login-password', this)">Show</span>
+        <input type="password" id="loginPassword" placeholder="Password" required>
+        <span onclick="togglePassword('loginPassword', this)">Show</span>
       </div>
 
-      <button type="submit">Login</button>
+      <button type="submit" id="loginBtn">Login</button>
     </form>
 
     <p>No account? <a href="signup.html">Sign Up</a></p>
