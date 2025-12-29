@@ -1,3 +1,4 @@
+$ cat app.js
 const backendUrl = "https://mayconnect-backend-1.onrender.com";
 
 /* ---------------- SHOW / HIDE PASSWORD ---------------- */
@@ -32,7 +33,7 @@ const signupForm = document.getElementById("signupForm");
       if (res.ok) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("email", email);
-        window.location.href = "dashboard.html"; ✅
+        window.location.href = "dashboard.html";  ✅
       } else {
         alert(data.error || "Signup failed");
       }
@@ -64,7 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (res.ok) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("email", email);
-        window.location.href = "dashboard.html"; ✅
+        window.location.href = "dashboard.html";  ✅
       } else {
         alert(data.error || "Login failed");
       }
