@@ -1,20 +1,18 @@
-$ cat app.js
 const backendUrl = "https://mayconnect-backend-1.onrender.com";
 
 /* ---------------- SHOW / HIDE PASSWORD ---------------- */
 function togglePassword(id, el) {
   const input = document.getElementById(id);
-  if (input.type === "password") {
-    input.type = "text";
-    el.textContent = "Hide";
-  } else {
-    input.type = "password";
-    el.textContent = "Show";
-  }
+  if (!input) return;
+  input.type = input.type === "password" ? "text" : "password";
+  el.textContent = input.type === "password" ? "Show" : "Hide";
 }
 
-/* ---------------- SIGNUP ---------------- */
-const signupForm = document.getElementById("signupForm");
+/* ---------------- DOM READY ---------------- */
+document.addEventListener("DOMContentLoaded", () => {
+
+  /* ---------------- SIGNUP ---------------- */
+  const signupForm = document.getElementById("signupForm");
   if (signupForm) {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -30,23 +28,18 @@ const signupForm = document.getElementById("signupForm");
       });
 
       const data = await res.json();
-      if (res.ok) {
+
+      if (res.ok && data.token) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("email", email);
-        window.location.href = "dashboard.html";  ✅
+        window.location.replace("dashboard.html");
       } else {
         alert(data.error || "Signup failed");
       }
     });
   }
 
-});
-  }
-}
-
-/* ---------------- LOGIN ---------------- */
-document.addEventListener("DOMContentLoaded", () => {
-
+  /* ---------------- LOGIN ---------------- */
   const loginForm = document.getElementById("loginForm");
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
@@ -62,118 +55,123 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       const data = await res.json();
-      if (res.ok) {
+
+      if (res.ok && data.token) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("email", email);
-        window.location.href = "dashboard.html";  ✅
+        window.location.replace("dashboard.html");
       } else {
         alert(data.error || "Login failed");
       }
     });
   }
-x
 
-/* ---------------- DASHBOARD WELCOME SOUND ---------------- */
-window.onload = () => {
-  const sound = document.getElementById("welcomeSound");
-  if (sound) sound.play();
-  updateWalletBalance();
-  loadTransactions();
-};
+  /* ---------------- DASHBOARD AUTO LOAD ---------------- */
+  if (localStorage.getItem("token")) {
+    updateWalletBalance();
+    loadTransactions();
+  }
+});
 
 /* ---------------- LOGOUT ---------------- */
 function logout() {
   localStorage.clear();
-  window.location.href = "login.html";
+  window.location.replace("login.html");
 }
 
-/* ---------------- WALLET & TRANSACTION FUNCTIONS ---------------- */
-async function getAuthToken() {
+/* ---------------- AUTH ---------------- */
+function getAuthToken() {
   return localStorage.getItem("token");
 }
 
-/* Update wallet balance dynamically */
+/* ---------------- WALLET ---------------- */
 async function updateWalletBalance() {
-  const token = await getAuthToken();
+  const token = getAuthToken();
   if (!token) return;
 
   const res = await fetch(`${backendUrl}/api/wallet`, {
     headers: { Authorization: `Bearer ${token}` }
   });
+
   const data = await res.json();
   const walletEl = document.querySelector(".card.blue strong");
-  if (walletEl && data.balance !== undefined) walletEl.textContent = `₦${data.balance}`;
+  if (walletEl && data.balance !== undefined) {
+    walletEl.textContent = `₦${data.balance}`;
+  }
 }
 
-/* Load transaction history dynamically */
+/* ---------------- TRANSACTIONS ---------------- */
 async function loadTransactions() {
-  const token = await getAuthToken();
+  const token = getAuthToken();
   if (!token) return;
 
   const res = await fetch(`${backendUrl}/api/wallet/transactions`, {
     headers: { Authorization: `Bearer ${token}` }
   });
+
   const data = await res.json();
+  const container = document.getElementById("transactionsList");
+  if (!container) return;
 
-  const transactionsContainer = document.getElementById("transactionsList");
-  if (!transactionsContainer) return;
-  transactionsContainer.innerHTML = "";
+  container.innerHTML = "";
 
-  if (data.transactions && data.transactions.length) {
-    data.transactions.forEach(txn => {
-      const div = document.createElement("div");
-      div.className = "txn-card";
-      div.innerHTML = `
-        <p><strong>${txn.type.toUpperCase()}</strong> - ₦${txn.amount}</p>
-        <p>${txn.description}</p>
-        <button onclick="showReceipt('${txn.reference}')">View Receipt</button>
-      `;
-      transactionsContainer.appendChild(div);
-    });
-  }
+  (data.transactions || []).forEach(txn => {
+    const div = document.createElement("div");
+    div.className = "txn-card";
+    div.innerHTML = `
+      <p><strong>${txn.type.toUpperCase()}</strong> - ₦${txn.amount}</p>
+      <p>${txn.description || ""}</p>
+      <button onclick="showReceipt('${txn.reference}')">View Receipt</button>
+    `;
+    container.appendChild(div);
+  });
 }
 
-/* ---------------- PIN / BIOMETRIC MODAL ---------------- */
-async function verifyPinOrBiometric(actionDesc) {
+/* ---------------- PIN / BIOMETRIC ---------------- */
+async function verifyPinOrBiometric(action) {
   return new Promise(resolve => {
     const modal = document.getElementById("pinModal");
-    const actionText = document.getElementById("modalActionText");
+    const text = document.getElementById("modalActionText");
     const pinInput = document.getElementById("pinInput");
-    const biometricBtn = document.getElementById("biometricBtn");
-    const pinSubmitBtn = document.getElementById("pinSubmitBtn");
+    const pinBtn = document.getElementById("pinSubmitBtn");
+    const bioBtn = document.getElementById("biometricBtn");
 
-    actionText.textContent = actionDesc;
+    text.textContent = action;
     pinInput.value = "";
     modal.style.display = "block";
 
-    // PIN submit
-    pinSubmitBtn.onclick = async () => {
-      const pin = pinInput.value;
-      const token = await getAuthToken();
+    pinBtn.onclick = async () => {
+      const token = getAuthToken();
       const res = await fetch(`${backendUrl}/api/wallet/verify-pin`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ pin })
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ pin: pinInput.value })
       });
-      const data = await res.json();
+
       if (res.ok) {
         modal.style.display = "none";
         resolve(true);
-      } else alert(data.error || "Incorrect PIN");
+      } else {
+        alert("Invalid PIN");
+      }
     };
 
-    // Biometric
-    biometricBtn.onclick = async () => {
-      const token = await getAuthToken();
+    bioBtn.onclick = async () => {
+      const token = getAuthToken();
       const res = await fetch(`${backendUrl}/api/auth/biometric-login`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await res.json();
+
       if (res.ok) {
         modal.style.display = "none";
         resolve(true);
-      } else alert(data.error || "Biometric verification failed");
+      } else {
+        alert("Biometric failed");
+      }
     };
   });
 }
@@ -181,106 +179,99 @@ async function verifyPinOrBiometric(actionDesc) {
 /* ---------------- FUND WALLET ---------------- */
 async function fundWalletPaystack() {
   const amount = parseFloat(document.getElementById("fundAmount").value);
-  if (!amount || amount <= 0) return alert("Enter a valid amount");
+  if (!amount) return alert("Enter amount");
 
-  const verified = await verifyPinOrBiometric("Fund Wallet via Paystack");
-  if (!verified) return;
+  if (!(await verifyPinOrBiometric("Fund Wallet via Paystack"))) return;
 
-  const token = await getAuthToken();
+  const token = getAuthToken();
   const email = localStorage.getItem("email");
 
-  try {
-    const res = await fetch(`${backendUrl}/api/wallet/deposit/paystack`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ amount, email })
-    });
-    const data = await res.json();
-    if (data.authorization_url) window.open(data.authorization_url, "_blank");
-    else alert("Failed to initialize Paystack payment");
-    setTimeout(updateWalletBalance, 5000); // auto-update
-  } catch (err) {
-    console.error(err);
-    alert("Error funding wallet");
+  const res = await fetch(`${backendUrl}/api/wallet/deposit/paystack`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ amount, email })
+  });
+
+  const data = await res.json();
+  if (data.authorization_url) {
+    window.open(data.authorization_url, "_blank");
+    setTimeout(updateWalletBalance, 5000);
   }
 }
 
 async function fundWalletFlutterwave() {
   const amount = parseFloat(document.getElementById("fundAmount").value);
-  if (!amount || amount <= 0) return alert("Enter a valid amount");
+  if (!amount) return alert("Enter amount");
 
-  const verified = await verifyPinOrBiometric("Fund Wallet via Flutterwave");
-  if (!verified) return;
+  if (!(await verifyPinOrBiometric("Fund Wallet via Flutterwave"))) return;
 
-  const token = await getAuthToken();
+  const token = getAuthToken();
   const email = localStorage.getItem("email");
 
-  try {
-    const res = await fetch(`${backendUrl}/api/wallet/deposit/flutterwave`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ amount, email })
-    });
-    const data = await res.json();
-    if (data.data && data.data.link) window.open(data.data.link, "_blank");
-    else alert("Failed to initialize Flutterwave payment");
+  const res = await fetch(`${backendUrl}/api/wallet/deposit/flutterwave`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ amount, email })
+  });
+
+  const data = await res.json();
+  if (data.data?.link) {
+    window.open(data.data.link, "_blank");
     setTimeout(updateWalletBalance, 5000);
-  } catch (err) {
-    console.error(err);
-    alert("Error funding wallet");
   }
 }
 
 /* ---------------- PURCHASE ---------------- */
 async function purchase(type) {
   const amount = parseFloat(document.getElementById(`${type}Amount`).value);
-  const detailsInput = document.getElementById(`${type}Details`).value;
-  if (!amount || amount <= 0) return alert("Enter valid amount");
+  const details = document.getElementById(`${type}Details`).value;
 
-  const verified = await verifyPinOrBiometric(`Purchase ${type}`);
-  if (!verified) return;
+  if (!amount) return alert("Enter amount");
+  if (!(await verifyPinOrBiometric(`Purchase ${type}`))) return;
 
-  const token = await getAuthToken();
-  try {
-    const res = await fetch(`${backendUrl}/api/wallet/purchase`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ type, amount, details: { info: detailsInput } })
-    });
-    const data = await res.json();
-    if (res.ok) {
-      showReceipt(data.receipt.reference, data.receipt);
-      updateWalletBalance();
-      loadTransactions();
-      const sound = document.getElementById("successSound");
-      if (sound) sound.play();
-    } else alert(data.error || "Purchase failed");
-  } catch (err) {
-    console.error(err);
-    alert("Error making purchase");
+  const token = getAuthToken();
+  const res = await fetch(`${backendUrl}/api/wallet/purchase`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ type, amount, details: { info: details } })
+  });
+
+  const data = await res.json();
+  if (res.ok) {
+    showReceipt(data.receipt.reference, data.receipt);
+    updateWalletBalance();
+    loadTransactions();
   }
 }
 
-/* ---------------- SHOW RECEIPT ---------------- */
-function showReceipt(reference, receiptData = null) {
+/* ---------------- RECEIPT ---------------- */
+function showReceipt(ref, receipt = {}) {
   const modal = document.getElementById("receiptModal");
-  const receiptContainer = document.getElementById("receiptContent");
+  const body = document.getElementById("receiptContent");
 
-  let html = `<img src="logo.png" class="receipt-logo"><h3>MAY-Connect Receipt</h3>`;
-  if (receiptData) {
-    html += `<p>Reference: ${receiptData.reference}</p>`;
-    html += `<p>Type: ${receiptData.type}</p>`;
-    html += `<p>Amount: ₦${receiptData.amount}</p>`;
-    html += `<p>Status: ${receiptData.status}</p>`;
-    html += `<p>Date: ${new Date(receiptData.date).toLocaleString()}</p>`;
-  } else html += `<p>Reference: ${reference}</p>`;
+  body.innerHTML = `
+    <img src="logo.png" class="receipt-logo">
+    <h3>MAY-Connect Receipt</h3>
+    <p>Reference: ${receipt.reference || ref}</p>
+    <p>Type: ${receipt.type || ""}</p>
+    <p>Amount: ₦${receipt.amount || ""}</p>
+    <p>Status: ${receipt.status || "SUCCESS"}</p>
+    <p>Date: ${new Date().toLocaleString()}</p>
+  `;
 
-  receiptContainer.innerHTML = html;
   modal.style.display = "block";
 }
 
-/* ---------------- CLOSE MODALS ---------------- */
-function closeModal(modalId) {
-  const modal = document.getElementById(modalId);
+function closeModal(id) {
+  const modal = document.getElementById(id);
   if (modal) modal.style.display = "none";
 }
