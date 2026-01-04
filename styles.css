@@ -1,231 +1,293 @@
-/* ===== MODAL STYLING ===== */
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0,0,0,0.6);
-}
-
-.modal-content {
-  background-color: #fff;
-  margin: 10% auto;
-  padding: 20px;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 400px;
-  text-align: center;
-}
-
-.close {
-  color: #aaa;
-  float: right;
-  font-size: 24px;
-  cursor: pointer;
-}
-
-.close:hover {
-  color: #000;
-}
-
-.receipt-logo {
-  width: 100px;
-  margin-bottom: 10px;
-}
-
-button {
-  padding: 10px 20px;
-  margin: 10px 5px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-button:hover {
-  opacity: 0.9;
-}
-
-input[type="password"], input[type="number"] {
-  width: 80%;
-  padding: 10px;
-  margin: 10px 0;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 16px;
-}
-
+/* =====================
+   GLOBAL RESET
+===================== */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Poppins', sans-serif;
 }
 
-/* ===== WELCOME PAGE ===== */
-.welcome-page {
+body {
+  font-family: "Inter", sans-serif;
+  background: linear-gradient(135deg, #0f172a, #020617);
+  color: #e5e7eb;
   min-height: 100vh;
-  background: linear-gradient(180deg, #0a86ff, #00b3ff);
+}
+
+/* =====================
+   HEADER
+===================== */
+.header {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
+  padding: 20px 28px;
+  background: #020617;
+  border-bottom: 1px solid #1e293b;
 }
 
-.welcome-wrapper {
-  text-align: center;
-  color: #fff;
+.logo {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #22c55e;
 }
 
-.logo-circle {
-  width: 120px;
-  height: 120px;
-  background: #fff;
-  border-radius: 50%;
+.user-area {
   display: flex;
-  justify-content: center;
   align-items: center;
-  margin: auto;
-}
-
-.logo-circle img {
-  width: 70px;
-}
-
-.welcome-card {
-  background: rgba(255,255,255,0.15);
-  padding: 30px;
-  border-radius: 20px;
-  margin-top: 20px;
-}
-
-.welcome-card span {
-  color: #ffdd00;
-}
-
-.welcome-buttons {
-  margin-top: 20px;
-  display: flex;
-  justify-content: center;
   gap: 15px;
 }
 
-.btn {
-  padding: 10px 25px;
-  border-radius: 10px;
-  text-decoration: none;
+.user-area span {
+  font-weight: 500;
+}
+
+.logout-btn {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  opacity: 0.9;
+}
+
+/* =====================
+   DASHBOARD LAYOUT
+===================== */
+.dashboard {
+  max-width: 1100px;
+  margin: 40px auto;
+  padding: 0 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 25px;
+}
+
+/* =====================
+   CARDS
+===================== */
+.card {
+  background: #020617;
+  border-radius: 14px;
+  padding: 22px;
+  border: 1px solid #1e293b;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+
+.card h3 {
+  margin-bottom: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #f9fafb;
+}
+
+/* =====================
+   WALLET CARD
+===================== */
+.wallet-card {
+  text-align: center;
+}
+
+.balance {
+  display: block;
+  font-size: 2.3rem;
+  font-weight: 700;
+  margin: 15px 0;
+  color: #22c55e;
+}
+
+.fund {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fund input {
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+  background: #020617;
+  border: 1px solid #1e293b;
+  color: #fff;
+}
+
+.fund button {
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
   font-weight: 600;
 }
 
-.primary {
-  background: #fff;
-  color: #007bff;
-}
-
-.outline {
-  border: 2px solid #fff;
+.fund button:first-of-type {
+  background: #2563eb;
   color: #fff;
 }
 
-footer {
-  margin-top: 20px;
-  font-size: 13px;
+.fund button:last-of-type {
+  background: #9333ea;
+  color: #fff;
 }
 
-/* ===== AUTH PAGES ===== */
-.auth-page {
-  min-height: 100vh;
-  background: linear-gradient(180deg, #007bff, #0099ff);
+.fund button:hover {
+  opacity: 0.9;
+}
+
+/* =====================
+   QUICK ACTIONS
+===================== */
+.actions-card .action {
   display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.actions-card input {
+  padding: 11px;
+  border-radius: 8px;
+  border: 1px solid #1e293b;
+  background: #020617;
+  color: #fff;
+}
+
+.actions-card button {
+  padding: 12px;
+  background: #22c55e;
+  color: #020617;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.actions-card button:hover {
+  background: #16a34a;
+}
+
+/* =====================
+   TRANSACTIONS
+===================== */
+.transactions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.txn-card {
+  background: #020617;
+  border: 1px solid #1e293b;
+  padding: 14px;
+  border-radius: 10px;
+}
+
+.txn-card p {
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+
+.txn-card button {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+}
+
+.txn-card button:hover {
+  opacity: 0.9;
+}
+
+/* =====================
+   MODALS
+===================== */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,23,0.8);
+  display: none;
   justify-content: center;
   align-items: center;
+  z-index: 1000;
 }
 
-.auth-box {
-  background: #fff;
-  padding: 30px;
-  border-radius: 20px;
+.modal-content {
+  background: #020617;
+  padding: 25px;
+  border-radius: 14px;
   width: 90%;
-  max-width: 350px;
+  max-width: 380px;
   text-align: center;
+  border: 1px solid #1e293b;
 }
 
-.auth-logo {
-  width: 80px;
+.modal-content h3 {
+  margin-bottom: 15px;
+}
+
+.modal-content input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  border: 1px solid #1e293b;
+  background: #020617;
+  color: #fff;
+}
+
+.modal-content button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 8px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#pinSubmitBtn {
+  background: #22c55e;
+  color: #020617;
+}
+
+#biometricBtn {
+  background: #2563eb;
+  color: #fff;
+}
+
+.modal-content button:last-child {
+  background: #374151;
+  color: #fff;
+}
+
+/* =====================
+   RECEIPT
+===================== */
+.receipt-logo {
+  width: 60px;
   margin-bottom: 10px;
 }
 
-.auth-box input {
-  width: 100%;
-  padding: 10px;
-  margin: 8px 0;
-  border-radius: 8px;
-  border: 1px solid #ccc;
+#receiptContent p {
+  margin: 6px 0;
+  font-size: 0.95rem;
 }
 
-.password-box {
-  position: relative;
-}
+/* =====================
+   RESPONSIVE
+===================== */
+@media (max-width: 600px) {
+  .dashboard {
+    margin-top: 20px;
+  }
 
-.password-box span {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  color: #007bff;
-}
-
-.auth-box button {
-  width: 100%;
-  margin-top: 10px;
-  padding: 10px;
-  border: none;
-  background: #007bff;
-  color: #fff;
-  border-radius: 8px;
-}
-
-/* ===== DASHBOARD ===== */
-.dashboard-page {
-  min-height: 100vh;
-  background: #f4f6f8;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.dashboard {
-  width: 90%;
-  max-width: 400px;
-  text-align: center;
-}
-
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 15px;
-  margin-top: 20px;
-}
-
-.card {
-  padding: 20px;
-  border-radius: 15px;
-  color: #fff;
-}
-
-.blue { background: #007bff; }
-.green { background: #28a745; }
-.purple { background: #6f42c1; }
-.orange { background: #fd7e14; }
-
-.logout {
-  margin-top: 20px;
-  background: red;
-  color: #fff;
-  border: none;
-  padding: 10px;
-  border-radius: 10px;
+  .balance {
+    font-size: 2rem;
+  }
 }
