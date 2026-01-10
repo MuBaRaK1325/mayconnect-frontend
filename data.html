@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAY-Connect | Buy Data</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ================= HEADER ================= -->
+  <div class="page-header">
+    <button class="back-btn" onclick="window.history.back()">←</button>
+    <h2>Buy Data</h2>
+  </div>
+
+  <!-- ================= AUDIO ================= -->
+  <audio id="successSound" src="sounds/success.mp3" preload="auto"></audio>
+
+  <!-- ================= PIN MODAL ================= -->
+  <div id="pinModal" class="modal hidden">
+    <div class="modal-card pin-card">
+      <h3>Enter Transaction PIN</h3>
+      <p class="pin-sub">Confirm this transaction</p>
+      <div class="pin-inputs">
+        <input type="password" maxlength="1">
+        <input type="password" maxlength="1">
+        <input type="password" maxlength="1">
+        <input type="password" maxlength="1">
+      </div>
+      <button class="primary-btn" onclick="verifyPin()">Confirm</button>
+      <button class="biometric-btn" onclick="useBiometric()">🔒 Use Biometric</button>
+      <button class="secondary-btn" onclick="closePin()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ================= RECEIPT MODAL ================= -->
+  <div id="receiptModal" class="modal hidden">
+    <div class="modal-card receipt-card">
+      <img src="images/mayconnect-logo.png" class="receipt-logo" />
+      <h3 class="success-title">Transaction Successful</h3>
+      <div id="receiptBody" class="receipt-body"></div>
+      <button class="primary-btn" onclick="closeReceipt()">Done</button>
+    </div>
+  </div>
+
+  <!-- ================= NETWORK SELECTION ================= -->
+  <div class="purchase-page">
+    <h3>Select Network</h3>
+    <div id="networkContainer" class="network-options"></div>
+
+    <div id="plansContainer" class="plans-container"></div>
+    <button class="primary-btn" onclick="confirmOrder()">Confirm Data Purchase</button>
+  </div>
+
+  <!-- ================= SCRIPT ================= -->
+  <script src="app.js"></script>
+</body>
+</html>

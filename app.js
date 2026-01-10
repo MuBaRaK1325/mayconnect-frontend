@@ -10,13 +10,13 @@ function togglePassword(id, el) {
 
 /* ---------------- DOM READY ---------------- */
 document.addEventListener("DOMContentLoaded", () => {
+  playWelcomeSound();
 
   /* ---------------- SIGNUP ---------------- */
   const signupForm = document.getElementById("signupForm");
   if (signupForm) {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-
       const name = document.getElementById("signup-name").value;
       const email = document.getElementById("signup-email").value;
       const password = document.getElementById("signup-password").value;
@@ -44,7 +44,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-
       const email = document.getElementById("login-email").value;
       const password = document.getElementById("login-password").value;
 
@@ -121,157 +120,214 @@ async function loadTransactions() {
     div.innerHTML = `
       <p><strong>${txn.type.toUpperCase()}</strong> - ₦${txn.amount}</p>
       <p>${txn.description || ""}</p>
-      <button onclick="showReceipt('${txn.reference}')">View Receipt</button>
+      <button onclick="showReceipt(${JSON.stringify(txn)})">View Receipt</button>
     `;
     container.appendChild(div);
   });
 }
 
 /* ---------------- PIN / BIOMETRIC ---------------- */
-async function verifyPinOrBiometric(action) {
-  return new Promise(resolve => {
-    const modal = document.getElementById("pinModal");
-    const text = document.getElementById("modalActionText");
-    const pinInput = document.getElementById("pinInput");
-    const pinBtn = document.getElementById("pinSubmitBtn");
-    const bioBtn = document.getElementById("biometricBtn");
+let pendingAction = null;
 
-    text.textContent = action;
-    pinInput.value = "";
-    modal.style.display = "block";
-
-    pinBtn.onclick = async () => {
-      const token = getAuthToken();
-      const res = await fetch(`${backendUrl}/api/wallet/verify-pin`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ pin: pinInput.value })
-      });
-
-      if (res.ok) {
-        modal.style.display = "none";
-        resolve(true);
-      } else {
-        alert("Invalid PIN");
-      }
-    };
-
-    bioBtn.onclick = async () => {
-      const token = getAuthToken();
-      const res = await fetch(`${backendUrl}/api/auth/biometric-login`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (res.ok) {
-        modal.style.display = "none";
-        resolve(true);
-      } else {
-        alert("Biometric failed");
-      }
-    };
-  });
+function openPin(callback) {
+  pendingAction = callback;
+  document.getElementById("pinModal").classList.remove("hidden");
 }
 
-/* ---------------- FUND WALLET ---------------- */
-async function fundWalletPaystack() {
-  const amount = parseFloat(document.getElementById("fundAmount").value);
-  if (!amount) return alert("Enter amount");
+function closePin() {
+  document.getElementById("pinModal").classList.add("hidden");
+  document.querySelectorAll(".pin-inputs input").forEach(i => i.value = "");
+}
 
-  if (!(await verifyPinOrBiometric("Fund Wallet via Paystack"))) return;
+async function verifyPin() {
+  let pin = "";
+  document.querySelectorAll(".pin-inputs input").forEach(i => pin += i.value);
+  if (pin.length !== 4) return alert("Enter 4-digit PIN");
 
   const token = getAuthToken();
-  const email = localStorage.getItem("email");
-
-  const res = await fetch(`${backendUrl}/api/wallet/deposit/paystack`, {
+  const res = await fetch(`${backendUrl}/api/wallet/verify-pin`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`
     },
-    body: JSON.stringify({ amount, email })
+    body: JSON.stringify({ pin })
   });
 
   const data = await res.json();
-  if (data.authorization_url) {
-    window.open(data.authorization_url, "_blank");
-    setTimeout(updateWalletBalance, 5000);
+  if (res.ok) {
+    closePin();
+    if (pendingAction) pendingAction(pin); // pass pin to pendingAction
+  } else {
+    alert(data.error || "Incorrect PIN");
   }
 }
 
-async function fundWalletFlutterwave() {
-  const amount = parseFloat(document.getElementById("fundAmount").value);
-  if (!amount) return alert("Enter amount");
+function useBiometric() {
+  alert("Biometric login coming soon");
+}
 
-  if (!(await verifyPinOrBiometric("Fund Wallet via Flutterwave"))) return;
+/* ---------------- DATA PURCHASE ---------------- */
+let selectedNetwork = null;
+let selectedPlan = null;
 
-  const token = getAuthToken();
-  const email = localStorage.getItem("email");
+function selectNetwork(el) {
+  selectedNetwork = el.dataset.network;
+  document.querySelectorAll(".network").forEach(n => n.classList.remove("selected"));
+  el.classList.add("selected");
 
-  const res = await fetch(`${backendUrl}/api/wallet/deposit/flutterwave`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({ amount, email })
+  // Render plans
+  const container = document.getElementById("plansContainer");
+  container.innerHTML = "";
+  plans[selectedNetwork].forEach(plan => {
+    const div = document.createElement("div");
+    div.className = "plan-card";
+    div.dataset.plan = plan.name;
+    div.dataset.price = plan.price;
+    div.innerHTML = `<strong>${plan.name}</strong><span>₦${plan.price}</span>`;
+    div.onclick = () => selectPlan(div);
+    container.appendChild(div);
   });
-
-  const data = await res.json();
-  if (data.data?.link) {
-    window.open(data.data.link, "_blank");
-    setTimeout(updateWalletBalance, 5000);
-  }
 }
 
-/* ---------------- PURCHASE ---------------- */
-async function purchase(type) {
-  const amount = parseFloat(document.getElementById(`${type}Amount`).value);
-  const details = document.getElementById(`${type}Details`).value;
+function selectPlan(el) {
+  selectedPlan = { name: el.dataset.plan, price: el.dataset.price };
+  document.querySelectorAll(".plan-card").forEach(p => p.classList.remove("selected"));
+  el.classList.add("selected");
+}
 
-  if (!amount) return alert("Enter amount");
-  if (!(await verifyPinOrBiometric(`Purchase ${type}`))) return;
+function confirmOrder() {
+  const phone = document.getElementById("phone").value;
+  if (!phone) return alert("Enter phone number");
+  if (!selectedNetwork) return alert("Select a network");
+  if (!selectedPlan) return alert("Select a plan");
 
+  const details = `
+    Phone: ${phone} <br>
+    Network: ${selectedNetwork} <br>
+    Plan: ${selectedPlan.name} <br>
+    Price: ₦${selectedPlan.price}
+  `;
+
+  document.getElementById("confirmDetails").innerHTML = details;
+  document.getElementById("confirmModal").classList.remove("hidden");
+}
+
+async function processPurchase(pin) {
+  const phone = document.getElementById("phone").value;
   const token = getAuthToken();
+
   const res = await fetch(`${backendUrl}/api/wallet/purchase`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`
     },
-    body: JSON.stringify({ type, amount, details: { info: details } })
+    body: JSON.stringify({
+      type: "data",
+      amount: parseFloat(selectedPlan.price),
+      details: { phone, network: selectedNetwork, plan: selectedPlan.name },
+      pin
+    })
   });
 
   const data = await res.json();
   if (res.ok) {
-    showReceipt(data.receipt.reference, data.receipt);
-    updateWalletBalance();
-    loadTransactions();
+    closeConfirm();
+    showReceipt(data.receipt); // receipt UI + sound
+  } else {
+    alert(data.error || "Purchase failed");
   }
 }
 
-/* ---------------- RECEIPT ---------------- */
-function showReceipt(ref, receipt = {}) {
-  const modal = document.getElementById("receiptModal");
-  const body = document.getElementById("receiptContent");
+/* ---------------- AIRTIME PURCHASE ---------------- */
+async function buyAirtime() {
+  const phone = document.getElementById("airtimePhone").value;
+  const amount = parseFloat(document.getElementById("airtimeAmount").value);
+  if (!phone || !amount) return alert("Enter phone number and amount");
 
-  body.innerHTML = `
-    <img src="logo.png" class="receipt-logo">
-    <h3>MAY-Connect Receipt</h3>
-    <p>Reference: ${receipt.reference || ref}</p>
-    <p>Type: ${receipt.type || ""}</p>
-    <p>Amount: ₦${receipt.amount || ""}</p>
-    <p>Status: ${receipt.status || "SUCCESS"}</p>
-    <p>Date: ${new Date().toLocaleString()}</p>
-  `;
+  openPin(async (pin) => {
+    const token = getAuthToken();
+    const res = await fetch(`${backendUrl}/api/wallet/purchase`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        type: "airtime",
+        amount,
+        details: { phone },
+        pin
+      })
+    });
 
-  modal.style.display = "block";
+    const data = await res.json();
+    if (res.ok) {
+      showReceipt(data.receipt);
+    } else {
+      alert(data.error || "Purchase failed");
+    }
+  });
 }
 
-function closeModal(id) {
-  const modal = document.getElementById(id);
-  if (modal) modal.style.display = "none";
+/* ---------------- RECEIPT ---------------- */
+function showReceipt(receipt) {
+  const body = document.getElementById("receiptBody");
+  const sound = document.getElementById("successSound");
+
+  body.innerHTML = `
+    <div class="receipt-row"><span>Reference</span><strong>${receipt.reference}</strong></div>
+    <div class="receipt-row"><span>Service</span><strong>${receipt.type.toUpperCase()}</strong></div>
+    <div class="receipt-row"><span>Amount</span><strong>₦${receipt.amount}</strong></div>
+    <div class="receipt-row"><span>Status</span><strong style="color:#16a34a">SUCCESS</strong></div>
+    <div class="receipt-row"><span>Date</span><strong>${new Date().toLocaleString()}</strong></div>
+  `;
+
+  document.getElementById("receiptModal").classList.remove("hidden");
+
+  // Play success sound fully
+  sound.currentTime = 0;
+  sound.play();
+}
+
+function closeReceipt() {
+  document.getElementById("receiptModal").classList.add("hidden");
+}
+
+/* ---------------- WELCOME SOUND ---------------- */
+function playWelcomeSound() {
+  const sound = document.getElementById("welcomeSound");
+  if (!sound) return;
+  sound.currentTime = 0;
+  sound.play();
+}
+
+/* ---------------- FUND WALLET ---------------- */
+async function fundWallet(amount, method) {
+  if (!amount) return alert("Enter amount");
+
+  openPin(async (pin) => {
+    const token = getAuthToken();
+    const email = localStorage.getItem("email");
+
+    const endpoint = method === "paystack"
+      ? "/api/wallet/deposit/paystack"
+      : "/api/wallet/deposit/flutterwave";
+
+    const res = await fetch(`${backendUrl}${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ amount, email })
+    });
+
+    const data = await res.json();
+    if (data.authorization_url || data.data?.link) {
+      window.open(data.authorization_url || data.data.link, "_blank");
+      setTimeout(updateWalletBalance, 5000);
+    }
+  });
 }
