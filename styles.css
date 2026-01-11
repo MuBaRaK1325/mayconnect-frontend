@@ -1,3 +1,19 @@
+/* =========================
+   MAY-CONNECT DESIGN SYSTEM
+========================= */
+
+:root {
+  --bg-main: #0B0F1A;
+  --bg-card: #131A2E;
+  --bg-soft: #0F172A;
+  --primary: #3B82F6;
+  --success: #22C55E;
+  --danger: #EF4444;
+  --text-main: #FFFFFF;
+  --text-muted: #9CA3AF;
+  --border-soft: #1F2A44;
+}
+
 /* ================= RESET ================= */
 * {
   margin: 0;
@@ -7,23 +23,12 @@
 }
 
 body {
-  background: var(--bg);
-  color: var(--dark);
+  background: var(--bg-main);
+  color: var(--text-main);
   min-height: 100vh;
 }
 
-/* ================= VARIABLES ================= */
-:root {
-  --primary: #0a2cff;
-c  --secondary: #00c896;
-  --dark: #0f172a;
-  --muted: #64748b;
-  --bg: #f8fafc;
-  --card: #ffffff;
-  --danger: #ef4444;
-}
-
-/* ================= CENTERED AUTH ================= */
+/* ================= CENTERED AUTH (LOGIN / SIGNUP) ================= */
 .auth-container {
   min-height: 100vh;
   display: flex;
@@ -32,17 +37,17 @@ c  --secondary: #00c896;
 }
 
 .auth-card {
-  background: var(--card);
+  background: var(--bg-card);
   width: 100%;
   max-width: 380px;
   padding: 2rem;
   border-radius: 18px;
-  box-shadow: 0 20px 40px rgba(0,0,0,.08);
+  border: 1px solid var(--border-soft);
   text-align: center;
 }
 
 .auth-card img {
-  width: 70px;
+  width: 80px;
   margin-bottom: 1rem;
 }
 
@@ -51,7 +56,7 @@ c  --secondary: #00c896;
 }
 
 .auth-card p {
-  color: var(--muted);
+  color: var(--text-muted);
   margin-bottom: 1.5rem;
 }
 
@@ -60,222 +65,200 @@ c  --secondary: #00c896;
   padding: 12px;
   margin-bottom: 1rem;
   border-radius: 10px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-soft);
+  color: var(--text-main);
 }
 
 .auth-card button {
   width: 100%;
-  padding: 12px;
+  padding: 14px;
   background: var(--primary);
   color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   font-weight: 600;
+  cursor: pointer;
+}
+
+/* ================= HEADER ================= */
+.page-header {
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 /* ================= DASHBOARD ================= */
-.dashboard {
-  padding-bottom: 80px;
-}
-
-.header {
-  padding: 1.2rem;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.header img {
-  width: 42px;
-}
-
-.welcome {
-  font-size: 1.1rem;
-  color: var(--muted);
+.dashboard-content {
+  padding: 1rem;
 }
 
 .wallet-card {
-  background: linear-gradient(135deg, var(--primary), #142b8f);
-  color: white;
-  margin: 1rem;
+  background: linear-gradient(135deg, var(--primary), #1E3A8A);
   padding: 1.5rem;
   border-radius: 18px;
+  margin-bottom: 1rem;
 }
 
-.wallet-card h3 {
-  font-size: .9rem;
-  opacity: .9;
+.wallet-card p {
+  opacity: .8;
 }
 
 .wallet-card strong {
   font-size: 1.8rem;
+  display: block;
+  margin: .5rem 0;
 }
 
-.account-box {
-  margin-top: 1rem;
+.wallet-card button {
   background: rgba(255,255,255,.15);
-  padding: .8rem;
+  border: none;
+  padding: .6rem 1rem;
   border-radius: 10px;
-  display: flex;
-  justify-content: space-between;
+  color: #fff;
 }
 
 /* ================= QUICK ACTIONS ================= */
-.actions {
+.quick-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
-  margin: 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.action {
-  background: var(--card);
+.quick-actions button {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
   padding: 1.2rem;
   border-radius: 16px;
-  text-align: center;
-  box-shadow: 0 10px 20px rgba(0,0,0,.05);
-}
-
-.action img {
-  width: 36px;
-  margin-bottom: .5rem;
+  color: var(--text-main);
+  font-weight: 600;
 }
 
 /* ================= TRANSACTIONS ================= */
-.txn-list {
-  margin: 1rem;
-}
-
-.txn {
-  background: var(--card);
+.transactions-list .txn-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
   padding: 1rem;
   border-radius: 14px;
   margin-bottom: .7rem;
-  display: flex;
-  justify-content: space-between;
 }
 
-/* ================= BOTTOM NAV ================= */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  background: white;
-  display: flex;
-  justify-content: space-around;
-  padding: .7rem 0;
-  box-shadow: 0 -5px 20px rgba(0,0,0,.06);
-}
-
-.bottom-nav button {
-  background: none;
+.transactions-list button {
+  margin-top: .5rem;
+  background: var(--primary);
   border: none;
-  color: var(--muted);
-  font-size: .9rem;
-}
-.pin-card {
-  text-align: center;
+  padding: .5rem .8rem;
+  border-radius: 8px;
+  color: white;
 }
 
-.pin-sub {
-  font-size: 13px;
-  color: #777;
-  margin-bottom: 15px;
+/* ================= INPUTS ================= */
+input {
+  background: var(--bg-soft);
+  border: 1px solid var(--border-soft);
+  color: var(--text-main);
+  padding: 12px;
+  border-radius: 10px;
 }
 
+/* ================= BUTTONS ================= */
+.primary-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: bold;
+}
+
+/* ================= MODALS ================= */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal.hidden { display: none; }
+
+.modal-card {
+  background: var(--bg-card);
+  padding: 1.5rem;
+  border-radius: 18px;
+  width: 90%;
+  max-width: 380px;
+}
+
+/* ================= PIN ================= */
 .pin-inputs {
   display: flex;
   justify-content: center;
   gap: 12px;
-  margin: 20px 0;
+  margin: 1rem 0;
 }
 
 .pin-inputs input {
   width: 50px;
   height: 55px;
-  text-align: center;
   font-size: 22px;
+  text-align: center;
+}
+
+/* ================= RECEIPT ================= */
+.receipt-logo {
+  width: 60px;
+  margin-bottom: .5rem;
+}
+
+.success-title {
+  color: var(--success);
+  margin-bottom: 1rem;
+}
+
+.receipt-body {
+  background: var(--bg-soft);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: .5rem;
+}
+
+/* ================= MORE PANEL ================= */
+.more-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  padding: 1rem;
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+}
+
+.more-panel.hidden { display: none; }
+
+.more-panel button {
+  width: 100%;
+  background: var(--primary);
+  border: none;
+  padding: .8rem;
   border-radius: 10px;
-  border: 1px solid #ddd;
-  background: #f9fafb;
-}
-.receipt-card {
-  text-align: center;
-  animation: slideUp .4s ease;
+  color: white;
 }
 
-.receipt-logo {
-  width: 60px;
-  margin-bottom: .5rem;
-}
-
-.success-title {
-  color: #16a34a;
-  margin-bottom: 1rem;
-}
-
-.receipt-body {
-  background: #f8fafc;
-  border-radius: 12px;
-  padding: 1rem;
-  text-align: left;
-  font-size: .9rem;
-}
-
-.receipt-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: .5rem;
-}
-
-.receipt-row span {
-  color: #64748b;
-}
-
-@keyframes slideUp {
-  from { transform: translateY(30px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-.receipt-card {
-  text-align: center;
-  animation: slideUp 0.4s ease;
-  background: #fff;
-  padding: 1.2rem;
-  border-radius: 12px;
-  max-width: 350px;
-  margin: auto;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.receipt-logo {
-  width: 60px;
-  margin-bottom: 0.5rem;
-}
-
-.success-title {
-  color: #16a34a;
-  margin-bottom: 1rem;
-}
-
-.receipt-body {
-  background: #f8fafc;
-  border-radius: 12px;
-  padding: 1rem;
-  text-align: left;
-  font-size: 0.9rem;
-}
-
-.receipt-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
-
-.receipt-row span {
-  color: #64748b;
-}
-
-@keyframes slideUp {
-  from { transform: translateY(30px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+.more-btn {
+  background: var(--primary);
+  border: none;
+  padding: .6rem 1rem;
+  border-radius: 10px;
+  color: white;
 }

@@ -2,61 +2,47 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <title>Buy Airtime</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MAY-Connect | Buy Airtime</title>
   <link rel="stylesheet" href="styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-  <!-- ================= HEADER ================= -->
-  <div class="page-header">
-    <button class="back-btn" onclick="window.history.back()">←</button>
-    <h2>Buy Airtime</h2>
-  </div>
+<div class="page-header">
+  <button onclick="history.back()">←</button>
+  <h2>Buy Airtime</h2>
+</div>
 
-  <!-- ================= AUDIO ================= -->
-  <audio id="successSound" src="sounds/success.mp3" preload="auto"></audio>
+<div class="purchase-page">
 
-  <!-- ================= PIN MODAL ================= -->
-  <div id="pinModal" class="modal hidden">
-    <div class="modal-card pin-card">
-      <h3>Enter Transaction PIN</h3>
-      <p class="pin-sub">Confirm this transaction</p>
-      <div class="pin-inputs">
-        <input type="password" maxlength="1">
-        <input type="password" maxlength="1">
-        <input type="password" maxlength="1">
-        <input type="password" maxlength="1">
-      </div>
-      <button class="primary-btn" onclick="verifyPin()">Confirm</button>
-      <button class="biometric-btn" onclick="useBiometric()">🔒 Use Biometric</button>
-      <button class="secondary-btn" onclick="closePin()">Cancel</button>
+  <input type="tel" id="airtimePhone" placeholder="Phone number">
+  <input type="number" id="amount" placeholder="Amount">
+
+  <div class="network-grid">
+    <div class="network-card" onclick="buyAirtime('MTN')">
+      <img src="images/mtn.png">
+      <span>MTN</span>
+    </div>
+    <div class="network-card" onclick="buyAirtime('Airtel')">
+      <img src="images/airtel.png">
+      <span>Airtel</span>
+    </div>
+    <div class="network-card" onclick="buyAirtime('Glo')">
+      <img src="images/glo.png">
+      <span>GLO</span>
     </div>
   </div>
 
-  <!-- ================= RECEIPT MODAL ================= -->
-  <div id="receiptModal" class="modal hidden">
-    <div class="modal-card receipt-card">
-      <img src="images/mayconnect-logo.png" class="receipt-logo" />
-      <h3 class="success-title">Transaction Successful</h3>
-      <div id="receiptBody" class="receipt-body"></div>
-      <button class="primary-btn" onclick="closeReceipt()">Done</button>
-    </div>
-  </div>
+</div>
 
-  <!-- ================= AIRTIME FORM ================= -->
-  <div class="purchase-page">
-    <label for="airtimePhone">Phone Number</label>
-    <input type="tel" id="airtimePhone" placeholder="Enter phone number">
+<script>
+function buyAirtime(network){
+  const phone=airtimePhone.value;
+  const amt=amount.value;
+  if(!phone||!amt) return alert("Fill all fields");
+  alert(`Buying ₦${amt} airtime on ${network}`);
+}
+</script>
 
-    <label for="airtimeAmount">Amount</label>
-    <input type="number" id="airtimeAmount" placeholder="Enter amount">
-
-    <button class="primary-btn" onclick="confirmAirtime()">Confirm Airtime Purchase</button>
-  </div>
-
-  <!-- ================= SCRIPT ================= -->
-  <script src="app.js"></script>
 </body>
 </html>

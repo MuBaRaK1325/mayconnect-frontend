@@ -1,178 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MAY-Connect Dashboard</title>
-
-  <!-- Styles -->
-  <link rel="stylesheet" href="styles.css" />
-
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>MAY-Connect | Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-  <!-- Welcome Sound -->
-  <audio id="welcomeSound" src="sounds/welcome.mp3"></audio>
+<div class="page-header">
+  <h2>Dashboard</h2>
+  <button id="moreBtn" class="more-btn">More ⚙️</button>
+</div>
 
-  <!-- ================= DASHBOARD ================= -->
-  <div class="dashboard">
+<audio id="welcomeSound" src="sounds/welcome.mp3"></audio>
 
-    <!-- HEADER -->
-    <div class="header">
-      <img src="images/mayconnect-logo.png" alt="MAY-Connect">
-      <div>
-        <div class="welcome">Welcome 👋</div>
-        <strong id="username">User</strong>
-      </div>
-    </div>
+<!-- MORE PANEL -->
+<div id="morePanel" class="more-panel hidden">
+  <button onclick="openSetPin()">Set Transaction PIN</button>
+  <button onclick="enableBiometric()">Enable Biometric</button>
+  <button onclick="forgotPin()">Forgot PIN</button>
+  <button onclick="forgotPassword()">Forgot Password</button>
+  <button onclick="contactWhatsApp()">WhatsApp Support</button>
+  <button onclick="callSupport()">Call Support</button>
+  <button onclick="copyAccount()">Copy Account</button>
+  <button onclick="logout()">Logout</button>
+  <button onclick="closeMore()">Close</button>
+</div>
 
-    <!-- WALLET CARD -->
-    <div class="wallet-card">
-      <h3>Wallet Balance</h3>
-      <strong id="walletBalance">₦0.00</strong>
+<div class="dashboard-content">
 
-      <div class="account-box">
-        <span>
-          <small>Funding Account</small><br>
-          <strong id="accountNumber">0123456789</strong>
-        </span>
-        <button onclick="copyAccount()">Copy</button>
-      </div>
-    </div>
-
-    <!-- QUICK ACTIONS -->
-    <div class="actions">
-      <div class="action" onclick="openData()">
-        <img src="images/data.png" alt="Data">
-        <div>Buy Data</div>
-      </div>
-
-      <div class="action" onclick="openAirtime()">
-        <img src="images/airtime.png" alt="Airtime">
-        <div>Buy Airtime</div>
-      </div>
-    </div>
-
-    <!-- RECENT TRANSACTIONS -->
-    <div class="txn-list">
-      <h3 style="margin-bottom:.5rem;">Recent Transactions</h3>
-
-      <div class="txn">
-        <span>Airtime Purchase</span>
-        <strong class="success">₦100</strong>
-      </div>
-
-      <div class="txn">
-        <span>Data Purchase</span>
-        <strong class="success">₦500</strong>
-      </div>
-    </div>
-
+  <div class="wallet-card">
+    <p>Wallet Balance</p>
+    <strong id="walletBalance">₦0</strong>
+    <button onclick="copyAccount()">Copy Account Number</button>
   </div>
 
-  <!-- ================= BOTTOM NAV ================= -->
-  <div class="bottom-nav">
-    <button onclick="goHome()">Home</button>
-    <button onclick="goTransactions()">Transactions</button>
-    <button onclick="openMore()">More</button>
+  <div class="quick-actions">
+    <button onclick="location.href='data.html'">Buy Data</button>
+    <button onclick="location.href='airtime.html'">Buy Airtime</button>
   </div>
 
-  <!-- ================= MORE MODAL ================= -->
-  <div id="moreModal" class="modal hidden">
-    <div class="modal-card">
-      <h3>More</h3>
+  <div id="transactionsList" class="transactions-list"></div>
+</div>
 
-      <button onclick="setPin()">Set Transaction PIN</button>
-      <button onclick="enableBiometric()">Enable Biometric</button>
-      <button onclick="forgotPassword()">Forgot Password</button>
-      <button onclick="forgotPin()">Forgot PIN</button>
+<script>
+const backendUrl = "https://mayconnect-backend-1.onrender.com";
 
-      <hr>
+document.getElementById("moreBtn")
+  .addEventListener("click",()=>morePanel.classList.toggle("hidden"));
 
-      <button onclick="openWhatsApp()">Contact on WhatsApp</button>
-      <button onclick="callSupport()">Call Support</button>
+function closeMore(){ morePanel.classList.add("hidden"); }
+function openSetPin(){ alert("Set PIN"); }
+function enableBiometric(){ alert("Biometric coming soon"); }
+function forgotPin(){ alert("Forgot PIN"); }
+function forgotPassword(){ alert("Forgot Password"); }
+function contactWhatsApp(){ window.open("https://wa.me/2349011111111"); }
+function callSupport(){ location.href="tel:+2349011111111"; }
+function logout(){ localStorage.clear(); location.href="login.html"; }
 
-      <hr>
+function copyAccount(){
+  const acc="1234567890";
+  navigator.clipboard.writeText(acc);
+  alert("Copied: "+acc);
+}
 
-      <button class="danger" onclick="logout()">Logout</button>
-      <button onclick="closeMore()">Close</button>
-    </div>
-  </div>
+document.addEventListener("DOMContentLoaded", async ()=>{
+  welcomeSound.play();
+  const token=localStorage.getItem("token");
+  if(!token) return;
 
-  <!-- ================= SCRIPT ================= -->
-  <script>
-    // Welcome Sound
-    document.addEventListener("DOMContentLoaded", () => {
-      const sound = document.getElementById("welcomeSound");
-      sound.volume = 1;
-      sound.play().catch(() => {});
-    });
-
-    // Copy Account Number
-    function copyAccount() {
-      const acc = document.getElementById("accountNumber").innerText;
-      navigator.clipboard.writeText(acc);
-      alert("Account number copied!");
-    }
-
-    // Navigation
-    function goHome() {
-      window.location.href = "dashboard.html";
-    }
-
-    function goTransactions() {
-      window.location.href = "transactions.html";
-    }
-
-    function openData() {
-      window.location.href = "data.html";
-    }
-
-    function openAirtime() {
-      window.location.href = "airtime.html";
-    }
-
-    // More Modal
-    function openMore() {
-      document.getElementById("moreModal").classList.remove("hidden");
-    }
-
-    function closeMore() {
-      document.getElementById("moreModal").classList.add("hidden");
-    }
-
-    // Actions
-    function setPin() {
-      alert("Set PIN coming soon");
-    }
-
-    function enableBiometric() {
-      alert("Biometric setup coming soon");
-    }
-
-    function forgotPassword() {
-      alert("Forgot password flow");
-    }
-
-    function forgotPin() {
-      alert("Forgot PIN flow");
-    }
-
-    function openWhatsApp() {
-      window.location.href = "https://wa.me/+2348117988561";
-    }
-
-    function callSupport() {
-      window.location.href = "tel:+2348117988561";
-    }
-
-    function logout() {
-      localStorage.clear();
-      window.location.href = "login.html";
-    }
-  </script>
+  const res=await fetch(`${backendUrl}/api/wallet`,{
+    headers:{Authorization:`Bearer ${token}`}
+  });
+  const data=await res.json();
+  walletBalance.textContent=`₦${data.balance||0}`;
+});
+</script>
 
 </body>
 </html>
