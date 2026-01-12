@@ -1,3 +1,39 @@
+.password-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-wrapper input {
+  width: 100%;
+  padding-right: 60px; /* space for the button */
+}
+
+.show-password-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+
+.logo-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.logo {
+  width: 72px;
+  height: auto;
+}
+
 /* =================================================
    MAY-CONNECT — SINGLE SOURCE OF TRUTH (FINAL)
 ================================================== */

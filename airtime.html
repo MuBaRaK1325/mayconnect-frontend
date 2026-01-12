@@ -19,7 +19,7 @@
 <!-- RECEIPT MODAL -->
 <div id="receiptModal" class="modal hidden">
   <div class="modal-card receipt-card animate-in">
-    <img src="images/mayconnect-logo.png" class="receipt-logo">
+    <img src="images/logo.png" class="receipt-logo">
     <h3 class="success-title">Airtime Successful</h3>
     <div id="receiptBody" class="receipt-body"></div>
     <button class="primary-btn" onclick="closeReceipt()">Done</button>
@@ -27,29 +27,29 @@
 </div>
 
 <div class="purchase-page">
-<!-- AMOUNT PRESETS -->
-<div class="amount-presets">
-  <button onclick="selectAmount(100)">₦100</button>
-  <button onclick="selectAmount(200)">₦200</button>
-  <button onclick="selectAmount(500)">₦500</button>
-</div>
+  <!-- AMOUNT PRESETS -->
+  <div class="amount-presets">
+    <button onclick="selectAmount(100)">₦100</button>
+    <button onclick="selectAmount(200)">₦200</button>
+    <button onclick="selectAmount(500)">₦500</button>
+  </div>
   <input type="tel" id="airtimePhone" placeholder="Phone number">
   <input type="number" id="airtimeAmount" placeholder="Amount">
 
   <!-- NETWORKS -->
   <div class="network-grid">
     <div class="network-card" data-network="MTN" onclick="selectAirtimeNetwork(this)">
-      <img src="images/mtn.png">
+      <img src="images/Mtn.png" alt="MTN Logo">
       <span>MTN</span>
     </div>
 
     <div class="network-card" data-network="Airtel" onclick="selectAirtimeNetwork(this)">
-      <img src="images/airtel.png">
+      <img src="images/Airtel.png" alt="Airtel Logo">
       <span>Airtel</span>
     </div>
 
     <div class="network-card" data-network="Glo" onclick="selectAirtimeNetwork(this)">
-      <img src="images/glo.png">
+      <img src="images/Glo.png" alt="GLO Logo">
       <span>GLO</span>
     </div>
   </div>
