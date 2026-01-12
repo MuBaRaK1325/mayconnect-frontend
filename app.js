@@ -167,33 +167,67 @@ function useBiometric() {
   alert("Biometric login coming soon");
 }
 
-/* ---------------- DATA PURCHASE ---------------- */
+/* ================= DATA PURCHASE (UI LOGIC) ================= */
+
 let selectedNetwork = null;
 let selectedPlan = null;
 
 function selectNetwork(el) {
   selectedNetwork = el.dataset.network;
-  document.querySelectorAll(".network").forEach(n => n.classList.remove("selected"));
+  selectedPlan = null;
+
+  // Haptic vibration (mobile)
+  if (navigator.vibrate) navigator.vibrate(30);
+
+  document.querySelectorAll(".network")
+    .forEach(n => n.classList.remove("selected"));
   el.classList.add("selected");
 
-  // Render plans
   const container = document.getElementById("plansContainer");
+  const shimmer = document.getElementById("loadingPlans");
+  const confirmBtn = document.getElementById("confirmBtn");
+
   container.innerHTML = "";
-  plans[selectedNetwork].forEach(plan => {
-    const div = document.createElement("div");
-    div.className = "plan-card";
-    div.dataset.plan = plan.name;
-    div.dataset.price = plan.price;
-    div.innerHTML = `<strong>${plan.name}</strong><span>₦${plan.price}</span>`;
-    div.onclick = () => selectPlan(div);
-    container.appendChild(div);
-  });
+  confirmBtn.disabled = true;
+  confirmBtn.classList.add("disabled");
+
+  shimmer.classList.remove("hidden");
+
+  // Simulate API delay (video animation feel)
+  setTimeout(() => {
+    shimmer.classList.add("hidden");
+
+    plans[selectedNetwork].forEach((plan, index) => {
+      const div = document.createElement("div");
+      div.className = "plan-card";
+      div.style.animationDelay = `${index * 0.06}s`;
+      div.innerHTML = `
+        <strong>${plan.name}</strong>
+        <span>₦${plan.price}</span>
+      `;
+      div.onclick = () => selectPlan(div, plan);
+      container.appendChild(div);
+    });
+
+    // Auto-scroll to plans
+    container.scrollIntoView({ behavior: "smooth" });
+
+  }, 600);
 }
 
-function selectPlan(el) {
-  selectedPlan = { name: el.dataset.plan, price: el.dataset.price };
-  document.querySelectorAll(".plan-card").forEach(p => p.classList.remove("selected"));
+function selectPlan(el, plan) {
+  selectedPlan = plan;
+
+  if (navigator.vibrate) navigator.vibrate(20);
+
+  document.querySelectorAll(".plan-card")
+    .forEach(p => p.classList.remove("selected"));
+
   el.classList.add("selected");
+
+  const confirmBtn = document.getElementById("confirmBtn");
+  confirmBtn.disabled = false;
+  confirmBtn.classList.remove("disabled");
 }
 
 function confirmOrder() {
@@ -241,13 +275,46 @@ async function processPurchase(pin) {
 }
 
 /* ---------------- AIRTIME PURCHASE ---------------- */
-async function buyAirtime() {
+let selectedAirtimeNetwork = null;
+
+function selectAirtimeNetwork(el) {
+  selectedAirtimeNetwork = el.dataset.network;
+
+  // HAPTIC
+  if (navigator.vibrate) navigator.vibrate(20);
+
+  document.querySelectorAll(".network-card")
+    .forEach(n => n.classList.remove("selected"));
+
+  el.classList.add("selected");
+
+  // AUTO SCROLL
+  document.getElementById("airtimeAmount")
+    .scrollIntoView({ behavior: "smooth", block: "center" });
+
+function selectAmount(value) {
+  if (navigator.vibrate) navigator.vibrate(15);
+  document.getElementById("airtimeAmount").value = value;
+}
+
+  // ENABLE BUTTON
+  const btn = document.getElementById("airtimeConfirmBtn");
+  btn.disabled = false;
+  btn.classList.remove("disabled");
+}
+
+async function confirmAirtime() {
   const phone = document.getElementById("airtimePhone").value;
-  const amount = parseFloat(document.getElementById("airtimeAmount").value);
-  if (!phone || !amount) return alert("Enter phone number and amount");
+  const amount = document.getElementById("airtimeAmount").value;
+
+  if (!phone || !amount) return alert("Fill all fields");
+  if (!selectedAirtimeNetwork) return alert("Select network");
+
+  document.getElementById("airtimeShimmer").classList.remove("hidden");
 
   openPin(async (pin) => {
     const token = getAuthToken();
+
     const res = await fetch(`${backendUrl}/api/wallet/purchase`, {
       method: "POST",
       headers: {
@@ -256,11 +323,13 @@ async function buyAirtime() {
       },
       body: JSON.stringify({
         type: "airtime",
-        amount,
-        details: { phone },
+        amount: parseFloat(amount),
+        details: { phone, network: selectedAirtimeNetwork },
         pin
       })
     });
+
+    document.getElementById("airtimeShimmer").classList.add("hidden");
 
     const data = await res.json();
     if (res.ok) {
@@ -270,6 +339,14 @@ async function buyAirtime() {
     }
   });
 }
+const colors = {
+  MTN: "#ffcc00",
+  Airtel: "#e60000",
+  Glo: "#0f9d58"
+};
+
+document.getElementById("airtimeConfirmBtn").style.background =
+  colors[selectedAirtimeNetwork];
 
 /* ---------------- RECEIPT ---------------- */
 function showReceipt(receipt) {
@@ -283,7 +360,51 @@ function showReceipt(receipt) {
     <div class="receipt-row"><span>Status</span><strong style="color:#16a34a">SUCCESS</strong></div>
     <div class="receipt-row"><span>Date</span><strong>${new Date().toLocaleString()}</strong></div>
   `;
+function launchConfetti() {
+  const canvas = document.getElementById("confettiCanvas");
+  const ctx = canvas.getContext("2d");
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 
+  let particles = Array.from({ length: 120 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height / 2,
+    r: Math.random() * 6 + 4,
+    d: Math.random() * 20 + 10
+  }));
+
+  let angle = 0;
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "rgba(34,197,94,0.8)";
+    ctx.beginPath();
+
+    particles.forEach(p => {
+      ctx.moveTo(p.x, p.y);
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    });
+
+    ctx.fill();
+    update();
+  }
+
+  function update() {
+    angle += 0.01;
+    particles.forEach(p => {
+      p.y += Math.cos(angle + p.d) + 1;
+      p.x += Math.sin(angle) * 2;
+      if (p.y > canvas.height) p.y = 0;
+    });
+  }
+
+  const interval = setInterval(draw, 16);
+  setTimeout(() => {
+    clearInterval(interval);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+  }, 2000);
+}
+launchConfetti();
   document.getElementById("receiptModal").classList.remove("hidden");
 
   // Play success sound fully
@@ -331,3 +452,11 @@ async function fundWallet(amount, method) {
     }
   });
 }
+
+window.addEventListener("offline", () => {
+  document.getElementById("offlineBanner")?.classList.remove("hidden");
+});
+
+window.addEventListener("online", () => {
+  document.getElementById("offlineBanner")?.classList.add("hidden");
+});

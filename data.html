@@ -17,48 +17,41 @@
 
   <input type="tel" id="phone" placeholder="Enter phone number">
 
-  <div class="network-grid">
+  <h3>Select Network</h3>
 
-    <div class="network-card" onclick="togglePlans('mtn')">
+  <div class="network-grid">
+    <div class="network" data-network="MTN" onclick="selectNetwork(this)">
       <img src="images/mtn.png">
       <span>MTN</span>
     </div>
-    <div id="mtn" class="plans hidden">
-      <button onclick="buyData('MTN 500MB',200)">500MB ₦200</button>
-      <button onclick="buyData('MTN 1GB',500)">1GB ₦500</button>
-    </div>
 
-    <div class="network-card" onclick="togglePlans('airtel')">
+    <div class="network" data-network="AIRTEL" onclick="selectNetwork(this)">
       <img src="images/airtel.png">
       <span>Airtel</span>
     </div>
-    <div id="airtel" class="plans hidden">
-      <button onclick="buyData('Airtel 1GB',450)">1GB ₦450</button>
-    </div>
 
-    <div class="network-card" onclick="togglePlans('glo')">
+    <div class="network" data-network="GLO" onclick="selectNetwork(this)">
       <img src="images/glo.png">
       <span>GLO</span>
     </div>
-    <div id="glo" class="plans hidden">
-      <button onclick="buyData('Glo 1GB',400)">1GB ₦400</button>
-    </div>
-
   </div>
+
+  <!-- Loading shimmer -->
+  <div id="loadingPlans" class="shimmer hidden"></div>
+
+  <!-- Plans -->
+  <div id="plansContainer" class="plans-container"></div>
+
+  <!-- Confirm -->
+  <button id="confirmBtn"
+          class="primary-btn disabled"
+          onclick="confirmOrder()"
+          disabled>
+    Continue
+  </button>
+
 </div>
 
-<script>
-function togglePlans(id){
-  document.querySelectorAll(".plans").forEach(p=>p.classList.add("hidden"));
-  document.getElementById(id).classList.toggle("hidden");
-}
-
-function buyData(plan,amount){
-  const phone=document.getElementById("phone").value;
-  if(!phone) return alert("Enter phone number");
-  alert(`Buying ${plan} for ₦${amount}`);
-}
-</script>
-
+<script src="app.js"></script>
 </body>
 </html>

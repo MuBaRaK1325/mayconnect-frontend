@@ -1,20 +1,27 @@
-/* =========================
-   MAY-CONNECT DESIGN SYSTEM
-========================= */
+/* =================================================
+   MAY-CONNECT — SINGLE SOURCE OF TRUTH (FINAL)
+================================================== */
 
+/* ============ THEME TOKENS ============ */
 :root {
   --bg-main: #0B0F1A;
   --bg-card: #131A2E;
   --bg-soft: #0F172A;
+
   --primary: #3B82F6;
   --success: #22C55E;
   --danger: #EF4444;
+
+  --mtn: #ffcc00;
+  --airtel: #e60000;
+  --glo: #0f9d58;
+
   --text-main: #FFFFFF;
   --text-muted: #9CA3AF;
   --border-soft: #1F2A44;
 }
 
-/* ================= RESET ================= */
+/* ============ RESET ============ */
 * {
   margin: 0;
   padding: 0;
@@ -28,43 +35,48 @@ body {
   min-height: 100vh;
 }
 
-/* ================= CENTERED AUTH (LOGIN / SIGNUP) ================= */
+/* =================================================
+   AUTH / WELCOME / LOGIN / SIGNUP  (FIXED & CENTERED)
+================================================== */
+
 .auth-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 1rem;
 }
 
 .auth-card {
-  background: var(--bg-card);
   width: 100%;
   max-width: 380px;
+  background: var(--bg-card);
   padding: 2rem;
-  border-radius: 18px;
+  border-radius: 20px;
   border: 1px solid var(--border-soft);
   text-align: center;
 }
 
 .auth-card img {
-  width: 80px;
+  width: 72px;
   margin-bottom: 1rem;
 }
 
 .auth-card h2 {
-  margin-bottom: .5rem;
+  margin-bottom: .3rem;
 }
 
 .auth-card p {
   color: var(--text-muted);
   margin-bottom: 1.5rem;
+  font-size: .9rem;
 }
 
 .auth-card input {
   width: 100%;
-  padding: 12px;
+  padding: 14px;
   margin-bottom: 1rem;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid var(--border-soft);
   background: var(--bg-soft);
   color: var(--text-main);
@@ -74,14 +86,22 @@ body {
   width: 100%;
   padding: 14px;
   background: var(--primary);
-  color: #fff;
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
+  color: white;
   font-weight: 600;
   cursor: pointer;
 }
 
-/* ================= HEADER ================= */
+.auth-card a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+/* =================================================
+   DASHBOARD (UNCHANGED VISUALLY)
+================================================== */
+
 .page-header {
   padding: 1rem;
   display: flex;
@@ -89,7 +109,6 @@ body {
   align-items: center;
 }
 
-/* ================= DASHBOARD ================= */
 .dashboard-content {
   padding: 1rem;
 }
@@ -101,30 +120,17 @@ body {
   margin-bottom: 1rem;
 }
 
-.wallet-card p {
-  opacity: .8;
-}
-
 .wallet-card strong {
   font-size: 1.8rem;
   display: block;
   margin: .5rem 0;
 }
 
-.wallet-card button {
-  background: rgba(255,255,255,.15);
-  border: none;
-  padding: .6rem 1rem;
-  border-radius: 10px;
-  color: #fff;
-}
-
-/* ================= QUICK ACTIONS ================= */
+/* QUICK ACTIONS */
 .quick-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
-  margin-bottom: 1.5rem;
 }
 
 .quick-actions button {
@@ -133,28 +139,12 @@ body {
   padding: 1.2rem;
   border-radius: 16px;
   color: var(--text-main);
-  font-weight: 600;
 }
 
-/* ================= TRANSACTIONS ================= */
-.transactions-list .txn-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-soft);
-  padding: 1rem;
-  border-radius: 14px;
-  margin-bottom: .7rem;
-}
+/* =================================================
+   COMMON UI
+================================================== */
 
-.transactions-list button {
-  margin-top: .5rem;
-  background: var(--primary);
-  border: none;
-  padding: .5rem .8rem;
-  border-radius: 8px;
-  color: white;
-}
-
-/* ================= INPUTS ================= */
 input {
   background: var(--bg-soft);
   border: 1px solid var(--border-soft);
@@ -163,17 +153,137 @@ input {
   border-radius: 10px;
 }
 
-/* ================= BUTTONS ================= */
 .primary-btn {
   background: var(--primary);
-  color: white;
   border: none;
   padding: 14px;
-  border-radius: 12px;
-  font-weight: bold;
+  border-radius: 14px;
+  color: white;
+  font-weight: 600;
+  width: 100%;
+  transition: transform .15s ease;
 }
 
-/* ================= MODALS ================= */
+.primary-btn:active {
+  transform: scale(.97);
+}
+
+.primary-btn.disabled {
+  opacity: .5;
+  pointer-events: none;
+}
+
+/* =================================================
+   DATA & AIRTIME — NETWORKS
+================================================== */
+
+.network-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.network-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  padding: 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .25s ease;
+}
+
+.network-card img {
+  width: 36px;
+  margin-bottom: 6px;
+}
+
+.network-card.selected {
+  transform: scale(1.05);
+}
+
+.network-card[data-network="MTN"].selected { border-color: var(--mtn); }
+.network-card[data-network="Airtel"].selected { border-color: var(--airtel); }
+.network-card[data-network="Glo"].selected { border-color: var(--glo); }
+
+/* =================================================
+   DATA PLANS
+================================================== */
+
+.plans-container {
+  margin-top: 1rem;
+  animation: slideUp .4s ease;
+}
+
+.plan-card {
+  background: var(--bg-soft);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+  opacity: 0;
+  animation: fadeUp .3s ease forwards;
+}
+
+.plan-card.selected {
+  border-color: var(--primary);
+}
+
+/* =================================================
+   AMOUNT PRESETS
+================================================== */
+
+.amount-presets {
+  display: flex;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.amount-presets button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.amount-presets button:active {
+  transform: scale(.95);
+  background: var(--primary);
+}
+
+/* =================================================
+   SHIMMER
+================================================== */
+
+.shimmer {
+  height: 60px;
+  border-radius: 12px;
+  background: linear-gradient(
+    90deg,
+    #1f2937 25%,
+    #374151 37%,
+    #1f2937 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+/* =================================================
+   MODALS & RECEIPTS
+================================================== */
+
 .modal {
   position: fixed;
   inset: 0;
@@ -194,71 +304,42 @@ input {
   max-width: 380px;
 }
 
-/* ================= PIN ================= */
-.pin-inputs {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin: 1rem 0;
+.animate-in {
+  animation: slideFade .35s ease;
 }
 
-.pin-inputs input {
-  width: 50px;
-  height: 55px;
-  font-size: 22px;
-  text-align: center;
-}
+/* =================================================
+   OFFLINE BANNER
+================================================== */
 
-/* ================= RECEIPT ================= */
-.receipt-logo {
-  width: 60px;
-  margin-bottom: .5rem;
-}
-
-.success-title {
-  color: var(--success);
-  margin-bottom: 1rem;
-}
-
-.receipt-body {
-  background: var(--bg-soft);
-  border-radius: 12px;
-  padding: 1rem;
-}
-
-.receipt-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: .5rem;
-}
-
-/* ================= MORE PANEL ================= */
-.more-panel {
+.offline {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: var(--bg-card);
-  padding: 1rem;
-  border-top-left-radius: 18px;
-  border-top-right-radius: 18px;
-}
-
-.more-panel.hidden { display: none; }
-
-.more-panel button {
+  top: 0;
   width: 100%;
-  background: var(--primary);
-  border: none;
-  padding: .8rem;
-  border-radius: 10px;
+  padding: 10px;
+  background: var(--danger);
   color: white;
+  text-align: center;
+  z-index: 9999;
 }
 
-.more-btn {
-  background: var(--primary);
-  border: none;
-  padding: .6rem 1rem;
-  border-radius: 10px;
-  color: white;
+.hidden { display: none; }
+
+/* =================================================
+   ANIMATIONS
+================================================== */
+
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity:0 }
+  to { transform: translateY(0); opacity:1 }
+}
+
+@keyframes fadeUp {
+  from { transform: translateY(12px); opacity: 0 }
+  to { transform: translateY(0); opacity: 1 }
+}
+
+@keyframes slideFade {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
 }

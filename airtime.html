@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<canvas id="confettiCanvas"></canvas>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -13,36 +14,60 @@
   <h2>Buy Airtime</h2>
 </div>
 
+<audio id="successSound" src="sounds/success.mp3" preload="auto"></audio>
+
+<!-- RECEIPT MODAL -->
+<div id="receiptModal" class="modal hidden">
+  <div class="modal-card receipt-card animate-in">
+    <img src="images/mayconnect-logo.png" class="receipt-logo">
+    <h3 class="success-title">Airtime Successful</h3>
+    <div id="receiptBody" class="receipt-body"></div>
+    <button class="primary-btn" onclick="closeReceipt()">Done</button>
+  </div>
+</div>
+
 <div class="purchase-page">
-
+<!-- AMOUNT PRESETS -->
+<div class="amount-presets">
+  <button onclick="selectAmount(100)">₦100</button>
+  <button onclick="selectAmount(200)">₦200</button>
+  <button onclick="selectAmount(500)">₦500</button>
+</div>
   <input type="tel" id="airtimePhone" placeholder="Phone number">
-  <input type="number" id="amount" placeholder="Amount">
+  <input type="number" id="airtimeAmount" placeholder="Amount">
 
+  <!-- NETWORKS -->
   <div class="network-grid">
-    <div class="network-card" onclick="buyAirtime('MTN')">
+    <div class="network-card" data-network="MTN" onclick="selectAirtimeNetwork(this)">
       <img src="images/mtn.png">
       <span>MTN</span>
     </div>
-    <div class="network-card" onclick="buyAirtime('Airtel')">
+
+    <div class="network-card" data-network="Airtel" onclick="selectAirtimeNetwork(this)">
       <img src="images/airtel.png">
       <span>Airtel</span>
     </div>
-    <div class="network-card" onclick="buyAirtime('Glo')">
+
+    <div class="network-card" data-network="Glo" onclick="selectAirtimeNetwork(this)">
       <img src="images/glo.png">
       <span>GLO</span>
     </div>
   </div>
 
+  <!-- SHIMMER -->
+  <div id="airtimeShimmer" class="shimmer hidden"></div>
+
+  <button
+    id="airtimeConfirmBtn"
+    class="primary-btn disabled"
+    disabled
+    onclick="confirmAirtime()"
+  >
+    Buy Airtime
+  </button>
+
 </div>
 
-<script>
-function buyAirtime(network){
-  const phone=airtimePhone.value;
-  const amt=amount.value;
-  if(!phone||!amt) return alert("Fill all fields");
-  alert(`Buying ₦${amt} airtime on ${network}`);
-}
-</script>
-
+<script src="app.js"></script>
 </body>
 </html>
