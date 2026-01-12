@@ -8,30 +8,40 @@
 </head>
 <body>
 
+<!-- Logo at the top -->
+<div class="logo-container">
+  <img src="images/logo.png" alt="MAY Connect Logo" class="logo">
+</div>
+
 <div class="page-header">
   <button onclick="history.back()">←</button>
   <h2>Buy Data</h2>
 </div>
 
 <div class="purchase-page">
-
   <input type="tel" id="phone" placeholder="Enter phone number">
 
   <h3>Select Network</h3>
 
   <div class="network-grid">
     <div class="network" data-network="MTN" onclick="selectNetwork(this)">
-      <img src="images/Mtn.png" alt="MTN Logo">
+      <div class="network-logo-wrapper">
+        <img src="images/Mtn.png" alt="MTN Logo">
+      </div>
       <span>MTN</span>
     </div>
 
     <div class="network" data-network="AIRTEL" onclick="selectNetwork(this)">
-      <img src="images/Airtel.png" alt="Airtel Logo">
+      <div class="network-logo-wrapper">
+        <img src="images/Airtel.png" alt="Airtel Logo">
+      </div>
       <span>Airtel</span>
     </div>
 
     <div class="network" data-network="GLO" onclick="selectNetwork(this)">
-      <img src="images/Glo.png" alt="GLO Logo">
+      <div class="network-logo-wrapper">
+        <img src="images/Glo.png" alt="GLO Logo">
+      </div>
       <span>GLO</span>
     </div>
   </div>
@@ -43,13 +53,9 @@
   <div id="plansContainer" class="plans-container"></div>
 
   <!-- Confirm -->
-  <button id="confirmBtn"
-          class="primary-btn disabled"
-          onclick="confirmOrder()"
-          disabled>
+  <button id="confirmBtn" class="primary-btn disabled" onclick="confirmOrder()" disabled>
     Continue
   </button>
-
 </div>
 
 <script src="app.js"></script>
