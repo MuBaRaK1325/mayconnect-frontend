@@ -1,25 +1,51 @@
-.password-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-.password-wrapper input {
-  width: 100%;
-  padding-right: 60px; /* space for the button */
-}
-
-.show-password-btn {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--bg-card);
-  border: 1px solid var(--border-soft);
-  border-radius: 12px;
-  padding: 6px 10px;
+/* ========== AUTH FORM BUTTONS ========== */
+.auth-card button.primary-btn {
+  display: block;            /* ensures button takes its own line */
+  width: 100%;               /* full width */
+  padding: 16px 0;           /* vertical padding */
+  margin: 12px 0;            /* space between buttons & inputs */
+  border-radius: 12px;       /* rounded corners */
+  background: var(--primary); 
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+  text-align: center;
   cursor: pointer;
-  color: var(--text-main);
-  font-weight: 500;
+  transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+  border: none;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.auth-card button.primary-btn:hover {
+  background: #2563eb; /* slightly darker on hover */
+  box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+
+.auth-card button.primary-btn:active {
+  transform: scale(0.97);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+}
+
+/* Optional: secondary buttons (links, outline) */
+.auth-card button.secondary-btn {
+  display: block;
+  width: 100%;
+  padding: 14px 0;
+  margin: 10px 0;
+  border-radius: 12px;
+  border: 2px solid var(--primary);
+  background: transparent;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.auth-card button.secondary-btn:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
 }
 
 
