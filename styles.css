@@ -1,65 +1,3 @@
-/* ========== AUTH FORM BUTTONS ========== */
-.auth-card button.primary-btn {
-  display: block;            /* ensures button takes its own line */
-  width: 100%;               /* full width */
-  padding: 16px 0;           /* vertical padding */
-  margin: 12px 0;            /* space between buttons & inputs */
-  border-radius: 12px;       /* rounded corners */
-  background: var(--primary); 
-  color: #fff;
-  font-weight: 600;
-  font-size: 1rem;
-  text-align: center;
-  cursor: pointer;
-  transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
-  border: none;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-.auth-card button.primary-btn:hover {
-  background: #2563eb; /* slightly darker on hover */
-  box-shadow: 0 6px 12px rgba(0,0,0,0.2);
-}
-
-.auth-card button.primary-btn:active {
-  transform: scale(0.97);
-  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
-}
-
-/* Optional: secondary buttons (links, outline) */
-.auth-card button.secondary-btn {
-  display: block;
-  width: 100%;
-  padding: 14px 0;
-  margin: 10px 0;
-  border-radius: 12px;
-  border: 2px solid var(--primary);
-  background: transparent;
-  color: var(--primary);
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.auth-card button.secondary-btn:hover {
-  background: var(--primary);
-  color: #fff;
-}
-
-}
-
-
-.logo-container {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 1rem;
-}
-
-.logo {
-  width: 72px;
-  height: auto;
-}
-
 /* =================================================
    MAY-CONNECT — SINGLE SOURCE OF TRUTH (FINAL)
 ================================================== */
@@ -97,10 +35,24 @@ body {
   min-height: 100vh;
 }
 
-/* =================================================
-   AUTH / WELCOME / LOGIN / SIGNUP  (FIXED & CENTERED)
-================================================== */
+/* ================== Circular MAY-Connect logo ================== */
+.logo-circle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 1.5rem 0;
+}
 
+.logo-circle img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 4px solid #3B82F6;
+  padding: 5px;
+  background: var(--bg-card);
+}
+
+/* ================== AUTH / WELCOME / LOGIN / SIGNUP ================== */
 .auth-container {
   min-height: 100vh;
   display: flex;
@@ -119,13 +71,9 @@ body {
   text-align: center;
 }
 
-.auth-card img {
-  width: 72px;
-  margin-bottom: 1rem;
-}
-
 .auth-card h2 {
-  margin-bottom: .3rem;
+  margin-bottom: .5rem;
+  font-weight: 600;
 }
 
 .auth-card p {
@@ -144,26 +92,102 @@ body {
   color: var(--text-main);
 }
 
-.auth-card button {
+/* Password wrapper */
+.password-wrapper {
+  position: relative;
   width: 100%;
-  padding: 14px;
-  background: var(--primary);
-  border: none;
-  border-radius: 14px;
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
+  margin-bottom: 1rem;
 }
 
+.password-wrapper input {
+  width: 100%;
+  padding-right: 70px; /* room for show button */
+  padding-left: 12px;
+}
+
+.show-password-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+/* ================== Auth buttons ================== */
+.auth-card button.primary-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  border: none;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.auth-card button.primary-btn:hover {
+  background: #2563eb;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+
+.auth-card button.primary-btn:active {
+  transform: scale(0.97);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+}
+
+/* Secondary buttons (links/outline) */
+.auth-card button.secondary-btn {
+  width: 100%;
+  padding: 14px 0;
+  margin: 10px 0;
+  border-radius: 12px;
+  border: 2px solid var(--primary);
+  background: transparent;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.auth-card button.secondary-btn:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* Links */
 .auth-card a {
   color: var(--primary);
   text-decoration: none;
 }
 
-/* =================================================
-   DASHBOARD (UNCHANGED VISUALLY)
-================================================== */
+/* ================== Index page buttons ================== */
+.welcome-buttons a.btn {
+  display: inline-block;
+  padding: 12px 24px;
+  border: 2px solid #3B82F6;
+  border-radius: 12px;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  margin: 0 8px;
+  transition: 0.2s;
+}
 
+.welcome-buttons a.btn:hover {
+  background: #3B82F6;
+  transform: scale(1.05);
+}
+
+/* ================== Dashboard ================== */
 .page-header {
   padding: 1rem;
   display: flex;
@@ -188,7 +212,7 @@ body {
   margin: .5rem 0;
 }
 
-/* QUICK ACTIONS */
+/* Quick actions */
 .quick-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -203,10 +227,7 @@ body {
   color: var(--text-main);
 }
 
-/* =================================================
-   COMMON UI
-================================================== */
-
+/* ================== Inputs ================== */
 input {
   background: var(--bg-soft);
   border: 1px solid var(--border-soft);
@@ -215,6 +236,7 @@ input {
   border-radius: 10px;
 }
 
+/* Primary buttons */
 .primary-btn {
   background: var(--primary);
   border: none;
@@ -235,10 +257,7 @@ input {
   pointer-events: none;
 }
 
-/* =================================================
-   DATA & AIRTIME — NETWORKS
-================================================== */
-
+/* ================== Network logos ================== */
 .network-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -246,7 +265,7 @@ input {
   margin: 16px 0;
 }
 
-.network-card {
+.network-card, .network {
   background: var(--bg-card);
   border: 1px solid var(--border-soft);
   border-radius: 14px;
@@ -254,11 +273,6 @@ input {
   text-align: center;
   cursor: pointer;
   transition: all .25s ease;
-}
-
-.network-card img {
-  width: 36px;
-  margin-bottom: 6px;
 }
 
 .network-card.selected {
@@ -269,10 +283,26 @@ input {
 .network-card[data-network="Airtel"].selected { border-color: var(--airtel); }
 .network-card[data-network="Glo"].selected { border-color: var(--glo); }
 
-/* =================================================
-   DATA PLANS
-================================================== */
+/* Network logos circular */
+.network-logo-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50px;
+  margin-bottom: 6px;
+}
 
+.network-logo-wrapper img,
+.network-card img,
+.network img {
+  max-width: 36px;
+  max-height: 36px;
+  object-fit: contain;
+  border-radius: 50%;
+  border: 3px solid #3B82F6;
+}
+
+/* ================== Data Plans ================== */
 .plans-container {
   margin-top: 1rem;
   animation: slideUp .4s ease;
@@ -295,10 +325,7 @@ input {
   border-color: var(--primary);
 }
 
-/* =================================================
-   AMOUNT PRESETS
-================================================== */
-
+/* Amount presets */
 .amount-presets {
   display: flex;
   gap: 10px;
@@ -320,10 +347,7 @@ input {
   background: var(--primary);
 }
 
-/* =================================================
-   SHIMMER
-================================================== */
-
+/* ================== Shimmer ================== */
 .shimmer {
   height: 60px;
   border-radius: 12px;
@@ -337,15 +361,7 @@ input {
   animation: shimmer 1.4s infinite;
 }
 
-@keyframes shimmer {
-  0% { background-position: -400px 0; }
-  100% { background-position: 400px 0; }
-}
-
-/* =================================================
-   MODALS & RECEIPTS
-================================================== */
-
+/* ================== Modals ================== */
 .modal {
   position: fixed;
   inset: 0;
@@ -370,10 +386,7 @@ input {
   animation: slideFade .35s ease;
 }
 
-/* =================================================
-   OFFLINE BANNER
-================================================== */
-
+/* ================== Offline Banner ================== */
 .offline {
   position: fixed;
   top: 0;
@@ -387,10 +400,7 @@ input {
 
 .hidden { display: none; }
 
-/* =================================================
-   ANIMATIONS
-================================================== */
-
+/* ================== Animations ================== */
 @keyframes slideUp {
   from { transform: translateY(30px); opacity:0 }
   to { transform: translateY(0); opacity:1 }
@@ -404,73 +414,4 @@ input {
 @keyframes slideFade {
   from { opacity: 0; transform: translateY(30px); }
   to { opacity: 1; transform: translateY(0); }
-}
-/* Logo container */
-.logo-container {
-  display: flex;
-  justify-content: center;
-  margin: 1rem 0;
-}
-
-.logo {
-  width: 72px;
-  height: auto;
-}
-
-/* Password input wrapper */
-.password-wrapper {
-  position: relative;
-  width: 100%;
-  margin-bottom: 1rem;
-}
-
-.password-wrapper input {
-  width: 100%;
-  padding-right: 60px; /* room for show button */
-}
-
-.show-password-btn {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--bg-card);
-  border: 1px solid var(--border-soft);
-  border-radius: 12px;
-  padding: 6px 10px;
-  cursor: pointer;
-  color: var(--text-main);
-  font-weight: 500;
-}
-
-/* Auth buttons */
-.auth-card button.primary-btn {
-  width: 100%;
-  padding: 14px;
-  border-radius: 14px;
-  background: var(--primary);
-  color: #fff;
-  font-weight: 600;
-  margin-top: 0.5rem;
-  cursor: pointer;
-  transition: transform 0.15s ease;
-}
-
-.auth-card button.primary-btn:active {
-  transform: scale(0.97);
-}
-
-/* Network logos centering in data.html */
-.network-logo-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 50px;
-  margin-bottom: 6px;
-}
-
-.network-logo-wrapper img {
-  max-width: 36px;
-  max-height: 36px;
-  object-fit: contain;
 }

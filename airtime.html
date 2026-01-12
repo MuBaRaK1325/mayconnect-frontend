@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<canvas id="confettiCanvas"></canvas>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -8,6 +7,11 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+
+<!-- Circular MAY-Connect Logo -->
+<div class="logo-circle">
+  <img src="images/logo.png" alt="MAY Connect Logo">
+</div>
 
 <div class="page-header">
   <button onclick="history.back()">←</button>
@@ -19,7 +23,7 @@
 <!-- RECEIPT MODAL -->
 <div id="receiptModal" class="modal hidden">
   <div class="modal-card receipt-card animate-in">
-    <img src="images/logo.png" class="receipt-logo">
+    <img src="images/logo.png" class="receipt-logo" alt="MAY Connect Logo">
     <h3 class="success-title">Airtime Successful</h3>
     <div id="receiptBody" class="receipt-body"></div>
     <button class="primary-btn" onclick="closeReceipt()">Done</button>
@@ -33,6 +37,7 @@
     <button onclick="selectAmount(200)">₦200</button>
     <button onclick="selectAmount(500)">₦500</button>
   </div>
+
   <input type="tel" id="airtimePhone" placeholder="Phone number">
   <input type="number" id="airtimeAmount" placeholder="Amount">
 
