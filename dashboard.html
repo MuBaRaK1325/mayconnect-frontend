@@ -8,9 +8,13 @@
 </head>
 <body>
 
-<div class="page-header">
-  <h2>Dashboard</h2>
-  <button id="moreBtn" class="more-btn">More ⚙️</button>
+<!-- LOGO + GREETING -->
+<div class="logo-circle">
+  <img src="images/logo.png" alt="MAY-Connect Logo">
+</div>
+
+<div style="text-align:center; margin-bottom:1rem;">
+  <h3 id="greeting">Hello, User 👋</h3>
 </div>
 
 <audio id="welcomeSound" src="sounds/welcome.mp3"></audio>
@@ -30,27 +34,38 @@
 
 <div class="dashboard-content">
 
+  <!-- WALLET -->
   <div class="wallet-card">
     <p>Wallet Balance</p>
     <strong id="walletBalance">₦0</strong>
     <button onclick="copyAccount()">Copy Account Number</button>
   </div>
 
+  <!-- QUICK ACTIONS -->
   <div class="quick-actions">
-    <button onclick="location.href='data.html'">Buy Data</button>
-    <button onclick="location.href='airtime.html'">Buy Airtime</button>
+    <button onclick="location.href='data.html'">📶 Buy Data</button>
+    <button onclick="location.href='airtime.html'">📞 Buy Airtime</button>
   </div>
 
   <div id="transactionsList" class="transactions-list"></div>
 </div>
 
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button onclick="location.href='dashboard.html'">🏠<br>Home</button>
+  <button onclick="location.href='transactions.html'">💳<br>Transactions</button>
+  <button onclick="toggleMore()">⚙️<br>More</button>
+</div>
+
 <script>
 const backendUrl = "https://mayconnect-backend-1.onrender.com";
 
-document.getElementById("moreBtn")
-  .addEventListener("click",()=>morePanel.classList.toggle("hidden"));
-
+/* Bottom More Toggle */
+function toggleMore(){
+  document.getElementById("morePanel").classList.toggle("hidden");
+}
 function closeMore(){ morePanel.classList.add("hidden"); }
+
 function openSetPin(){ alert("Set PIN"); }
 function enableBiometric(){ alert("Biometric coming soon"); }
 function forgotPin(){ alert("Forgot PIN"); }
@@ -67,6 +82,11 @@ function copyAccount(){
 
 document.addEventListener("DOMContentLoaded", async ()=>{
   welcomeSound.play();
+
+  /* Username greeting */
+  const name = localStorage.getItem("name") || "User";
+  document.getElementById("greeting").textContent = `Hello, ${name} 👋`;
+
   const token=localStorage.getItem("token");
   if(!token) return;
 

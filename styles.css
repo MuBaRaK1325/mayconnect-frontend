@@ -415,3 +415,194 @@ input {
   from { opacity: 0; transform: translateY(30px); }
   to { opacity: 1; transform: translateY(0); }
 }
+/* Bottom Navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: var(--bg-card);
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 0;
+  border-top: 1px solid var(--border-soft);
+}
+
+.bottom-nav button {
+  background: none;
+  border: none;
+  color: var(--text-main);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+/* ================= SPLASH SCREEN LOADER ================= */
+
+.splash-loader {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 15, 26, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+}
+
+.splash-loader.hidden {
+  display: none;
+}
+
+.splash-content {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.splash-content img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg-card);
+  padding: 6px;
+}
+
+/* Spinning ring */
+.splash-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 4px solid transparent;
+  border-top: 4px solid var(--primary);
+  border-right: 4px solid var(--primary);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+/* ===== FADE ANIMATIONS ===== */
+.fade-in {
+  animation: fadeIn .6s ease forwards;
+}
+.fade-out {
+  animation: fadeOut .4s ease forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* ===== SPLASH / LOADER ===== */
+.splash-loader {
+  position: fixed;
+  inset: 0;
+  background: rgba(5,10,25,.96);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.hidden { display: none; }
+
+.splash-content {
+  text-align: center;
+}
+.splash-content img {
+  width: 90px;
+  border-radius: 50%;
+  border: 4px solid #1e90ff;
+  background: #fff;
+}
+.splash-ring {
+  width: 110px;
+  height: 110px;
+  border: 4px solid rgba(255,255,255,.2);
+  border-top: 4px solid #1e90ff;
+  border-radius: 50%;
+  position: absolute;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== SUCCESS CHECK ===== */
+.success-check {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 4px solid #1e90ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  color: #1e90ff;
+  animation: pop .4s ease;
+}
+@keyframes pop {
+  from { transform: scale(.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ===== NETWORK INDICATOR ===== */
+.network-status {
+  position: fixed;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #111;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  z-index: 9999;
+}
+.network-status.slow { background: #ff9800; }
+.network-status.offline { background: #e53935; }
+
+/* ===== BUTTON FIX ===== */
+.password-wrapper {
+  position: relative;
+}
+.password-wrapper input {
+  padding-right: 70px;
+}
+.show-password-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #1e90ff;
+  font-weight: bold;
+}
+.biometric-box {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px dashed #1e90ff;
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  align-items: center;
+  transition: all .25s ease;
+}
+
+.biometric-box:hover {
+  background: rgba(30,144,255,.15);
+}
+
+.bio-icon {
+  font-size: 20px;
+}

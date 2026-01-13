@@ -2,30 +2,67 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>MAY Connect</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MAY-Connect | Welcome</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body class="welcome-page">
+<body>
 
-  <!-- Circular Logo -->
-  <div class="logo-circle">
-    <img src="images/logo.png" alt="MAY Connect Logo">
-  </div>
+<!-- HERO SECTION -->
+<div class="auth-container">
 
-  <div class="welcome-wrapper">
-    <div class="welcome-card">
-      <h1>Welcome to <span>MAY Connect</span></h1>
-      <p>Affordable Airtime • Data • Fast Transactions</p>
+  <div class="auth-card" style="padding-top:2.5rem;">
 
-      <div class="welcome-buttons">
-        <a href="login.html" class="btn">Login</a>
-        <a href="signup.html" class="btn">Sign Up</a>
+    <!-- LOGO -->
+    <div class="logo-circle">
+      <img src="images/logo.png" alt="MAY-Connect Logo">
+    </div>
+
+    <!-- BRAND NAME -->
+    <h2 style="margin-top:.5rem;">MAY-Connect</h2>
+    <p style="margin-top:.3rem;">
+      Fast • Secure • Reliable Digital Services
+    </p>
+
+    <!-- FEATURES -->
+    <div style="
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin:1.8rem 0;
+      font-size:.9rem;
+    ">
+      <div style="background:var(--bg-soft); padding:12px; border-radius:14px;">
+        📶 Buy Data
+      </div>
+      <div style="background:var(--bg-soft); padding:12px; border-radius:14px;">
+        📞 Buy Airtime
+      </div>
+      <div style="background:var(--bg-soft); padding:12px; border-radius:14px;">
+        💳 Wallet System
+      </div>
+      <div style="background:var(--bg-soft); padding:12px; border-radius:14px;">
+        🔐 Secure Login
       </div>
     </div>
 
-    <footer>© MAY TECH  2025. All rights reserved.</footer>
+    <!-- CTA BUTTONS -->
+    <div class="welcome-buttons" style="margin-top:1.5rem;">
+      <a href="login.html" class="btn">Login</a>
+      <a href="signup.html" class="btn">Sign Up</a>
+    </div>
+
+    <!-- FOOTER TEXT -->
+    <p style="
+      margin-top:1.8rem;
+      font-size:.75rem;
+      color:var(--text-muted);
+    ">
+      © 2026 MAY TECH. All rights reserved.
+    </p>
+
   </div>
+</div>
 
 </body>
 </html>
