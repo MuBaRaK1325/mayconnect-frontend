@@ -8,21 +8,22 @@
 </head>
 <body>
 
-<!-- Logo at the top -->
+<!-- Logo -->
 <div class="logo-circle">
   <img src="images/logo.png" alt="MAY Connect Logo">
 </div>
 
+<!-- Page Header -->
 <div class="page-header">
   <button onclick="history.back()">←</button>
   <h2>Buy Data</h2>
 </div>
 
+<!-- Purchase Page -->
 <div class="purchase-page">
   <input type="tel" id="phone" placeholder="Enter phone number">
 
   <h3>Select Network</h3>
-
   <div class="network-grid">
     <div class="network" data-network="MTN" onclick="selectNetwork(this)">
       <div class="network-logo-wrapper">
@@ -46,18 +47,51 @@
     </div>
   </div>
 
-  <!-- Loading shimmer -->
+  <!-- Loading shimmer for plans -->
   <div id="loadingPlans" class="shimmer hidden"></div>
 
-  <!-- Plans -->
+  <!-- Plans container -->
   <div id="plansContainer" class="plans-container"></div>
 
-  <!-- Confirm -->
+  <!-- Confirm Button -->
   <button id="confirmBtn" class="primary-btn disabled" onclick="confirmOrder()" disabled>
     Continue
   </button>
 </div>
 
+<!-- Loader / Splash -->
+<div id="splashLoader" class="hidden">
+  <div id="loaderState"></div>
+</div>
+
+<!-- Network Status -->
+<div id="networkStatus" class="network-status hidden"></div>
+
+<!-- PIN Modal -->
+<div id="pinModal" class="modal hidden">
+  <h3>Enter PIN</h3>
+  <div class="pin-inputs">
+    <input type="password" maxlength="1">
+    <input type="password" maxlength="1">
+    <input type="password" maxlength="1">
+    <input type="password" maxlength="1">
+  </div>
+  <button onclick="verifyPin()">Verify</button>
+  <button onclick="closePin()">Cancel</button>
+</div>
+
+<!-- Receipt Modal -->
+<div id="receiptModal" class="modal hidden">
+  <h3>Transaction Receipt</h3>
+  <div id="receiptBody"></div>
+  <button onclick="closeReceipt()">Close</button>
+</div>
+
+<!-- Sounds -->
+<audio id="welcomeSound" src="sounds/welcome.mp3" preload="auto"></audio>
+<audio id="successSound" src="sounds/success.mp3" preload="auto"></audio>
+
+<!-- App JS -->
 <script src="app.js"></script>
 </body>
 </html>

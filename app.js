@@ -249,7 +249,7 @@ async function verifyPin() {
   document.querySelectorAll(".pin-inputs input").forEach(i => pin += i.value);
   if (pin.length !== 4) return alert("Enter 4-digit PIN");
 
-  const res = await fetch(`${backendUrl}/api/wallet/verify-pin`, {
+  const res = await fetch(`${backendUrl}/api/wallet/purchase`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -287,7 +287,9 @@ function selectNetwork(el) {
 
   setTimeout(() => {
     $("loadingPlans").classList.add("hidden");
-    plans[selectedNetwork].forEach(plan => {
+
+    const plansList = plans[selectedNetwork] || [];
+    plansList.forEach(plan => {
       const div = document.createElement("div");
       div.className = "plan-card";
       div.innerHTML = `<strong>${plan.name}</strong><span>₦${plan.price}</span>`;
@@ -304,17 +306,47 @@ function selectPlan(el, plan) {
   $("confirmBtn").disabled = false;
 }
 
-/* =================================================
-   AIRTIME
-================================================== */
+async function confirmOrder() {
+  const phone = $("phone").value.trim();
+  if (!selectedNetwork || !selectedPlan || !phone) return alert("Enter phone and select plan");
 
-let selectedAirtimeNetwork = null;
+  openPin(async (pin) => {
+    showLoader();
+    try {
+      const res = await fetch(`${backendUrl}/api/wallet/purchase`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({
+          type: "data",
+          amount: selectedPlan.price,
+          pin,
+          details: {
+            mobile_number: phone,
+            plan: selectedPlan.name,
+            network: selectedNetwork
+          }
+        })
+      });
 
-function selectAirtimeNetwork(el) {
-  selectedAirtimeNetwork = el.dataset.network;
-  document.querySelectorAll(".network-card").forEach(n => n.classList.remove("selected"));
-  el.classList.add("selected");
-  $("airtimeConfirmBtn").disabled = false;
+      const data = await res.json();
+      hideLoader();
+
+      if (res.ok) {
+        $("successSound")?.play();
+        showReceipt({ reference: data.receipt.reference, amount: data.receipt.amount, type: "data" });
+        updateWalletBalance();
+        loadTransactions();
+      } else {
+        alert(data.error || "Purchase failed");
+      }
+    } catch {
+      hideLoader();
+      showNetwork("offline");
+    }
+  });
 }
 
 /* =================================================
@@ -328,11 +360,10 @@ function showReceipt(receipt) {
     <div class="receipt-row"><span>Status</span><strong style="color:#22c55e">SUCCESS</strong></div>
   `;
   $("receiptModal").classList.remove("hidden");
-  $("successSound")?.play();
 }
 
 function closeReceipt() {
-  $("receiptModal").classList.add("hidden");
+  $("receiptModal")?.classList.add("hidden");
 }
 
 /* =================================================
