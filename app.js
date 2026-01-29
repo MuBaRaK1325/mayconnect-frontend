@@ -350,6 +350,27 @@ async function confirmOrder() {
 }
 
 /* =================================================
+   DATA PLANS (MAITAMA — FINAL)
+================================================== */
+
+const plans = {
+  MTN: [
+    {
+      id: 165, // Maitama plan ID
+      name: "5GB Monthly",
+      price: 1600,       // what user pays
+      cost: 1400,        // what Maitama charges you
+      profit: 200,
+      type: "SME",
+      validity: "30 Days"
+    }
+  ],
+
+  AIRTEL: [],
+  GLO: []
+};
+
+/* =================================================
    RECEIPT
 ================================================== */
 
