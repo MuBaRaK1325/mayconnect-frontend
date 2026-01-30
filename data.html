@@ -2,104 +2,57 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Buy Data</title>
+  <title>Buy Data — MAY Connect</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="styles.css">
   <style>
-    /* ================== PLAN CARD STYLE ================== */
-    .plan-card {
-      display: flex;
-      align-items: center;
-      border: 1px solid #ccc;
-      border-left: 4px solid transparent;
-      border-radius: 8px;
-      padding: 12px;
-      margin: 8px 0;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      background-color: #fff;
-    }
+    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f9f9f9; }
+    .logo-circle { display:flex; justify-content:center; margin:20px 0; }
+    .logo-circle img { width:80px; height:80px; border-radius:50%; }
+    .page-header { display:flex; align-items:center; padding:0 15px; margin-bottom:15px; }
+    .page-header h2 { flex:1; text-align:center; margin:0; }
+    .page-header button { background:none; border:none; font-size:20px; cursor:pointer; }
+    .purchase-page { padding:0 15px; }
+    #phone { width:100%; padding:10px; margin-bottom:20px; font-size:16px; border-radius:5px; border:1px solid #ccc; }
 
-    .plan-card:hover {
-      background-color: #f0f9ff;
-    }
+    .network-grid { display:flex; justify-content:space-between; margin-bottom:20px; }
+    .network { flex:1; margin:0 5px; padding:10px; background:#fff; border-radius:8px; text-align:center; cursor:pointer; border:2px solid transparent; transition:0.2s; }
+    .network.selected { border-color:#3b82f6; }
+    .network img { width:40px; height:40px; margin-bottom:5px; }
+    .network span { display:block; font-weight:bold; }
 
-    .plan-card.selected {
-      border-left: 4px solid #3b82f6; /* Blue line for selected plan */
-      background-color: #e0f2fe;
-    }
+    #loadingPlans { height:80px; background:#e0e0e0; border-radius:5px; margin-bottom:15px; animation: shimmer 1.5s infinite linear; }
+    @keyframes shimmer { 0%{background-position:-200px 0} 100%{background-position:200px 0} }
+    
+    .plans-container { display:grid; grid-template-columns:1fr; gap:15px; margin-bottom:20px; }
+    .plan-card { display:flex; align-items:center; padding:10px; background:#fff; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:0.2s; }
+    .plan-card.selected { border-color:#3b82f6; }
+    .plan-logo img { width:40px; height:40px; margin-right:15px; }
+    .plan-info { flex:1; display:flex; flex-direction:column; }
+    .plan-name { font-weight:bold; margin-bottom:5px; }
+    .plan-validity { font-size:14px; color:#666; }
+    .plan-price { font-weight:bold; color:#111; }
 
-    .plan-logo {
-      width: 50px;
-      height: 50px;
-      margin-right: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+    .primary-btn { width:100%; padding:12px; font-size:16px; border:none; border-radius:5px; background:#3b82f6; color:#fff; cursor:pointer; transition:0.2s; }
+    .primary-btn.disabled { opacity:0.5; cursor:not-allowed; }
 
-    .plan-info {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
+    .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:1000; }
+    .modal.hidden { display:none; }
+    .modal h3 { margin-top:0; }
+    .modal-content { background:#fff; padding:20px; border-radius:8px; width:90%; max-width:400px; }
 
-    .plan-name {
-      font-weight: bold;
-      font-size: 16px;
-      margin-bottom: 4px;
-    }
+    .pin-inputs { display:flex; justify-content:space-between; margin:10px 0; }
+    .pin-inputs input { width:20%; padding:10px; font-size:18px; text-align:center; border-radius:5px; border:1px solid #ccc; }
 
-    .plan-price {
-      color: #3b82f6;
-      font-weight: bold;
-    }
+    .receipt-row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #eee; }
 
-    .network-grid {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 16px;
-    }
+    #networkStatus { position:fixed; top:10px; left:50%; transform:translateX(-50%); background:#f87171; color:#fff; padding:8px 12px; border-radius:5px; display:none; z-index:2000; }
+    #networkStatus.hidden { display:none; }
 
-    .network-logo-wrapper img {
-      width: 40px;
-      height: 40px;
-    }
-
-    .network.selected {
-      border: 2px solid #3b82f6;
-      border-radius: 8px;
-      background-color: #f0f9ff;
-    }
-
-    .shimmer {
-      height: 60px;
-      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.2s infinite;
-      border-radius: 8px;
-      margin: 8px 0;
-    }
-
-    @keyframes shimmer {
-      0% { background-position: -200% 0; }
-      100% { background-position: 200% 0; }
-    }
-
-    .hidden { display: none; }
-    .primary-btn.disabled { opacity: 0.6; cursor: not-allowed; }
-
-    .modal {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #fff;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      z-index: 1000;
-    }
+    #splashLoader { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); display:flex; justify-content:center; align-items:center; z-index:3000; }
+    .splash-ring { width:50px; height:50px; border:5px solid #3b82f6; border-radius:50%; border-top-color:transparent; animation:spin 1s linear infinite; margin-right:10px; }
+    @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+    #loaderState img { width:50px; height:50px; }
   </style>
 </head>
 <body>
@@ -115,44 +68,36 @@
   <h2>Buy Data</h2>
 </div>
 
-<!-- Purchase Page -->
 <div class="purchase-page">
+
+  <!-- Phone Input -->
   <input type="tel" id="phone" placeholder="Enter phone number">
 
+  <!-- Network Selection -->
   <h3>Select Network</h3>
   <div class="network-grid">
     <div class="network" data-network="MTN" onclick="selectNetwork(this)">
-      <div class="network-logo-wrapper">
-        <img src="images/Mtn.png" alt="MTN Logo">
-      </div>
+      <img src="images/Mtn.png" alt="MTN Logo">
       <span>MTN</span>
     </div>
-
     <div class="network" data-network="AIRTEL" onclick="selectNetwork(this)">
-      <div class="network-logo-wrapper">
-        <img src="images/Airtel.png" alt="Airtel Logo">
-      </div>
+      <img src="images/Airtel.png" alt="Airtel Logo">
       <span>Airtel</span>
     </div>
-
     <div class="network" data-network="GLO" onclick="selectNetwork(this)">
-      <div class="network-logo-wrapper">
-        <img src="images/Glo.png" alt="GLO Logo">
-      </div>
+      <img src="images/Glo.png" alt="GLO Logo">
       <span>GLO</span>
     </div>
   </div>
 
-  <!-- Loading shimmer for plans -->
+  <!-- Loading shimmer -->
   <div id="loadingPlans" class="shimmer hidden"></div>
 
-  <!-- Plans container -->
+  <!-- Plans -->
   <div id="plansContainer" class="plans-container"></div>
 
   <!-- Confirm Button -->
-  <button id="confirmBtn" class="primary-btn disabled" onclick="confirmOrder()" disabled>
-    Continue
-  </button>
+  <button id="confirmBtn" class="primary-btn disabled" onclick="confirmOrder()" disabled>Continue</button>
 </div>
 
 <!-- Loader / Splash -->
@@ -165,22 +110,26 @@
 
 <!-- PIN Modal -->
 <div id="pinModal" class="modal hidden">
-  <h3>Enter PIN</h3>
-  <div class="pin-inputs">
-    <input type="password" maxlength="1">
-    <input type="password" maxlength="1">
-    <input type="password" maxlength="1">
-    <input type="password" maxlength="1">
+  <div class="modal-content">
+    <h3>Enter PIN</h3>
+    <div class="pin-inputs">
+      <input type="password" maxlength="1">
+      <input type="password" maxlength="1">
+      <input type="password" maxlength="1">
+      <input type="password" maxlength="1">
+    </div>
+    <button onclick="verifyPin()">Verify</button>
+    <button onclick="closePin()">Cancel</button>
   </div>
-  <button onclick="verifyPin()">Verify</button>
-  <button onclick="closePin()">Cancel</button>
 </div>
 
 <!-- Receipt Modal -->
 <div id="receiptModal" class="modal hidden">
-  <h3>Transaction Receipt</h3>
-  <div id="receiptBody"></div>
-  <button onclick="closeReceipt()">Close</button>
+  <div class="modal-content">
+    <h3>Transaction Receipt</h3>
+    <div id="receiptBody"></div>
+    <button onclick="closeReceipt()">Close</button>
+  </div>
 </div>
 
 <!-- Sounds -->

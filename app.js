@@ -1,5 +1,5 @@
 /* =================================================
-   MAY-CONNECT — CLEAN APP.JS (FULL FEATURED)
+   MAY-CONNECT — FULL FEATURED APP.JS
 ================================================== */
 
 const backendUrl = "https://mayconnect-backend-1.onrender.com";
@@ -7,14 +7,12 @@ const backendUrl = "https://mayconnect-backend-1.onrender.com";
 /* =================================================
    GLOBAL HELPERS
 ================================================== */
-
 function $(id) { return document.getElementById(id); }
 function getToken() { return localStorage.getItem("token"); }
 
 /* =================================================
    NETWORK STATUS
 ================================================== */
-
 const net = $("networkStatus");
 function showNetwork(type) {
   if (!net) return;
@@ -28,25 +26,15 @@ window.addEventListener("offline", () => showNetwork("offline"));
 /* =================================================
    SPLASH / LOADER
 ================================================== */
-
 const loader = $("splashLoader");
 const loaderState = $("loaderState");
-
-function showLoader() {
-  if (!loader) return;
-  loaderState.innerHTML = `<div class="splash-ring"></div><img src="images/logo.png">`;
-  loader.classList.remove("hidden");
-}
-function showSuccess() {
-  if (!loader) return;
-  loaderState.innerHTML = `<div class="success-check">✓</div>`;
-}
+function showLoader() { loaderState.innerHTML = `<div class="splash-ring"></div><img src="images/logo.png">`; loader.classList.remove("hidden"); }
+function showSuccess() { loaderState.innerHTML = `<div class="success-check">✓</div>`; }
 function hideLoader() { loader?.classList.add("hidden"); }
 
 /* =================================================
    SOUNDS
 ================================================== */
-
 function playWelcomeSound() {
   const sound = $("welcomeSound");
   if (!sound) return;
@@ -63,7 +51,6 @@ function playSuccessSound() {
 /* =================================================
    PASSWORD TOGGLE
 ================================================== */
-
 function togglePassword(inputId, btn) {
   const input = $(inputId);
   if (!input) return;
@@ -74,7 +61,6 @@ function togglePassword(inputId, btn) {
 /* =================================================
    LOGIN
 ================================================== */
-
 const loginForm = $("loginForm");
 if (loginForm) {
   loginForm.addEventListener("submit", async e => {
@@ -90,17 +76,13 @@ if (loginForm) {
           password: $("login-password").value
         })
       });
-
       const elapsed = performance.now() - start;
       if (elapsed > 2500) showNetwork("slow");
 
       const data = await res.json();
       if (res.ok && data.token) {
         showSuccess();
-        setTimeout(() => {
-          localStorage.setItem("token", data.token);
-          location.replace("dashboard.html");
-        }, 700);
+        setTimeout(() => { localStorage.setItem("token", data.token); location.replace("dashboard.html"); }, 700);
       } else {
         alert(data.error || "Login failed");
         hideLoader();
@@ -115,7 +97,6 @@ if (loginForm) {
 /* =================================================
    SIGNUP
 ================================================== */
-
 const signupForm = $("signupForm");
 if (signupForm) {
   signupForm.addEventListener("submit", async e => {
@@ -134,10 +115,7 @@ if (signupForm) {
       const data = await res.json();
       if (res.ok && data.token) {
         showSuccess();
-        setTimeout(() => {
-          localStorage.setItem("token", data.token);
-          location.replace("dashboard.html");
-        }, 700);
+        setTimeout(() => { localStorage.setItem("token", data.token); location.replace("dashboard.html"); }, 700);
       } else {
         alert(data.error || "Signup failed");
         hideLoader();
@@ -152,7 +130,6 @@ if (signupForm) {
 /* =================================================
    DASHBOARD WALLET & TRANSACTIONS
 ================================================== */
-
 async function updateWalletBalance() {
   if (!getToken()) return;
   const res = await fetch(`${backendUrl}/api/wallet`, { headers: { Authorization: `Bearer ${getToken()}` } });
@@ -168,6 +145,7 @@ async function loadTransactions() {
 
   const res = await fetch(`${backendUrl}/api/wallet/transactions`, { headers: { Authorization: `Bearer ${getToken()}` } });
   const data = await res.json();
+
   (data.transactions || []).forEach(txn => {
     const div = document.createElement("div");
     div.className = "txn-card";
@@ -183,14 +161,11 @@ async function loadTransactions() {
 /* =================================================
    PIN HANDLING
 ================================================== */
-
 let pendingAction = null;
+let selectedNetwork = null;
+let selectedPlan = null;
 
-function openPin(cb) {
-  pendingAction = cb;
-  $("pinModal")?.classList.remove("hidden");
-}
-
+function openPin(cb) { pendingAction = cb; $("pinModal")?.classList.remove("hidden"); }
 function closePin() { $("pinModal")?.classList.add("hidden"); }
 
 async function verifyPin() {
@@ -201,9 +176,8 @@ async function verifyPin() {
   const res = await fetch(`${backendUrl}/api/wallet/purchase`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-    body: JSON.stringify({ pin })
+    body: JSON.stringify({ pin, type: "data", details: { plan: selectedPlan?.plan_id, network: selectedPlan?.maitama_network } })
   });
-
   const data = await res.json();
   if (res.ok) {
     closePin();
@@ -213,15 +187,17 @@ async function verifyPin() {
   }
 }
 
-/* ===================== DATA PLANS (FRONTEND) ===================== */
+/* =================================================
+   DATA PLANS
+================================================== */
 const plans = {
   MTN: [
     {
-      plan_id: 158,         // Maitama plan ID
-      maitama_network: 1,   // Maitama MTN network code
+      plan_id: 158,
+      maitama_network: 1,
       name: "MTN 5GB SME",
-      price: 1600,          // what user pays
-      cost: 1400,           // what Maitama charges
+      price: 1600,
+      cost: 1400,
       profit: 200,
       type: "SME",
       validity: "30 Days"
@@ -231,72 +207,25 @@ const plans = {
   GLO: []
 };
 
-/* ===================== SELECT NETWORK ===================== */
-let selectedNetwork = null;
-let selectedPlan = null;
-
-function selectNetwork(el) {
-  selectedNetwork = el.dataset.network;
-  selectedPlan = null;
-
-  document.querySelectorAll(".network").forEach(n => n.classList.remove("selected"));
-  el.classList.add("selected");
-
-  const container = $("plansContainer");
-  container.innerHTML = "";
-
-  const plansList = plans[selectedNetwork] || [];
-  if (plansList.length === 0) {
-    container.innerHTML = "<p>No plans available</p>";
-    $("confirmBtn").disabled = true;
-    return;
-  }
-
-  plansList.forEach(plan => {
-    const div = document.createElement("div");
-    div.className = "plan-card";
-    div.innerHTML = `
-      <div class="plan-name">${plan.name}</div>
-      <div class="plan-price">₦${plan.price}</div>
-      <div class="plan-validity">${plan.validity}</div>
-    `;
-    div.onclick = () => selectPlan(div, plan);
-    container.appendChild(div);
-  });
-}
-
-function selectPlan(el, plan) {
-  selectedPlan = plan;
-  document.querySelectorAll(".plan-card").forEach(c => c.classList.remove("selected"));
-  el.classList.add("selected");
-  $("confirmBtn").disabled = false;
-}
-/* =================================================
-   DATA PURCHASE / PLAN RENDERING
-================================================== */
-
-const plansContainer = document.getElementById("plansContainer");
-const loadingPlans = document.getElementById("loadingPlans");
-
-let selectedNetwork = null;
-let selectedPlan = null;
-
-// Mapping network names to logos
 const networkLogos = {
   MTN: "images/Mtn.png",
   AIRTEL: "images/Airtel.png",
   GLO: "images/Glo.png"
 };
 
+const plansContainer = $("plansContainer");
+const loadingPlans = $("loadingPlans");
+
+/* =================================================
+   SELECT NETWORK & PLAN
+================================================== */
 function selectNetwork(el) {
   selectedNetwork = el.dataset.network;
   selectedPlan = null;
 
-  // Highlight selected network
   document.querySelectorAll(".network").forEach(n => n.classList.remove("selected"));
   el.classList.add("selected");
 
-  // Show loader
   plansContainer.innerHTML = "";
   loadingPlans.classList.remove("hidden");
 
@@ -304,50 +233,33 @@ function selectNetwork(el) {
     loadingPlans.classList.add("hidden");
 
     const plansList = plans[selectedNetwork] || [];
-
-    if (plansList.length === 0) {
+    if (!plansList.length) {
       plansContainer.innerHTML = "<p>No plans available for this network</p>";
+      $("confirmBtn").disabled = true;
       return;
     }
 
     plansList.forEach(plan => {
       const div = document.createElement("div");
       div.className = "plan-card";
-      
-      // Inject network logo dynamically
       div.innerHTML = `
-        <div class="plan-logo">
-          <img src="${networkLogos[selectedNetwork]}" alt="${selectedNetwork} Logo">
-        </div>
+        <div class="plan-logo"><img src="${networkLogos[selectedNetwork]}" alt="${selectedNetwork} Logo"></div>
         <div class="plan-info">
           <span class="plan-name">${plan.name}</span>
           <span class="plan-validity">${plan.validity}</span>
         </div>
         <div class="plan-price">₦${plan.price}</div>
       `;
-
-      div.onclick = () => {
-        selectPlan(div, plan);
-      };
-
+      div.onclick = () => selectPlan(div, plan);
       plansContainer.appendChild(div);
     });
-  }, 600);
+  }, 300);
 }
 
 function selectPlan(card, plan) {
   selectedPlan = plan;
   document.querySelectorAll(".plan-card").forEach(c => c.classList.remove("selected"));
   card.classList.add("selected");
-  $("confirmBtn").disabled = false;
-  $("confirmBtn").classList.remove("disabled");
-}
-}
-
-function selectPlan(card, plan) {
-  document.querySelectorAll(".plan-card").forEach(c => c.classList.remove("selected"));
-  card.classList.add("selected");
-  selectedPlan = plan;
   $("confirmBtn").disabled = false;
   $("confirmBtn").classList.remove("disabled");
 }
@@ -355,13 +267,12 @@ function selectPlan(card, plan) {
 /* =================================================
    CONFIRM PURCHASE
 ================================================== */
-
 async function confirmOrder() {
-  if (!selectedPlan) return;
+  if (!selectedPlan) return alert("Select a plan first");
   const phone = $("phone").value;
   if (!phone) return alert("Enter phone number");
 
-  const userPin = prompt("Enter your 4-digit PIN"); // can be replaced with your PIN modal
+  const userPin = prompt("Enter your 4-digit PIN");
   if (!userPin) return;
 
   const payload = {
@@ -380,9 +291,10 @@ async function confirmOrder() {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
       body: JSON.stringify(payload)
     });
+
     const data = await res.json();
     if (res.ok) {
-      playSuccessSound(); // ✅ only success sound
+      playSuccessSound();
       showReceipt(data.receipt);
       updateWalletBalance();
       loadTransactions();
@@ -397,7 +309,6 @@ async function confirmOrder() {
 /* =================================================
    RECEIPT
 ================================================== */
-
 function showReceipt(receipt) {
   $("receiptBody").innerHTML = `
     <div class="receipt-row"><span>Reference</span><strong>${receipt.reference}</strong></div>
@@ -411,7 +322,6 @@ function closeReceipt() { $("receiptModal")?.classList.add("hidden"); }
 /* =================================================
    BIOMETRICS PLACEHOLDER
 ================================================== */
-
 function biometricLogin() {
   if (!("credentials" in navigator)) return alert("Biometric not supported");
   showLoader();
@@ -421,7 +331,6 @@ function biometricLogin() {
 /* =================================================
    INIT
 ================================================== */
-
 document.addEventListener("DOMContentLoaded", () => {
   playWelcomeSound();
   if (getToken()) {
