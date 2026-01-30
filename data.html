@@ -1,138 +1,136 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MAY-Connect Data Purchase</title>
-<link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <title>Buy Data – MAY Connect</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Your existing CSS -->
+  <link rel="stylesheet" href="style.css" />
+
 </head>
 <body>
 
 <!-- ================= NETWORK STATUS ================= -->
 <div id="networkStatus" class="network-status hidden"></div>
 
-<!-- ================= SPLASH / LOADER ================= -->
-<div id="splashLoader" class="splash-loader hidden">
+<!-- ================= LOADER ================= -->
+<div id="splashLoader" class="loader hidden">
   <div id="loaderState"></div>
 </div>
 
-<!-- ================= SOUNDS ================= -->
-<audio id="successSound" src="sounds/success.mp3"></audio>
-
-<!-- ================= DASHBOARD ================= -->
-<div class="dashboard">
-
-  <!-- WALLET BALANCE -->
+<!-- ================= HEADER ================= -->
+<header class="top-bar">
+  <h2>Buy Data</h2>
   <div class="wallet">
-    <h2>Wallet Balance: <span id="walletBalance">₦0</span></h2>
+    Balance: <span id="walletBalance">₦0</span>
+  </div>
+</header>
+
+<!-- ================= PHONE INPUT ================= -->
+<section class="input-section">
+  <input
+    type="tel"
+    id="phone"
+    placeholder="Enter phone number"
+    maxlength="11"
+  />
+</section>
+
+<!-- ================= NETWORK LOGOS ================= -->
+<section class="networks">
+  <div class="network-logo" onclick="document.getElementById('mtnPlans').classList.toggle('hidden')">
+    <img src="mtn.png" alt="MTN" />
+    <p>MTN</p>
+  </div>
+</section>
+
+<!-- ================= MTN PLANS ================= -->
+<section id="mtnPlans" class="plans hidden">
+
+  <div
+    class="plan-card"
+    onclick="selectPlan(this, {
+      plan_id: 158,
+      network: 1,
+      name: 'MTN 5GB SME',
+      price: 1600,
+      validity: '30 Days'
+    })"
+  >
+    <h4>MTN 5GB SME</h4>
+    <p>₦1,600</p>
+    <small>30 Days</small>
   </div>
 
-  <!-- ================= NETWORK SELECTION ================= -->
-  <div class="networks">
-    <div class="network" data-network="MTN" onclick="selectNetwork(this)">
-      <img src="images/Mtn.png" alt="MTN Logo">
-    </div>
-    <div class="network" data-network="AIRTEL" onclick="selectNetwork(this)">
-      <img src="images/Airtel.png" alt="Airtel Logo">
-    </div>
-    <div class="network" data-network="GLO" onclick="selectNetwork(this)">
-      <img src="images/Glo.png" alt="Glo Logo">
-    </div>
-  </div>
+</section>
 
-  <!-- ================= DATA PLANS ================= -->
-  <div id="loadingPlans" class="loading hidden">Loading plans...</div>
-  <div id="plansContainer" class="plans-container"></div>
-
-  <!-- ================= PHONE & CONFIRM ================= -->
-  <div class="purchase-form">
-    <input type="text" id="phone" placeholder="Enter phone number">
-    <button id="confirmBtn" class="disabled" onclick="confirmOrder()" disabled>Confirm Order</button>
-  </div>
-
+<!-- ================= CONFIRM ORDER ================= -->
+<div class="confirm-wrapper">
+  <button
+    id="confirmOrderBtn"
+    class="confirm-btn hidden"
+    onclick="confirmOrder()"
+  >
+    Confirm Order
+  </button>
 </div>
 
-<!-- ================= PIN MODAL ================= -->
-<div id="pinModal" class="modal hidden">
-  <div class="modal-content">
-    <h3>Enter Transaction PIN</h3>
-    <div class="pin-inputs">
-      <input type="password" maxlength="1">
-      <input type="password" maxlength="1">
-      <input type="password" maxlength="1">
-      <input type="password" maxlength="1">
-    </div>
-    <button onclick="submitPin()">Submit</button>
-    <button onclick="closePinModal()">Cancel</button>
-  </div>
+<!-- ================= SET PIN BUTTON ================= -->
+<div class="pin-settings">
+  <button id="setPinBtn" onclick="openSetPin()">Set PIN</button>
 </div>
 
 <!-- ================= SET PIN MODAL ================= -->
 <div id="setPinModal" class="modal hidden">
   <div class="modal-content">
-    <h3>Set Your Transaction PIN</h3>
+    <h3>Set Transaction PIN</h3>
+
     <div class="pin-inputs">
-      <input type="password" maxlength="1">
-      <input type="password" maxlength="1">
-      <input type="password" maxlength="1">
-      <input type="password" maxlength="1">
+      <input maxlength="1" />
+      <input maxlength="1" />
+      <input maxlength="1" />
+      <input maxlength="1" />
     </div>
-    <button onclick="submitSetPin()">Set PIN</button>
-    <button onclick="closeSetPin()">Cancel</button>
+
+    <button onclick="submitSetPin()">Save PIN</button>
+    <button class="ghost" onclick="closeSetPin()">Cancel</button>
   </div>
 </div>
 
-<!-- ================= RECEIPT MODAL ================= -->
+<!-- ================= PIN MODAL ================= -->
+<div id="pinModal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Enter PIN</h3>
+
+    <div class="pin-inputs">
+      <input maxlength="1" />
+      <input maxlength="1" />
+      <input maxlength="1" />
+      <input maxlength="1" />
+    </div>
+
+    <button onclick="submitPin()">Pay Now</button>
+    <button class="ghost" onclick="closePinModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- ================= RECEIPT ================= -->
 <div id="receiptModal" class="modal hidden">
   <div class="modal-content">
-    <h3>Receipt</h3>
+    <h3>Transaction Receipt</h3>
     <div id="receiptBody"></div>
-    <button onclick="closeReceipt()">Close</button>
+    <button onclick="this.parentElement.parentElement.classList.add('hidden')">
+      Close
+    </button>
   </div>
 </div>
 
-<!-- ================= SCRIPT ================= -->
+<!-- ================= SOUND ================= -->
+<audio id="successSound" src="success.mp3"></audio>
+
+<!-- ================= JS ================= -->
 <script src="app.js"></script>
-<script>
-  // NETWORK SELECT
-  function selectNetwork(el) {
-    window.selectedNetwork = el.dataset.network;
-    document.querySelectorAll(".network").forEach(n => n.classList.remove("selected"));
-    el.classList.add("selected");
-
-    // Load plans dynamically
-    const plansContainer = document.getElementById("plansContainer");
-    const loadingPlans = document.getElementById("loadingPlans");
-    plansContainer.innerHTML = "";
-    loadingPlans.classList.remove("hidden");
-
-    setTimeout(() => {
-      loadingPlans.classList.add("hidden");
-
-      const plansList = window.plans?.[window.selectedNetwork] || [];
-      if (!plansList.length) {
-        plansContainer.innerHTML = "<p>No plans available for this network</p>";
-        document.getElementById("confirmBtn").disabled = true;
-        return;
-      }
-
-      plansList.forEach(plan => {
-        const div = document.createElement("div");
-        div.className = "plan-card";
-        div.innerHTML = `
-          <div class="plan-logo"><img src="images/${window.selectedNetwork}.png" alt="${window.selectedNetwork}"></div>
-          <div class="plan-info">
-            <span class="plan-name">${plan.name}</span>
-            <span class="plan-validity">${plan.validity}</span>
-          </div>
-          <div class="plan-price">₦${plan.price}</div>
-        `;
-        div.onclick = () => selectPlan(div, plan);
-        plansContainer.appendChild(div);
-      });
-    }, 300);
-  }
-</script>
 
 </body>
 </html>
