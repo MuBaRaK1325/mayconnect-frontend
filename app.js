@@ -1,5 +1,5 @@
 /* =================================================
-   MAY-CONNECT — FINAL WIRED APP.JS (STABLE)
+   MAY-CONNECT — FINAL STABLE APP.JS (FIXED)
 ================================================== */
 
 const backendUrl = "https://mayconnect-backend-1.onrender.com";
@@ -68,11 +68,13 @@ $("loginForm")?.addEventListener("submit", async e => {
 /* ================= WALLET ================= */
 async function updateWalletBalance() {
   if (!getToken()) return;
-  const res = await fetch(`${backendUrl}/api/wallet`, {
-    headers: { Authorization: `Bearer ${getToken()}` }
-  });
-  const data = await res.json();
-  $("walletBalance").textContent = `₦${data.balance || 0}`;
+  try {
+    const res = await fetch(`${backendUrl}/api/wallet`, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    const data = await res.json();
+    $("walletBalance").textContent = `₦${data.balance || 0}`;
+  } catch {}
 }
 
 /* ================= PIN STATE ================= */
@@ -93,19 +95,17 @@ async function checkPinStatus() {
 
 /* ================= DATA PLANS ================= */
 let selectedPlan = null;
-
 const plans = [
   {
     id: "mtn5gb",
     plan_id: 158,
     network: 1,
     name: "MTN 5GB SME",
-    price: 1600,
+    price: 1500,
     validity: "30 Days"
   }
 ];
 
-/* When plan card is tapped */
 function selectPlan(card, plan) {
   document.querySelectorAll(".plan-card")
     .forEach(p => p.classList.remove("selected"));
@@ -146,8 +146,7 @@ async function submitSetPin() {
     .map(i => i.value)
     .join("");
 
-  if (!/^\d{4}$/.test(pin))
-    return alert("PIN must be 4 digits");
+  if (!/^\d{4}$/.test(pin)) return alert("PIN must be 4 digits");
 
   showLoader();
   try {
@@ -171,7 +170,8 @@ async function submitSetPin() {
     setTimeout(() => {
       hideLoader();
       closeSetPin();
-      openPinModal(); // continue purchase automatically
+      // If a plan is already selected, continue purchase automatically
+      if (selectedPlan && $("phone").value) openPinModal();
     }, 600);
   } catch (err) {
     alert(err.message);
