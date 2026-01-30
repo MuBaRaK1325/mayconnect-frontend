@@ -267,6 +267,51 @@ async function verifyPin() {
   }
 }
 
+const plansContainer = document.getElementById("plansContainer");
+const loadingPlans = document.getElementById("loadingPlans");
+
+let selectedPlan = null;
+
+async function loadPlans() {
+  loadingPlans.classList.remove("hidden");
+
+  try {
+    const res = await fetch("/api/data/plans");
+    const plans = await res.json();
+
+    plansContainer.innerHTML = "";
+
+    plans.forEach(plan => {
+      const card = document.createElement("div");
+      card.className = "plan-card";
+      card.innerHTML = `
+        <h4>${plan.name}</h4>
+        <p>${plan.validity}</p>
+        <strong>₦${plan.price}</strong>
+      `;
+
+      card.onclick = () => selectPlan(card, plan);
+      plansContainer.appendChild(card);
+    });
+
+  } catch (err) {
+    plansContainer.innerHTML = `<p>Failed to load plans</p>`;
+  } finally {
+    loadingPlans.classList.add("hidden");
+  }
+}
+
+function selectPlan(card, plan) {
+  document.querySelectorAll(".plan-card").forEach(c => c.classList.remove("active"));
+  card.classList.add("active");
+
+  selectedPlan = plan;
+  confirmBtn.disabled = false;
+  confirmBtn.classList.remove("disabled");
+}
+
+loadPlans();
+
 /* =================================================
    DATA PURCHASE
 ================================================== */
@@ -305,42 +350,40 @@ function selectPlan(el, plan) {
   el.classList.add("selected");
   $("confirmBtn").disabled = false;
 }
-
 async function confirmOrder() {
-  const phone = $("phone").value.trim();
-  if (!selectedNetwork || !selectedPlan || !phone) return alert("Enter phone and select plan");
+  if (!selectedPlan) return;
 
-  openPin(async (pin) => {
-    showLoader();
-    try {
-      const res = await fetch(`${backendUrl}/api/wallet/purchase`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${getToken()}`
-        },
-        body: JSON.stringify({
-          type: "data",
-          amount: selectedPlan.price,
-          pin,
-          details: {
-            mobile_number: phone,
-            plan: selectedPlan.name,
-            network: selectedNetwork
-          }
-        })
-      });
+  const phone = document.getElementById("phone").value;
 
-      const data = await res.json();
-      hideLoader();
+  const payload = {
+    type: "data",
+    pin: userPin, // your existing PIN logic
+    details: {
+      mobile_number: phone,
+      plan: selectedPlan.plan_id,
+      network: selectedPlan.maitama_network
+    }
+  };
 
-      if (res.ok) {
-        $("successSound")?.play();
-        showReceipt({ reference: data.receipt.reference, amount: data.receipt.amount, type: "data" });
-        updateWalletBalance();
-        loadTransactions();
-      } else {
-        alert(data.error || "Purchase failed");
+  const res = await fetch("/api/wallet/purchase", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+
+  if (res.ok) {
+    successSound.play(); // ✅ only success sound
+    showReceipt(data.receipt);
+  } else {
+    alert(data.error);
+  }
+}
+
       }
     } catch {
       hideLoader();
