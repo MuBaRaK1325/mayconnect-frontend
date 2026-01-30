@@ -213,33 +213,27 @@ async function verifyPin() {
   }
 }
 
-/* =================================================
-   DATA PLANS (MTN 5GB SME)
-================================================== */
-
+/* ===================== DATA PLANS (FRONTEND) ===================== */
 const plans = {
   MTN: [
     {
-      plan_id: 158,          // Maitama plan ID
-      name: "5GB Monthly",
-      price: 1500,           // what user pays
-      cost: 1400,            // Maitama charges
-      profit: 100,
+      plan_id: 158,         // Maitama plan ID
+      maitama_network: 1,   // Maitama MTN network code
+      name: "MTN 5GB SME",
+      price: 1600,          // what user pays
+      cost: 1400,           // what Maitama charges
+      profit: 200,
       type: "SME",
-      validity: "30 Days",
-      maitama_network: 1
+      validity: "30 Days"
     }
   ],
   AIRTEL: [],
   GLO: []
 };
 
+/* ===================== SELECT NETWORK ===================== */
 let selectedNetwork = null;
 let selectedPlan = null;
-
-/* =================================================
-   SELECT NETWORK & PLAN
-================================================== */
 
 function selectNetwork(el) {
   selectedNetwork = el.dataset.network;
@@ -248,12 +242,35 @@ function selectNetwork(el) {
   document.querySelectorAll(".network").forEach(n => n.classList.remove("selected"));
   el.classList.add("selected");
 
-  $("plansContainer").innerHTML = "";
-  $("loadingPlans")?.classList.remove("hidden");
+  const container = $("plansContainer");
+  container.innerHTML = "";
 
-  setTimeout(() => {
-    $("loadingPlans")?.classList.add("hidden");
+  const plansList = plans[selectedNetwork] || [];
+  if (plansList.length === 0) {
+    container.innerHTML = "<p>No plans available</p>";
+    $("confirmBtn").disabled = true;
+    return;
+  }
 
+  plansList.forEach(plan => {
+    const div = document.createElement("div");
+    div.className = "plan-card";
+    div.innerHTML = `
+      <div class="plan-name">${plan.name}</div>
+      <div class="plan-price">₦${plan.price}</div>
+      <div class="plan-validity">${plan.validity}</div>
+    `;
+    div.onclick = () => selectPlan(div, plan);
+    container.appendChild(div);
+  });
+}
+
+function selectPlan(el, plan) {
+  selectedPlan = plan;
+  document.querySelectorAll(".plan-card").forEach(c => c.classList.remove("selected"));
+  el.classList.add("selected");
+  $("confirmBtn").disabled = false;
+}
 /* =================================================
    DATA PURCHASE / PLAN RENDERING
 ================================================== */
