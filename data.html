@@ -1,142 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Buy Data — MAY Connect</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="styles.css">
-  <style>
-    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f9f9f9; }
-    .logo-circle { display:flex; justify-content:center; margin:20px 0; }
-    .logo-circle img { width:80px; height:80px; border-radius:50%; }
-    .page-header { display:flex; align-items:center; padding:0 15px; margin-bottom:15px; }
-    .page-header h2 { flex:1; text-align:center; margin:0; }
-    .page-header button { background:none; border:none; font-size:20px; cursor:pointer; }
-    .purchase-page { padding:0 15px; }
-    #phone { width:100%; padding:10px; margin-bottom:20px; font-size:16px; border-radius:5px; border:1px solid #ccc; }
-
-    .network-grid { display:flex; justify-content:space-between; margin-bottom:20px; }
-    .network { flex:1; margin:0 5px; padding:10px; background:#fff; border-radius:8px; text-align:center; cursor:pointer; border:2px solid transparent; transition:0.2s; }
-    .network.selected { border-color:#3b82f6; }
-    .network img { width:40px; height:40px; margin-bottom:5px; }
-    .network span { display:block; font-weight:bold; }
-
-    #loadingPlans { height:80px; background:#e0e0e0; border-radius:5px; margin-bottom:15px; animation: shimmer 1.5s infinite linear; }
-    @keyframes shimmer { 0%{background-position:-200px 0} 100%{background-position:200px 0} }
-    
-    .plans-container { display:grid; grid-template-columns:1fr; gap:15px; margin-bottom:20px; }
-    .plan-card { display:flex; align-items:center; padding:10px; background:#fff; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:0.2s; }
-    .plan-card.selected { border-color:#3b82f6; }
-    .plan-logo img { width:40px; height:40px; margin-right:15px; }
-    .plan-info { flex:1; display:flex; flex-direction:column; }
-    .plan-name { font-weight:bold; margin-bottom:5px; }
-    .plan-validity { font-size:14px; color:#666; }
-    .plan-price { font-weight:bold; color:#111; }
-
-    .primary-btn { width:100%; padding:12px; font-size:16px; border:none; border-radius:5px; background:#3b82f6; color:#fff; cursor:pointer; transition:0.2s; }
-    .primary-btn.disabled { opacity:0.5; cursor:not-allowed; }
-
-    .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:1000; }
-    .modal.hidden { display:none; }
-    .modal h3 { margin-top:0; }
-    .modal-content { background:#fff; padding:20px; border-radius:8px; width:90%; max-width:400px; }
-
-    .pin-inputs { display:flex; justify-content:space-between; margin:10px 0; }
-    .pin-inputs input { width:20%; padding:10px; font-size:18px; text-align:center; border-radius:5px; border:1px solid #ccc; }
-
-    .receipt-row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #eee; }
-
-    #networkStatus { position:fixed; top:10px; left:50%; transform:translateX(-50%); background:#f87171; color:#fff; padding:8px 12px; border-radius:5px; display:none; z-index:2000; }
-    #networkStatus.hidden { display:none; }
-
-    #splashLoader { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); display:flex; justify-content:center; align-items:center; z-index:3000; }
-    .splash-ring { width:50px; height:50px; border:5px solid #3b82f6; border-radius:50%; border-top-color:transparent; animation:spin 1s linear infinite; margin-right:10px; }
-    @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
-    #loaderState img { width:50px; height:50px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAY-Connect Data Purchase</title>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<!-- Logo -->
-<div class="logo-circle">
-  <img src="images/logo.png" alt="MAY Connect Logo">
-</div>
+<!-- ================= NETWORK STATUS ================= -->
+<div id="networkStatus" class="network-status hidden"></div>
 
-<!-- Page Header -->
-<div class="page-header">
-  <button onclick="history.back()">←</button>
-  <h2>Buy Data</h2>
-</div>
-
-<div class="purchase-page">
-
-  <!-- Phone Input -->
-  <input type="tel" id="phone" placeholder="Enter phone number">
-
-  <!-- Network Selection -->
-  <h3>Select Network</h3>
-  <div class="network-grid">
-    <div class="network" data-network="MTN" onclick="selectNetwork(this)">
-      <img src="images/Mtn.png" alt="MTN Logo">
-      <span>MTN</span>
-    </div>
-    <div class="network" data-network="AIRTEL" onclick="selectNetwork(this)">
-      <img src="images/Airtel.png" alt="Airtel Logo">
-      <span>Airtel</span>
-    </div>
-    <div class="network" data-network="GLO" onclick="selectNetwork(this)">
-      <img src="images/Glo.png" alt="GLO Logo">
-      <span>GLO</span>
-    </div>
-  </div>
-
-  <!-- Loading shimmer -->
-  <div id="loadingPlans" class="shimmer hidden"></div>
-
-  <!-- Plans -->
-  <div id="plansContainer" class="plans-container"></div>
-
-  <!-- Confirm Button -->
-  <button id="confirmBtn" class="primary-btn disabled" onclick="confirmOrder()" disabled>Continue</button>
-</div>
-
-<!-- Loader / Splash -->
-<div id="splashLoader" class="hidden">
+<!-- ================= SPLASH / LOADER ================= -->
+<div id="splashLoader" class="splash-loader hidden">
   <div id="loaderState"></div>
 </div>
 
-<!-- Network Status -->
-<div id="networkStatus" class="network-status hidden"></div>
+<!-- ================= SOUNDS ================= -->
+<audio id="successSound" src="sounds/success.mp3"></audio>
 
-<!-- PIN Modal -->
+<!-- ================= DASHBOARD ================= -->
+<div class="dashboard">
+
+  <!-- WALLET BALANCE -->
+  <div class="wallet">
+    <h2>Wallet Balance: <span id="walletBalance">₦0</span></h2>
+  </div>
+
+  <!-- ================= NETWORK SELECTION ================= -->
+  <div class="networks">
+    <div class="network" data-network="MTN" onclick="selectNetwork(this)">
+      <img src="images/Mtn.png" alt="MTN Logo">
+    </div>
+    <div class="network" data-network="AIRTEL" onclick="selectNetwork(this)">
+      <img src="images/Airtel.png" alt="Airtel Logo">
+    </div>
+    <div class="network" data-network="GLO" onclick="selectNetwork(this)">
+      <img src="images/Glo.png" alt="Glo Logo">
+    </div>
+  </div>
+
+  <!-- ================= DATA PLANS ================= -->
+  <div id="loadingPlans" class="loading hidden">Loading plans...</div>
+  <div id="plansContainer" class="plans-container"></div>
+
+  <!-- ================= PHONE & CONFIRM ================= -->
+  <div class="purchase-form">
+    <input type="text" id="phone" placeholder="Enter phone number">
+    <button id="confirmBtn" class="disabled" onclick="confirmOrder()" disabled>Confirm Order</button>
+  </div>
+
+</div>
+
+<!-- ================= PIN MODAL ================= -->
 <div id="pinModal" class="modal hidden">
   <div class="modal-content">
-    <h3>Enter PIN</h3>
+    <h3>Enter Transaction PIN</h3>
     <div class="pin-inputs">
       <input type="password" maxlength="1">
       <input type="password" maxlength="1">
       <input type="password" maxlength="1">
       <input type="password" maxlength="1">
     </div>
-    <button onclick="verifyPin()">Verify</button>
-    <button onclick="closePin()">Cancel</button>
+    <button onclick="submitPin()">Submit</button>
+    <button onclick="closePinModal()">Cancel</button>
   </div>
 </div>
 
-<!-- Receipt Modal -->
+<!-- ================= SET PIN MODAL ================= -->
+<div id="setPinModal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Set Your Transaction PIN</h3>
+    <div class="pin-inputs">
+      <input type="password" maxlength="1">
+      <input type="password" maxlength="1">
+      <input type="password" maxlength="1">
+      <input type="password" maxlength="1">
+    </div>
+    <button onclick="submitSetPin()">Set PIN</button>
+    <button onclick="closeSetPin()">Cancel</button>
+  </div>
+</div>
+
+<!-- ================= RECEIPT MODAL ================= -->
 <div id="receiptModal" class="modal hidden">
   <div class="modal-content">
-    <h3>Transaction Receipt</h3>
+    <h3>Receipt</h3>
     <div id="receiptBody"></div>
     <button onclick="closeReceipt()">Close</button>
   </div>
 </div>
 
-<!-- Sounds -->
-<audio id="welcomeSound" src="sounds/welcome.mp3" preload="auto"></audio>
-<audio id="successSound" src="sounds/success.mp3" preload="auto"></audio>
-
-<!-- App JS -->
+<!-- ================= SCRIPT ================= -->
 <script src="app.js"></script>
+<script>
+  // NETWORK SELECT
+  function selectNetwork(el) {
+    window.selectedNetwork = el.dataset.network;
+    document.querySelectorAll(".network").forEach(n => n.classList.remove("selected"));
+    el.classList.add("selected");
+
+    // Load plans dynamically
+    const plansContainer = document.getElementById("plansContainer");
+    const loadingPlans = document.getElementById("loadingPlans");
+    plansContainer.innerHTML = "";
+    loadingPlans.classList.remove("hidden");
+
+    setTimeout(() => {
+      loadingPlans.classList.add("hidden");
+
+      const plansList = window.plans?.[window.selectedNetwork] || [];
+      if (!plansList.length) {
+        plansContainer.innerHTML = "<p>No plans available for this network</p>";
+        document.getElementById("confirmBtn").disabled = true;
+        return;
+      }
+
+      plansList.forEach(plan => {
+        const div = document.createElement("div");
+        div.className = "plan-card";
+        div.innerHTML = `
+          <div class="plan-logo"><img src="images/${window.selectedNetwork}.png" alt="${window.selectedNetwork}"></div>
+          <div class="plan-info">
+            <span class="plan-name">${plan.name}</span>
+            <span class="plan-validity">${plan.validity}</span>
+          </div>
+          <div class="plan-price">₦${plan.price}</div>
+        `;
+        div.onclick = () => selectPlan(div, plan);
+        plansContainer.appendChild(div);
+      });
+    }, 300);
+  }
+</script>
+
 </body>
 </html>
