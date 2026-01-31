@@ -1,5 +1,5 @@
 /* =================================================
-   MAY-CONNECT — FINAL STABLE APP.JS (FIXED)
+   MAY-CONNECT — FINAL STABLE APP.JS (ALL PLANS FIXED)
 ================================================== */
 
 const backendUrl = "https://mayconnect-backend-1.onrender.com";
@@ -41,30 +41,6 @@ function playSuccessSound() {
   $("successSound")?.play().catch(() => {});
 }
 
-/* ================= AUTH ================= */
-$("loginForm")?.addEventListener("submit", async e => {
-  e.preventDefault();
-  showLoader();
-  try {
-    const res = await fetch(`${backendUrl}/api/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: $("login-email").value,
-        password: $("login-password").value
-      })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
-    localStorage.setItem("token", data.token);
-    showSuccess();
-    setTimeout(() => location.replace("dashboard.html"), 600);
-  } catch (err) {
-    alert(err.message || "Login failed");
-    hideLoader();
-  }
-});
-
 /* ================= WALLET ================= */
 async function updateWalletBalance() {
   if (!getToken()) return;
@@ -73,7 +49,8 @@ async function updateWalletBalance() {
       headers: { Authorization: `Bearer ${getToken()}` }
     });
     const data = await res.json();
-    $("walletBalance").textContent = `₦${data.balance || 0}`;
+    $("walletBalance") &&
+      ($("walletBalance").textContent = `₦${data.balance || 0}`);
   } catch {}
 }
 
@@ -87,45 +64,88 @@ async function checkPinStatus() {
     });
     if (res.ok) {
       hasPin = true;
-      const btn = $("setPinBtn");
-      if (btn) btn.textContent = "Change PIN";
+      $("setPinBtn") && ($("setPinBtn").textContent = "Change PIN");
     }
   } catch {}
 }
 
 /* ================= DATA PLANS ================= */
 let selectedPlan = null;
-const plans = [
+
+const DATA_PLANS = [
+  /* ========= MAITAMA ========= */
   {
-    id: "mtn5gb",
-    plan_id: 158,
-    network: 1,
+    plan_id: 153,
+    network: "MTN",
     name: "MTN 5GB SME",
     price: 1500,
     validity: "30 Days"
-  }
+  },
+
+  /* ========= MTN (SUBPADI) ========= */
+  { plan_id: 414, network: "MTN", name: "2.5GB GIFTING", price: 600, validity: "1 Month" },
+  { plan_id: 413, network: "MTN", name: "1GB GIFTING", price: 300, validity: "1 Month" },
+  { plan_id: 359, network: "MTN", name: "2GB GIFTING", price: 500, validity: "1 Month" },
+
+  /* ========= AIRTEL (SUBPADI) ========= */
+  { plan_id: 415, network: "AIRTEL", name: "3.2GB GIFTING", price: 1050, validity: "1 Month" },
+  { plan_id: 394, network: "AIRTEL", name: "2GB GIFTING", price: 700, validity: "1 Month" },
+  { plan_id: 329, network: "AIRTEL", name: "6.5GB SME", price: 1500, validity: "1 Month" },
+  { plan_id: 327, network: "AIRTEL", name: "3.2GB SME", price: 700, validity: "1 Month" },
+
+  /* ========= AIRTEL (MAITAMA) ========= */
+  { plan_id: 37, network: "AIRTEL", name: "1GB", price: 300, validity: "Monthly" },
+  { plan_id: 38, network: "AIRTEL", name: "2GB", price: 600, validity: "Monthly" },
+  { plan_id: 39, network: "AIRTEL", name: "3GB", price: 600, validity: "Monthly" },
+
+  /* ========= GLO ========= */
+  { plan_id: 335, network: "GLO", name: "9.8GB SME", price: 2450, validity: "1 Month" },
+  { plan_id: 334, network: "GLO", name: "2.5GB SME", price: 700, validity: "1 Month" },
+  { plan_id: 261, network: "GLO", name: "1.024GB CORPORATE", price: 500, validity: "1 Month" },
+  { plan_id: 195, network: "GLO", name: "3.9GB GIFTING", price: 1050, validity: "1 Month" },
+  { plan_id: 194, network: "GLO", name: "1.05GB GIFTING", price: 500, validity: "1 Month" },
+
+  /* ========= CHEAP DATA HUB ========= */
+  { plan_id: 52, network: "AIRTEL", name: "5GB", price: 1650, validity: "7 Days" }
 ];
 
+/* ================= RENDER PLANS ================= */
+function renderPlans() {
+  const grid = $("plansGrid");
+  if (!grid) return;
+
+  grid.innerHTML = "";
+
+  DATA_PLANS.forEach(plan => {
+    const card = document.createElement("div");
+    card.className = "plan-card";
+    card.innerHTML = `
+      <small>${plan.network}</small>
+      <h4>${plan.name}</h4>
+      <small>${plan.validity}</small>
+      <div class="price">₦${plan.price}</div>
+    `;
+    card.onclick = () => selectPlan(card, plan);
+    grid.appendChild(card);
+  });
+}
+
+/* ================= SELECT PLAN ================= */
 function selectPlan(card, plan) {
   document.querySelectorAll(".plan-card")
-    .forEach(p => p.classList.remove("selected"));
+    .forEach(c => c.classList.remove("selected"));
 
   card.classList.add("selected");
   selectedPlan = plan;
-
   $("confirmOrderBtn")?.classList.remove("hidden");
 }
 
 /* ================= CONFIRM ORDER ================= */
 function confirmOrder() {
-  if (!selectedPlan) return alert("Select a plan first");
-  if (!$("phone").value) return alert("Enter phone number");
+  if (!selectedPlan) return alert("Select a data plan");
+  if (!$("phone")?.value) return alert("Enter phone number");
 
-  if (!hasPin) {
-    openSetPin();
-    return;
-  }
-
+  if (!hasPin) return openSetPin();
   openPinModal();
 }
 
@@ -135,10 +155,6 @@ function openSetPin() {
   document
     .querySelectorAll("#setPinModal input")
     .forEach(i => (i.value = ""));
-}
-
-function closeSetPin() {
-  $("setPinModal")?.classList.add("hidden");
 }
 
 async function submitSetPin() {
@@ -159,8 +175,7 @@ async function submitSetPin() {
       body: JSON.stringify({ pin })
     });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || data.error);
+    if (!res.ok) throw new Error("Failed to set PIN");
 
     hasPin = true;
     $("setPinBtn").textContent = "Change PIN";
@@ -169,12 +184,11 @@ async function submitSetPin() {
 
     setTimeout(() => {
       hideLoader();
-      closeSetPin();
-      // If a plan is already selected, continue purchase automatically
-      if (selectedPlan && $("phone").value) openPinModal();
+      $("setPinModal").classList.add("hidden");
+      openPinModal();
     }, 600);
-  } catch (err) {
-    alert(err.message);
+  } catch (e) {
+    alert(e.message);
     hideLoader();
   }
 }
@@ -183,16 +197,13 @@ async function submitSetPin() {
 function openPinModal() {
   $("pinModal")?.classList.remove("hidden");
 }
-function closePinModal() {
-  $("pinModal")?.classList.add("hidden");
-}
 
 async function submitPin() {
-  const pin = [...document.querySelectorAll(".pin-inputs input")]
+  const pin = [...document.querySelectorAll("#pinModal input")]
     .map(i => i.value)
     .join("");
 
-  if (pin.length !== 4) return alert("Enter 4-digit PIN");
+  if (pin.length !== 4) return alert("Enter PIN");
 
   showLoader();
   try {
@@ -214,31 +225,22 @@ async function submitPin() {
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    if (!res.ok) throw new Error(data.error || "Purchase failed");
 
     playSuccessSound();
-    showReceipt(data.receipt);
     updateWalletBalance();
-    closePinModal();
-  } catch (err) {
-    alert(err.message || "Purchase failed");
+    alert("Data purchase successful ✅");
+    $("pinModal").classList.add("hidden");
+  } catch (e) {
+    alert(e.message);
   } finally {
     hideLoader();
   }
 }
 
-/* ================= RECEIPT ================= */
-function showReceipt(r) {
-  $("receiptBody").innerHTML = `
-    <div><b>Reference:</b> ${r.reference}</div>
-    <div><b>Amount:</b> ₦${r.amount}</div>
-    <div style="color:green"><b>Status:</b> SUCCESS</div>
-  `;
-  $("receiptModal")?.classList.remove("hidden");
-}
-
 /* ================= INIT ================= */
 document.addEventListener("DOMContentLoaded", () => {
+  renderPlans();
   if (getToken()) {
     updateWalletBalance();
     checkPinStatus();
