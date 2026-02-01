@@ -1,68 +1,49 @@
-/* =================================================
-   MAY-CONNECT — SIGNUP.JS
-   ✔ Matches latest server.js
-   ✔ Clean auth flow
-================================================== */
-
 const backendUrl = "https://mayconnect-backend-1.onrender.com";
-
 const loader = document.getElementById("splashLoader");
 const welcomeSound = document.getElementById("welcomeSound");
 
-const signupForm = document.getElementById("signupForm");
-const nameInput = document.getElementById("signup-name");
-const emailInput = document.getElementById("signup-email");
-const passwordInput = document.getElementById("signup-password");
-
-/* ================= PASSWORD TOGGLE ================= */
-function togglePassword(id, btn) {
-  const input = document.getElementById(id);
-  input.type = input.type === "password" ? "text" : "password";
-  btn.textContent = input.type === "password" ? "Show" : "Hide";
-}
-
-/* ================= INIT ================= */
 document.addEventListener("DOMContentLoaded", () => {
-  welcomeSound?.play().catch(() => {});
-});
+  welcomeSound.play().catch(() => {});
 
-/* ================= SIGNUP ================= */
-signupForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
+  // show/hide password
+  document.querySelectorAll(".show-password-btn").forEach(btn => {
+    btn.onclick = () => {
+      const input = btn.previousElementSibling;
+      input.type = input.type === "password" ? "text" : "password";
+      btn.textContent = input.type === "password" ? "Show" : "Hide";
+    };
+  });
 
-  if (!nameInput.value || !emailInput.value || !passwordInput.value) {
-    return alert("All fields are required");
-  }
+  // signup submit
+  const signupForm = document.getElementById("signupForm");
+  signupForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    loader.classList.remove("hidden");
 
-  loader.classList.remove("hidden");
+    const name = document.getElementById("signupName").value.trim();
+    const email = document.getElementById("signupEmail").value.trim();
+    const password = document.getElementById("signupPassword").value.trim();
 
-  try {
-    const res = await fetch(`${backendUrl}/api/signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: nameInput.value.trim(),
-        email: emailInput.value.trim(),
-        password: passwordInput.value
-      })
-    });
+    try {
+      const res = await fetch(`${backendUrl}/api/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password })
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      throw new Error(data.error || "Signup failed");
+      if (res.ok && data.token) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("name", name);
+        location.replace("dashboard.html");
+      } else {
+        alert(data.error || "Signup failed");
+      }
+    } catch {
+      alert("Network error. Please try again.");
+    } finally {
+      loader.classList.add("hidden");
     }
-
-    // Save token
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("name", nameInput.value.trim());
-
-    // Redirect
-    location.replace("dashboard.html");
-
-  } catch (err) {
-    alert(err.message);
-  } finally {
-    loader.classList.add("hidden");
-  }
+  });
 });

@@ -4,84 +4,46 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MAY-Connect | Sign Up</title>
-
   <link rel="stylesheet" href="styles.css">
 </head>
+<body>
 
-<body class="fade-in">
-
-<!-- ================= SPLASH LOADER ================= -->
+<!-- SPLASH LOADER -->
 <div id="splashLoader" class="splash-loader hidden">
-  <div id="loaderState" class="splash-content">
+  <div class="splash-content">
     <div class="splash-ring"></div>
     <img src="images/logo.png" alt="MAY-Connect Logo">
   </div>
 </div>
 
-<!-- ================= LOGO ================= -->
+<!-- LOGO -->
 <div class="logo-circle">
   <img src="images/logo.png" alt="MAY Connect Logo">
 </div>
 
-<!-- ================= SOUND ================= -->
 <audio id="welcomeSound" src="sounds/welcome.mp3" preload="auto"></audio>
 
-<!-- ================= SIGNUP CARD ================= -->
 <div class="auth-container">
-  <div class="auth-card fade-in">
-
+  <div class="auth-card">
     <h2>Create Account</h2>
 
-    <form id="signupForm" novalidate>
-
-      <input
-        type="text"
-        id="signup-name"
-        placeholder="Full Name"
-        required
-      >
-
-      <input
-        type="email"
-        id="signup-email"
-        placeholder="Email"
-        autocomplete="email"
-        required
-      >
+    <form id="signupForm">
+      <input type="text" id="signupName" placeholder="Full Name" required>
+      <input type="email" id="signupEmail" placeholder="Email" required>
 
       <div class="password-wrapper">
-        <input
-          type="password"
-          id="signup-password"
-          placeholder="Password"
-          autocomplete="new-password"
-          required
-        >
-        <button
-          type="button"
-          class="show-password-btn"
-          onclick="togglePassword('signup-password', this)">
-          Show
-        </button>
+        <input type="password" id="signupPassword" placeholder="Password" required>
+        <button type="button" class="show-password-btn">Show</button>
       </div>
 
-      <button type="submit" class="primary-btn">
-        Sign Up
-      </button>
-
-      <button
-        type="button"
-        class="secondary-btn"
-        onclick="location.href='login.html'">
+      <button type="submit" class="primary-btn">Sign Up</button>
+      <button type="button" class="secondary-btn" onclick="location.href='login.html'">
         Login Instead
       </button>
-
     </form>
   </div>
 </div>
 
-<!-- ================= SCRIPT ================= -->
 <script src="signup.js"></script>
-
 </body>
 </html>

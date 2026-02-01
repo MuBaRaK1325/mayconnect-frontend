@@ -1,80 +1,48 @@
-/* =================================================
-   MAY-CONNECT — LOGIN.JS
-   ✔ Clean
-   ✔ Render-safe
-   ✔ Matches latest server.js
-================================================== */
-
 const backendUrl = "https://mayconnect-backend-1.onrender.com";
-
-const loginForm = document.getElementById("loginForm");
 const loader = document.getElementById("splashLoader");
 const welcomeSound = document.getElementById("welcomeSound");
 
-/* ================= PAGE INIT ================= */
 document.addEventListener("DOMContentLoaded", () => {
-  // Play welcome sound safely
-  welcomeSound?.play().catch(() => {});
+  welcomeSound.play().catch(() => {}); // play once loaded
 
-  // Password toggle buttons
+  // show/hide password
   document.querySelectorAll(".show-password-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
+    btn.onclick = () => {
       const input = btn.previousElementSibling;
-      if (!input) return;
       input.type = input.type === "password" ? "text" : "password";
       btn.textContent = input.type === "password" ? "Show" : "Hide";
-    });
+    };
+  });
+
+  // login submit
+  const loginForm = document.getElementById("loginForm");
+  loginForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    loader.classList.remove("hidden");
+
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value.trim();
+
+    try {
+      const res = await fetch(`${backendUrl}/api/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.token) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("name", data.name || email);
+        location.replace("dashboard.html");
+      } else {
+        alert(data.error || "Login failed");
+      }
+    } catch {
+      alert("Network error. Please try again.");
+    } finally {
+      loader.classList.add("hidden");
+    }
   });
 });
-
-/* ================= LOGIN ================= */
-loginForm?.addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  const email = document.getElementById("login-email")?.value.trim();
-  const password = document.getElementById("login-password")?.value;
-
-  if (!email || !password) {
-    alert("Please enter email and password");
-    return;
-  }
-
-  loader?.classList.remove("hidden");
-
-  try {
-    const res = await fetch(`${backendUrl}/api/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password })
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.error || "Login failed");
-    }
-
-    if (!data.token) {
-      throw new Error("No token received");
-    }
-
-    // Save auth
-    localStorage.setItem("token", data.token);
-    if (data.user?.name) {
-      localStorage.setItem("name", data.user.name);
-    }
-
-    // Redirect
-    location.replace("dashboard.html");
-
-  } catch (err) {
-    alert(err.message);
-  } finally {
-    loader?.classList.add("hidden");
-  }
-});
-
-/* ================= BIOMETRIC (SAFE PLACEHOLDER) ================= */
-function biometricLogin() {
-  alert("Biometric login will be available soon.");
-}
