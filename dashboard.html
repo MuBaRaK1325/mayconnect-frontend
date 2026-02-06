@@ -138,9 +138,62 @@ function copyAccount(){
   alert("Copied: "+acc);
 }
 
+
 /* ================= PIN UX ================= */
 const pinInputs = document.querySelectorAll(".pin-inputs input");
+<script>
+let pinMode = "set";
 
+function $(id){
+  return document.getElementById(id);
+}
+
+/* ===== PIN MODAL CONTROL ===== */
+
+function openSetPinFromMore(){
+  pinMode = "set";
+  $("pinTitle").textContent = "Set Transaction PIN";
+  $("pinActionBtn").textContent = "Verify";
+  $("pinModal").classList.remove("hidden");
+}
+
+function openPinModal(mode){
+  pinMode = mode;
+  $("pinTitle").textContent = mode === "set" ? "Set Transaction PIN" : "Enter PIN";
+  $("pinActionBtn").textContent = "Verify";
+  $("pinModal").classList.remove("hidden");
+}
+
+function closePinModal(){
+  $("pinModal").classList.add("hidden");
+}
+
+/* ===== PIN INPUT UX ===== */
+
+const pinInputs = document.querySelectorAll(".pin-inputs input");
+
+pinInputs.forEach((input, idx) => {
+  input.addEventListener("input", e => {
+    if (e.target.value.length === 1 && idx < pinInputs.length - 1) {
+      pinInputs[idx + 1].focus();
+    }
+  });
+
+  input.addEventListener("keydown", e => {
+    if (e.key === "Backspace" && !input.value && idx > 0) {
+      pinInputs[idx - 1].focus();
+    }
+  });
+});
+
+/* SHOW / HIDE PIN */
+
+function togglePinVisibility() {
+  pinInputs.forEach(i => {
+    i.type = i.type === "password" ? "text" : "password";
+  });
+}
+</script>
 // Auto-focus next & backspace
 pinInputs.forEach((input, idx) => {
   input.addEventListener("input", e => {
