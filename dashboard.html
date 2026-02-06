@@ -7,6 +7,23 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<div id="pinModal" class="modal hidden">
+<div class="modal-content">
+
+<h3>Enter Transaction PIN</h3>
+
+<div class="pin-inputs">
+<input maxlength="1" type="password">
+<input maxlength="1" type="password">
+<input maxlength="1" type="password">
+<input maxlength="1" type="password">
+</div>
+
+<button onclick="submitPin()" class="primary-btn">Verify</button>
+
+</div>
+</div>
+
 
 <!-- SPLASH LOADER -->
 <div id="splashLoader" class="splash-loader hidden">
