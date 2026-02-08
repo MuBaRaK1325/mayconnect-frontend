@@ -23,7 +23,6 @@
 <div class="logo-circle">
   <img src="images/logo.png" alt="MAY-Connect Logo">
 </div>
-
 <div style="text-align:center; margin-bottom:1rem;">
   <h3 id="greeting">Hello, User 👋</h3>
 </div>
@@ -33,7 +32,7 @@
 
 <!-- MORE PANEL -->
 <div id="morePanel" class="more-panel hidden">
-  <button onclick="openSetPinFromMore()">Set Transaction PIN</button>
+  <button id="setPinBtn">Set Transaction PIN</button>
   <button onclick="enableBiometric()">Enable Biometric</button>
   <button onclick="forgotPin()">Forgot PIN</button>
   <button onclick="forgotPassword()">Forgot Password</button>
@@ -80,7 +79,7 @@
       <input type="password" maxlength="1">
       <input type="password" maxlength="1">
     </div>
-    <button id="pinActionBtn" class="primary-btn" onclick="submitPin()">Pay</button>
+    <button id="pinActionBtn" class="primary-btn">Pay</button>
     <button onclick="closePinModal()" class="secondary-btn">Cancel</button>
   </div>
 </div>
@@ -204,18 +203,6 @@ function selectPlan(card, plan){
   $("confirmOrderBtn")?.classList.remove("hidden");
 }
 
-/* ================= PIN STATUS ================= */
-async function checkPinStatus() {
-  if(!getToken()) return;
-  try{
-    const res=await fetch(`${backendUrl}/api/wallet`, { headers:{ Authorization:`Bearer ${getToken()}` }});
-    if(res.ok){
-      hasPin=true;
-      if($("setPinBtn")) $("setPinBtn").textContent="Change PIN";
-    }
-  }catch{}
-}
-
 /* ================= PIN MODAL ================= */
 function openPinModal(mode){
   pinMode=mode;
@@ -225,7 +212,26 @@ function openPinModal(mode){
 function closePinModal(){ $("pinModal")?.classList.add("hidden"); }
 function openSetPinFromMore(){ openPinModal("set"); }
 
-/* ================= CONFIRM ORDER ================= */
+/* ================= PIN INPUT UX ================= */
+const pinInputs=document.querySelectorAll(".pin-inputs input");
+pinInputs.forEach((input,idx)=>{
+  input.addEventListener("input",e=>{ if(e.target.value.length===1 && idx<pinInputs.length-1) pinInputs[idx+1].focus(); });
+  input.addEventListener("keydown",e=>{ if(e.key==="Backspace" && !input.value && idx>0) pinInputs[idx-1].focus(); });
+});
+function togglePinVisibility(){ pinInputs.forEach(i=>i.type=i.type==="password"?"text":"password"); }
+document.addEventListener("DOMContentLoaded",()=>{
+  const modalContent=$("#pinModal .modal-content");
+  if(modalContent){
+    const btn=document.createElement("button");
+    btn.type="button"; btn.textContent="Show"; btn.className="show-password-btn"; btn.style.marginTop="0.5rem";
+    btn.onclick=()=>{ togglePinVisibility(); btn.textContent=pinInputs[0].type==="password"?"Show":"Hide"; };
+    modalContent.appendChild(btn);
+  }
+});
+function clearPinInputs(){ pinInputs.forEach(i=>i.value=""); }
+$("pinModal")?.addEventListener("show", clearPinInputs);
+
+/* ================= CONFIRM ORDER & SUBMIT PIN ================= */
 function confirmOrder(){
   if(!selectedPlan) return alert("Select a plan first");
   if(!$("phone")?.value) return alert("Enter phone number");
@@ -233,48 +239,21 @@ function confirmOrder(){
   openPinModal("purchase");
 }
 
-/* ================= PIN SUBMIT ================= */
-const pinInputs = document.querySelectorAll(".pin-inputs input");
-pinInputs.forEach((input,idx)=>{
-  input.addEventListener("input",e=>{ if(e.target.value.length===1 && idx<pinInputs.length-1) pinInputs[idx+1].focus(); });
-  input.addEventListener("keydown",e=>{ if(e.key==="Backspace" && !input.value && idx>0) pinInputs[idx-1].focus(); });
-});
-function togglePinVisibility(){ pinInputs.forEach(i=>i.type=i.type==="password"?"text":"password"); }
-const pinToggleBtn=document.createElement("button");
-pinToggleBtn.type="button"; pinToggleBtn.textContent="Show"; pinToggleBtn.className="show-password-btn";
-pinToggleBtn.style.marginTop="0.5rem";
-pinToggleBtn.onclick=()=>{
-  togglePinVisibility();
-  pinToggleBtn.textContent=pinInputs[0].type==="password"?"Show":"Hide";
-};
-document.querySelector("#pinModal .modal-content").appendChild(pinToggleBtn);
-function clearPinInputs(){ pinInputs.forEach(i=>i.value=""); }
-$("pinModal")?.addEventListener("show", clearPinInputs);
-
 async function submitPin(){
   const pin=[...pinInputs].map(i=>i.value).join("");
   if(!/^\d{4}$/.test(pin)) return alert("Enter 4-digit PIN");
   showLoader();
   try{
-    let res, data;
+    let res,data;
     if(pinMode==="set"){
-      res=await fetch(`${backendUrl}/api/set-pin`,{
-        method:"POST",
-        headers:{ "Content-Type":"application/json", Authorization:`Bearer ${getToken()}` },
-        body:JSON.stringify({pin})
-      });
+      res=await fetch(`${backendUrl}/api/set-pin`,{ method:"POST", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${getToken()}` }, body:JSON.stringify({pin}) });
       data=await res.json();
       if(!res.ok) throw new Error(data.error||"Failed to set PIN");
       hasPin=true;
-      playSuccessSound();
-      alert("PIN verified successfully");
+      playSuccessSound(); alert("PIN verified successfully");
       closePinModal();
     } else {
-      res=await fetch(`${backendUrl}/api/wallet/purchase`,{
-        method:"POST",
-        headers:{ "Content-Type":"application/json", Authorization:`Bearer ${getToken()}` },
-        body:JSON.stringify({ type:"data", pin, provider:selectedPlan.provider, details:{ mobile_number:$("phone").value, plan:selectedPlan.plan_id } })
-      });
+      res=await fetch(`${backendUrl}/api/wallet/purchase`,{ method:"POST", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${getToken()}` }, body:JSON.stringify({ type:"data", pin, provider:selectedPlan.provider, details:{ mobile_number:$("phone").value, plan:selectedPlan.plan_id } }) });
       data=await res.json();
       if(!res.ok) throw new Error(data.error||"Purchase failed");
       playSuccessSound();
@@ -286,14 +265,7 @@ async function submitPin(){
 }
 
 /* ================= RECEIPT ================= */
-function showReceipt(r){
-  $("receiptBody").innerHTML=`
-    <div><b>Reference:</b> ${r.reference}</div>
-    <div><b>Amount:</b> ₦${r.amount}</div>
-    <div style="color:green"><b>Status:</b> SUCCESS</div>
-  `;
-  $("receiptModal")?.classList.remove("hidden");
-}
+function showReceipt(r){ $("receiptBody").innerHTML=`<div><b>Reference:</b> ${r.reference}</div><div><b>Amount:</b> ₦${r.amount}</div><div style="color:green"><b>Status:</b> SUCCESS</div>`; $("receiptModal")?.classList.remove("hidden"); }
 
 /* ================= MORE PANEL ================= */
 function toggleMore(){ $("morePanel").classList.toggle("hidden"); }
@@ -311,8 +283,11 @@ document.addEventListener("DOMContentLoaded",async()=>{
   welcomeSound.play();
   const name = localStorage.getItem("name")||"User";
   $("greeting").textContent=`Hello, ${name} 👋`;
-  if(getToken()) { updateWalletBalance(); checkPinStatus(); }
+  if(getToken()){ updateWalletBalance(); checkPinStatus(); }
   renderPlans();
+
+  // Attach Set PIN from More tab
+  $("#setPinBtn")?.addEventListener("click", openSetPinFromMore);
 });
 </script>
 
