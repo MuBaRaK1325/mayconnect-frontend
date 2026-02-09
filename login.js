@@ -1,67 +1,109 @@
-/* ==============================
-   MAY-CONNECT LOGIN SCRIPT CLEAN • FINAL
-   SAFE • MATCHES login.html
-================================ */
-
+/* ================= CONFIG ================= */
 const backendUrl = "https://mayconnect-backend-1.onrender.com";
 
-const loginForm = document.getElementById("loginForm");
-const emailInput = document.getElementById("loginEmail");
-const passwordInput = document.getElementById("loginPassword");
-const loader = document.getElementById("splashLoader");
-const welcomeSound = document.getElementById("welcomeSound");
+const $ = id => document.getElementById(id);
+const getToken = () => localStorage.getItem("token");
 
-/* ===== Welcome sound ===== */
+const loginForm = $("loginForm");
+const emailInput = $("login-email");
+const passwordInput = $("login-password");
+const loader = $("splashLoader");
+const welcomeSound = $("welcomeSound");
+
+/* ================= PAGE LOAD ================= */
 document.addEventListener("DOMContentLoaded", () => {
-  welcomeSound?.play().catch(() => {});
+  if (welcomeSound) welcomeSound.play().catch(() => {});
+  if (getToken()) location.href = "dashboard.html"; // auto-redirect if already logged in
 });
 
-/* ===== Show / Hide password ===== */
-document.querySelector(".show-password-btn")?.addEventListener("click", function () {
-  passwordInput.type = passwordInput.type === "password" ? "text" : "password";
-  this.textContent = passwordInput.type === "password" ? "Show" : "Hide";
-});
+/* ================= SHOW/HIDE PASSWORD ================= */
+function togglePassword(inputId, btn) {
+  const input = $(inputId);
+  if (!input) return;
+  input.type = input.type === "password" ? "text" : "password";
+  btn.textContent = input.type === "password" ? "Show" : "Hide";
+}
 
-/* ===== Login submit ===== */
-loginForm?.addEventListener("submit", async (e) => {
-  e.preventDefault();
+/* ================= LOGIN SUBMIT ================= */
+if (loginForm) {
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-  const email = emailInput.value.trim();
-  const password = passwordInput.value.trim();
-
-  if (!email || !password) {
-    alert("Please enter email and password");
-    return;
-  }
-
-  loader?.classList.remove("hidden");
-
-  try {
-    const res = await fetch(`${backendUrl}/api/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password })
-    });
-
-    const contentType = res.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      throw new Error("Server did not return JSON");
+    // Defensive checks
+    if (!emailInput || !passwordInput) {
+      alert("Login form misconfigured. Please refresh the page.");
+      return;
     }
 
-    const data = await res.json();
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
 
-    if (!res.ok) throw new Error(data.error || "Login failed");
+    if (!email || !password) {
+      alert("Please enter both email and password.");
+      return;
+    }
 
-    // SUCCESS
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("name", data.name || "User");
+    loader?.classList.remove("hidden");
+
+    try {
+      const res = await fetch(`${backendUrl}/api/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+
+      // Check server response type
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Server did not return JSON. Try again later.");
+      }
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Login failed. Check your credentials.");
+      }
+
+      // SUCCESS: store token & name
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("name", data.name || "User");
+      localStorage.setItem("email", email);
+
+      location.replace("dashboard.html");
+
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+    } finally {
+      loader?.classList.add("hidden");
+    }
+  });
+}
+
+/* ================= BIOMETRIC PLACEHOLDER ================= */
+function biometricLogin() {
+  alert("Biometric login coming soon");
+}
+
+
+
+
+
+    // ==============================
+    // ADMIN CHECK: YOUR EMAIL
+    // ==============================
+    if(email.toLowerCase() === "abubakarmubarak3456@gmail.com"){
+      localStorage.setItem("isAdmin", "true");
+    } else {
+      localStorage.setItem("isAdmin", "false");
+    }
 
     location.replace("dashboard.html");
 
-  } catch (err) {
+  }catch(err){
     console.error(err);
-    alert(err.message || "Network error. Please check your connection or backend.");
-  } finally {
-    loader?.classList.add("hidden");
+    alert(err.message || "Network error");
+  }finally{
+    loader.classList.add("hidden");
   }
 });
