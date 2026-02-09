@@ -1,9 +1,9 @@
 /* ================= CONFIG ================= */
 const backendUrl = "https://mayconnect-backend-1.onrender.com";
-
 const $ = id => document.getElementById(id);
 const getToken = () => localStorage.getItem("token");
 
+/* DOM ELEMENTS */
 const loginForm = $("loginForm");
 const emailInput = $("login-email");
 const passwordInput = $("login-password");
@@ -13,7 +13,7 @@ const welcomeSound = $("welcomeSound");
 /* ================= PAGE LOAD ================= */
 document.addEventListener("DOMContentLoaded", () => {
   if (welcomeSound) welcomeSound.play().catch(() => {});
-  if (getToken()) location.href = "dashboard.html"; // auto-redirect if already logged in
+  if (getToken()) location.href = "dashboard.html"; // auto-redirect if logged in
 });
 
 /* ================= SHOW/HIDE PASSWORD ================= */
@@ -29,9 +29,8 @@ if (loginForm) {
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // Defensive checks
     if (!emailInput || !passwordInput) {
-      alert("Login form misconfigured. Please refresh the page.");
+      alert("Login form misconfigured. Refresh page.");
       return;
     }
 
@@ -39,7 +38,7 @@ if (loginForm) {
     const password = passwordInput.value.trim();
 
     if (!email || !password) {
-      alert("Please enter both email and password.");
+      alert("Please enter email and password.");
       return;
     }
 
@@ -52,24 +51,23 @@ if (loginForm) {
         body: JSON.stringify({ email, password })
       });
 
-      // Check server response type
       const contentType = res.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Server did not return JSON. Try again later.");
+        throw new Error("Server did not return JSON.");
       }
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Login failed. Check your credentials.");
+        throw new Error(data.error || "Login failed. Check credentials.");
       }
 
-      // SUCCESS: store token & name
+      // Success: save token and user info
       localStorage.setItem("token", data.token);
       localStorage.setItem("name", data.name || "User");
       localStorage.setItem("email", email);
 
-      location.replace("dashboard.html");
+      location.href = "dashboard.html";
 
     } catch (err) {
       console.error(err);
@@ -84,26 +82,3 @@ if (loginForm) {
 function biometricLogin() {
   alert("Biometric login coming soon");
 }
-
-
-
-
-
-    // ==============================
-    // ADMIN CHECK: YOUR EMAIL
-    // ==============================
-    if(email.toLowerCase() === "abubakarmubarak3456@gmail.com"){
-      localStorage.setItem("isAdmin", "true");
-    } else {
-      localStorage.setItem("isAdmin", "false");
-    }
-
-    location.replace("dashboard.html");
-
-  }catch(err){
-    console.error(err);
-    alert(err.message || "Network error");
-  }finally{
-    loader.classList.add("hidden");
-  }
-});
