@@ -2,71 +2,85 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>MAY-Connect | Signup</title>
+<title>MAY-Connect | Sign Up</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<h2>Signup</h2>
-
-<form id="signupForm">
-  <input id="name" type="text" placeholder="Full Name" required>
-  <input id="email" type="email" placeholder="Email" required>
-  <div style="position:relative;">
-    <input id="password" type="password" placeholder="Password" required>
-    <button type="button" onclick="togglePassword()" style="position:absolute; right:0; top:0;">Show</button>
+<!-- SPLASH LOADER -->
+<div id="splashLoader" class="splash-loader hidden">
+  <div class="splash-content">
+    <div class="splash-ring"></div>
+    <img src="images/logo.png" alt="MAY-Connect">
   </div>
-  <button type="submit">Signup</button>
-</form>
+</div>
+
+<audio id="welcomeSound" src="sounds/welcome.mp3" preload="auto"></audio>
+
+<div class="signup-container">
+  <img src="images/logo.png" alt="MAY-Connect Logo" class="logo">
+  <h2>Sign Up</h2>
+
+  <form id="signupForm">
+    <label>Full Name</label>
+    <input type="text" id="name" required>
+
+    <label>Email</label>
+    <input type="email" id="email" required>
+
+    <label>Password</label>
+    <input type="password" id="password" required>
+
+    <button type="submit">Sign Up</button>
+  </form>
+
+  <p>Already have an account? <a href="login.html">Login</a></p>
+</div>
 
 <script>
-const backendUrl = "https://mayconnect-backend-1.onrender.com";
+const backendUrl="https://mayconnect-backend-1.onrender.com";
+const loader = document.getElementById("splashLoader");
+const welcomeSound = document.getElementById("welcomeSound");
 
-function togglePassword() {
-  const pw = document.getElementById("password");
-  pw.type = pw.type === "password" ? "text" : "password";
-}
+function showLoader(){ loader.classList.remove("hidden"); }
+function hideLoader(){ loader.classList.add("hidden"); }
+function playSound(){ welcomeSound.play().catch(()=>{}); }
 
-document.getElementById("signupForm").addEventListener("submit", async e => {
+document.addEventListener("DOMContentLoaded",()=>{ playSound(); });
+
+/* SIGNUP SUBMIT */
+document.getElementById("signupForm").addEventListener("submit", async e=>{
   e.preventDefault();
-
   const name = document.getElementById("name").value.trim();
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value.trim();
 
-  if(!name || !email || !password) {
+  if(!name || !email || !password){
     alert("All fields are required");
     return;
   }
 
-  try {
-    const res = await fetch(`${backendUrl}/api/signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password })
+  showLoader();
+
+  try{
+    const res = await fetch(`${backendUrl}/api/signup`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({name,email,password})
     });
 
     const data = await res.json();
+    if(!res.ok) throw new Error(data.error || "Signup failed");
 
-    if(!res.ok) {
-      alert(data.error || "Signup failed");
-      return;
-    }
-
-    // Automatically login after signup
     localStorage.setItem("token", data.token);
     localStorage.setItem("name", data.name || "User");
+    hideLoader();
+    location.href="dashboard.html";
 
-    if(email.toLowerCase() === "abubakarmubarak3456@gmail.com") {
-      alert("Welcome Admin!");
-    }
-
-    location.href = "dashboard.html";
-
-  } catch(err) {
-    alert("Network error. Check your connection.");
-    console.error(err);
+  }catch(err){
+    hideLoader();
+    alert(err.message);
   }
 });
 </script>
