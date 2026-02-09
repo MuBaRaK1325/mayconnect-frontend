@@ -1,61 +1,41 @@
-/* ==============================
-   MAY-CONNECT SIGNUP SCRIPT
-   Final Production Version
-================================ */
+const backendUrl="https://mayconnect-backend-1.onrender.com";
 
-const backendUrl = "https://mayconnect-backend-1.onrender.com";
+const form=document.getElementById("signupForm");
+const name=document.getElementById("signup-name");
+const email=document.getElementById("signup-email");
+const password=document.getElementById("signup-password");
+const loader=document.getElementById("splashLoader");
 
-// DOM Elements
-const signupForm = document.getElementById("signupForm");
-const nameInput = document.getElementById("signup-name");
-const emailInput = document.getElementById("signup-email");
-const passwordInput = document.getElementById("signup-password");
-const loader = document.getElementById("splashLoader");
+form.addEventListener("submit",async e=>{
+ e.preventDefault();
 
-document.addEventListener("DOMContentLoaded", () => {
-  loader?.classList.add("hidden");
-});
+ if(!name.value||!email.value||!password.value){
+  alert("All fields required");
+  return;
+ }
 
-if (signupForm) {
-  signupForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
+ loader.classList.remove("hidden");
 
-    const name = nameInput?.value.trim();
-    const email = emailInput?.value.trim();
-    const password = passwordInput?.value.trim();
-
-    if (!name || !email || !password) {
-      alert("All fields are required.");
-      return;
-    }
-
-    loader?.classList.remove("hidden");
-
-    try {
-      const res = await fetch(`${backendUrl}/api/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error || "Signup failed");
-
-      alert("Signup successful! Please login.");
-
-      // Optionally notify admin if the new signup email is admin
-      if (email.toLowerCase() === "abubakarmubarak3456@gmail.com") {
-        alert("Admin account created successfully!");
-      }
-
-      location.href = "login.html";
-
-    } catch (err) {
-      console.error(err);
-      alert(err.message);
-    } finally {
-      loader?.classList.add("hidden");
-    }
+ try{
+  const res=await fetch(`${backendUrl}/api/signup`,{
+   method:"POST",
+   headers:{ "Content-Type":"application/json" },
+   body:JSON.stringify({
+     name:name.value.trim(),
+     email:email.value.trim(),
+     password:password.value.trim()
+   })
   });
-}
+
+  const data=await res.json();
+  if(!res.ok) throw new Error(data.error);
+
+  alert("Signup success");
+  location.href="login.html";
+
+ }catch(err){
+  alert(err.message);
+ }finally{
+  loader.classList.add("hidden");
+ }
+});
