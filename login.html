@@ -32,41 +32,41 @@
 
 <script>
 const backendUrl = "https://mayconnect-backend-1.onrender.com";
-const loader = document.getElementById("loader");
-const welcomeSound = document.getElementById("welcomeSound");
 
-document.addEventListener("DOMContentLoaded", () => {
-  welcomeSound.play().catch(()=>{});
-});
-
-document.getElementById("loginForm").addEventListener("submit", async e=>{
+document.getElementById("loginForm").addEventListener("submit", async function(e){
   e.preventDefault();
-  loader.style.display = "block";
+
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value.trim();
-  if(!email || !password){ alert("All fields required"); loader.style.display="none"; return; }
+
+  if(!email || !password){
+    alert("Fill all fields");
+    return;
+  }
 
   try{
-    const res = await fetch(`${backendUrl}/api/login`,{
+    const res = await fetch(backendUrl + "/api/login",{
       method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({email,password})
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ email, password })
     });
+
     const data = await res.json();
-    if(!res.ok) throw new Error(data.error || "Login failed");
+
+    if(!res.ok){
+      alert(data.error || "Login failed");
+      return;
+    }
+
     localStorage.setItem("token", data.token);
     localStorage.setItem("name", data.name);
-    if(email==="abubakarmubarak3456@gmail.com") alert("Admin logged in");
-    location.href="dashboard.html";
-  }catch(err){ alert(err.message); }
-  finally{ loader.style.display="none"; }
-});
 
-// Fingerprint placeholder
-document.getElementById("fingerprintBtn").addEventListener("click", ()=>{
-  alert("Biometric login coming soon");
+    location.href="dashboard.html";
+
+  }catch(err){
+    alert("Network error");
+  }
 });
 </script>
-
 </body>
 </html>
