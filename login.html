@@ -1,62 +1,54 @@
-/* ==============================
-   MAY-CONNECT LOGIN SCRIPT
-   CLEAN • FINAL • MATCHES login.html
-================================ */
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MAY-Connect | Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="fade-in">
 
-const backendUrl = "https://mayconnect-backend-1.onrender.com";
+  <!-- SPLASH LOADER -->
+  <div id="splashLoader" class="splash-loader hidden">
+    <div id="loaderState" class="splash-content">
+      <div class="splash-ring"></div>
+      <img src="images/logo.png" alt="MAY-Connect">
+    </div>
+  </div>
 
-const loginForm = document.getElementById("loginForm");
-const emailInput = document.getElementById("loginEmail");
-const passwordInput = document.getElementById("loginPassword");
-const loader = document.getElementById("splashLoader");
-const welcomeSound = document.getElementById("welcomeSound");
+  <!-- NETWORK STATUS -->
+  <div id="networkStatus" class="network-status hidden"></div>
 
-/* ===== Welcome sound ===== */
-document.addEventListener("DOMContentLoaded", () => {
-  welcomeSound?.play().catch(()=>{});
-});
+  <!-- LOGO -->
+  <div class="logo-circle">
+    <img src="images/logo.png" alt="MAY-Connect">
+  </div>
 
-/* ===== Show / Hide password ===== */
-document.querySelector(".show-password-btn")?.addEventListener("click", function(){
-  passwordInput.type =
-    passwordInput.type === "password" ? "text" : "password";
-  this.textContent =
-    passwordInput.type === "password" ? "Show" : "Hide";
-});
+  <audio id="welcomeSound" src="sounds/welcome.mp3" preload="auto"></audio>
 
-/* ===== Login submit ===== */
-loginForm.addEventListener("submit", async e => {
-  e.preventDefault();
+  <!-- LOGIN FORM -->
+  <div class="auth-container">
+    <div class="auth-card fade-in">
+      <h2>Welcome Back</h2>
 
-  const email = emailInput.value.trim();
-  const password = passwordInput.value.trim();
+      <form id="loginForm">
+        <input type="email" id="loginEmail" placeholder="Email" required>
 
-  if(!email || !password){
-    alert("Please enter email and password");
-    return;
-  }
+        <div class="password-wrapper">
+          <input type="password" id="loginPassword" placeholder="Password" required>
+          <button type="button" class="show-password-btn">Show</button>
+        </div>
 
-  loader.classList.remove("hidden");
+        <button type="submit" class="primary-btn">Login</button>
 
-  try{
-    const res = await fetch(`${backendUrl}/api/login`,{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({ email, password })
-    });
+        <button type="button" class="secondary-btn" onclick="location.href='signup.html'">
+          Create Account
+        </button>
+      </form>
+    </div>
+  </div>
 
-    const data = await res.json();
-
-    if(!res.ok) throw new Error(data.error || "Login failed");
-
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("name", data.name || "User");
-
-    location.replace("dashboard.html");
-
-  }catch(err){
-    alert(err.message || "Network error");
-  }finally{
-    loader.classList.add("hidden");
-  }
-});
+  <!-- LINK TO JS -->
+  <script src="login.js"></script>
+</body>
+</html>

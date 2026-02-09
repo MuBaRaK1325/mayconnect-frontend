@@ -1,38 +1,30 @@
 /* ==============================
-   MAY-CONNECT LOGIN SCRIPT
-   CLEAN • SINGLE FLOW • STABLE
+   MAY-CONNECT LOGIN SCRIPT CLEAN • FINAL
+   SAFE • MATCHES login.html
 ================================ */
 
 const backendUrl = "https://mayconnect-backend-1.onrender.com";
 
 const loginForm = document.getElementById("loginForm");
-const emailInput = document.getElementById("login-email");
-const passwordInput = document.getElementById("login-password");
+const emailInput = document.getElementById("loginEmail");
+const passwordInput = document.getElementById("loginPassword");
 const loader = document.getElementById("splashLoader");
 const welcomeSound = document.getElementById("welcomeSound");
 
-/* PLAY SOUND */
+/* ===== Welcome sound ===== */
 document.addEventListener("DOMContentLoaded", () => {
-  welcomeSound?.play().catch(()=>{});
+  welcomeSound?.play().catch(() => {});
 });
 
-/* SHOW / HIDE PASSWORD */
-function togglePassword(inputId, btn) {
-  const input = document.getElementById(inputId);
-  if (!input) return;
+/* ===== Show / Hide password ===== */
+document.querySelector(".show-password-btn")?.addEventListener("click", function () {
+  passwordInput.type = passwordInput.type === "password" ? "text" : "password";
+  this.textContent = passwordInput.type === "password" ? "Show" : "Hide";
+});
 
-  input.type = input.type === "password" ? "text" : "password";
-  btn.textContent = input.type === "password" ? "Show" : "Hide";
-}
-
-/* LOGIN */
-loginForm?.addEventListener("submit", async e => {
+/* ===== Login submit ===== */
+loginForm?.addEventListener("submit", async (e) => {
   e.preventDefault();
-
-  if (!emailInput || !passwordInput) {
-    alert("Login form misconfigured");
-    return;
-  }
 
   const email = emailInput.value.trim();
   const password = passwordInput.value.trim();
@@ -51,23 +43,25 @@ loginForm?.addEventListener("submit", async e => {
       body: JSON.stringify({ email, password })
     });
 
+    const contentType = res.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error("Server did not return JSON");
+    }
+
     const data = await res.json();
 
     if (!res.ok) throw new Error(data.error || "Login failed");
 
+    // SUCCESS
     localStorage.setItem("token", data.token);
     localStorage.setItem("name", data.name || "User");
 
     location.replace("dashboard.html");
 
   } catch (err) {
-    alert(err.message || "Network error");
+    console.error(err);
+    alert(err.message || "Network error. Please check your connection or backend.");
   } finally {
     loader?.classList.add("hidden");
   }
 });
-
-/* BIOMETRIC PLACEHOLDER */
-function biometricLogin(){
-  alert("Biometric coming soon");
-}
