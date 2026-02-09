@@ -1,49 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MAY-Connect | Sign Up</title>
-  <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<title>MAY-Connect | Signup</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<!-- SPLASH LOADER -->
-<div id="splashLoader" class="splash-loader hidden">
-  <div class="splash-content">
-    <div class="splash-ring"></div>
-    <img src="images/logo.png" alt="MAY-Connect Logo">
+<h2>Signup</h2>
+
+<form id="signupForm">
+  <input id="name" type="text" placeholder="Full Name" required>
+  <input id="email" type="email" placeholder="Email" required>
+  <div style="position:relative;">
+    <input id="password" type="password" placeholder="Password" required>
+    <button type="button" onclick="togglePassword()" style="position:absolute; right:0; top:0;">Show</button>
   </div>
-</div>
+  <button type="submit">Signup</button>
+</form>
 
-<!-- LOGO -->
-<div class="logo-circle">
-  <img src="images/logo.png" alt="MAY Connect Logo">
-</div>
+<script>
+const backendUrl = "https://mayconnect-backend-1.onrender.com";
 
-<audio id="welcomeSound" src="sounds/welcome.mp3" preload="auto"></audio>
+function togglePassword() {
+  const pw = document.getElementById("password");
+  pw.type = pw.type === "password" ? "text" : "password";
+}
 
-<div class="auth-container">
-  <div class="auth-card">
-    <h2>Create Account</h2>
+document.getElementById("signupForm").addEventListener("submit", async e => {
+  e.preventDefault();
 
-    <form id="signupForm">
-      <input type="text" id="signupName" placeholder="Full Name" required>
-      <input type="email" id="signupEmail" placeholder="Email" required>
+  const name = document.getElementById("name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
 
-      <div class="password-wrapper">
-        <input type="password" id="signupPassword" placeholder="Password" required>
-        <button type="button" class="show-password-btn">Show</button>
-      </div>
+  if(!name || !email || !password) {
+    alert("All fields are required");
+    return;
+  }
 
-      <button type="submit" class="primary-btn">Sign Up</button>
-      <button type="button" class="secondary-btn" onclick="location.href='login.html'">
-        Login Instead
-      </button>
-    </form>
-  </div>
-</div>
+  try {
+    const res = await fetch(`${backendUrl}/api/signup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password })
+    });
 
-<script src="signup.js"></script>
+    const data = await res.json();
+
+    if(!res.ok) {
+      alert(data.error || "Signup failed");
+      return;
+    }
+
+    // Automatically login after signup
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("name", data.name || "User");
+
+    if(email.toLowerCase() === "abubakarmubarak3456@gmail.com") {
+      alert("Welcome Admin!");
+    }
+
+    location.href = "dashboard.html";
+
+  } catch(err) {
+    alert("Network error. Check your connection.");
+    console.error(err);
+  }
+});
+</script>
+
 </body>
 </html>
