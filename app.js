@@ -1,355 +1,289 @@
+// ========================================
+// CONFIG
+// ========================================
+
 const API = "https://mayconnect-backend-1.onrender.com"
+const token = localStorage.getItem("token")
 
-/* =========================
-SOUNDS
-========================= */
+// ========================================
+// PAGE GUARD
+// ========================================
 
-const welcomeSound = new Audio("/sounds/welcome.mp3")
-const successSound = new Audio("/sounds/success.mp3")
+const currentPage = window.location.pathname
 
-/* =========================
-HELPERS
-========================= */
-
-function token(){
-return localStorage.getItem("token")
+if (!token && !currentPage.includes("index.html")) {
+  window.location.href = "index.html"
 }
 
-function authHeader(){
-return {
-Authorization:"Bearer "+token(),
-"Content-Type":"application/json"
-}
+if (token && currentPage.includes("index.html")) {
+  window.location.href = "dashboard.html"
 }
 
-function logout(){
-localStorage.removeItem("token")
-window.location="login.html"
+// ========================================
+// SOUNDS
+// ========================================
+
+const welcomeSound = new Audio("sounds/welcome.mp3")
+const successSound = new Audio("sounds/success.mp3")
+
+// ========================================
+// AUTH FUNCTIONS
+// ========================================
+
+async function login() {
+  const username = document.getElementById("loginUsername").value
+  const password = document.getElementById("loginPassword").value
+
+  const res = await fetch(`${API}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password })
+  })
+
+  const data = await res.json()
+  if (!res.ok) return alert(data.message)
+
+  localStorage.setItem("token", data.token)
+  window.location.href = "dashboard.html"
 }
 
-/* =========================
-TAB SYSTEM (FIXED)
-========================= */
+async function signup() {
+  const username = document.getElementById("signupUsername").value
+  const email = document.getElementById("signupEmail").value
+  const password = document.getElementById("signupPassword").value
 
-function openTab(tabId){
+  const res = await fetch(`${API}/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, email, password })
+  })
 
-const tabs = document.querySelectorAll(".tab")
+  const data = await res.json()
+  if (!res.ok) return alert(data.message)
 
-tabs.forEach(tab=>{
-tab.style.display="none"
-})
-
-const activeTab = document.getElementById(tabId)
-
-if(activeTab){
-activeTab.style.display="block"
-}else{
-console.warn("Tab not found:", tabId)
+  localStorage.setItem("token", data.token)
+  window.location.href = "dashboard.html"
 }
 
+// ========================================
+// SET TRANSACTION PIN
+// ========================================
+
+async function setPin() {
+  const pin = document.getElementById("setPinInput").value
+
+  const res = await fetch(`${API}/set-pin`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ pin })
+  })
+
+  const data = await res.json()
+  alert(data.message)
 }
 
-/* =========================
-LOGIN
-========================= */
+// ========================================
+// DASHBOARD LOAD
+// ========================================
 
-async function login(){
+async function loadDashboard() {
+  if (!token) return
 
-const username=document.getElementById("username").value
-const password=document.getElementById("password").value
+  const res = await fetch(`${API}/me`, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
 
-const res = await fetch(API+"/api/login",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({username,password})
-})
+  const user = await res.json()
 
-const data = await res.json()
+  // Hello 👋 username
+  const usernameDisplay = document.getElementById("usernameDisplay")
+  if (usernameDisplay) {
+    usernameDisplay.innerHTML = `Hello 👋 ${user.username}`
+  }
 
-if(!res.ok){
-alert(data.message || "Login failed")
-return
+  // Wallet balance
+  const wallet = document.getElementById("walletBalance")
+  if (wallet) {
+    wallet.innerText = `₦${Number(user.wallet_balance).toLocaleString()}`
+  }
+
+  // Admin panel
+  if (user.is_admin) {
+    const adminPanel = document.getElementById("adminPanel")
+    if (adminPanel) adminPanel.style.display = "block"
+
+    const profitRes = await fetch(`${API}/admin/profit`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+
+    const profitData = await profitRes.json()
+
+    const adminWallet = document.getElementById("adminWallet")
+    if (adminWallet) {
+      adminWallet.innerText = `₦${Number(profitData.admin_wallet).toLocaleString()}`
+    }
+  }
+
+  loadTransactions()   // ✅ VERY IMPORTANT
+  welcomeSound.play()
 }
-
-localStorage.setItem("token",data.token)
-window.location="dashboard.html"
-}
-
-/* =========================
-SIGNUP
-========================= */
-
-async function signup(){
-
-const username=document.getElementById("username").value
-const email=document.getElementById("email").value
-const password=document.getElementById("password").value
-
-const res = await fetch(API+"/api/signup",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({username,email,password})
-})
-
-const data = await res.json()
-
-if(!res.ok){
-alert(data.message)
-return
-}
-
-localStorage.setItem("token",data.token)
-window.location="dashboard.html"
-}
-
-/* =========================
-LOAD DASHBOARD
-========================= */
-
-async function loadDashboard(){
-
-const res = await fetch(API+"/api/me",{ headers:authHeader() })
-
-if(res.status===401){
-logout()
-return
-}
-
-const user = await res.json()
-
-document.getElementById("usernameDisplay").innerText = user.username
-document.getElementById("walletBalance").innerText =
-"₦"+Number(user.wallet_balance).toLocaleString()
-
-welcomeSound.play()
-
-// SHOW ADMIN BUTTON
-if(user.is_admin){
-
-const adminBtn=document.getElementById("adminBtn")
-if(adminBtn){
-adminBtn.style.display="block"
-}
-
-}
-
-}
-
-/* =========================
-LOAD DATA PLANS
-========================= */
-
-async function loadPlans(){
-
-const res = await fetch(API+"/api/plans")
-const plans = await res.json()
-
-const box=document.getElementById("plans")
-if(!box) return
-
-box.innerHTML=""
-
-plans.forEach(p=>{
-box.innerHTML+=`
-<option value="${p.plan_id}">
-${p.network} ${p.name} - ₦${Number(p.price).toLocaleString()}
-</option>
-`
-})
-}
-
-/* =========================
-BUY DATA
-========================= */
-
-async function buyData(){
-
-const phone=document.getElementById("phone").value
-const plan_id=document.getElementById("plans").value
-const pin=prompt("Enter transaction PIN")
-
-if(!pin) return
-
-const res = await fetch(API+"/api/buy-data",{
-method:"POST",
-headers:authHeader(),
-body:JSON.stringify({ phone, plan_id, pin })
-})
-
-const data = await res.json()
-
-if(!res.ok){
-alert(data.message)
-return
-}
-
-successSound.play()
-alert("Data purchase successful")
 
 loadDashboard()
-loadTransactions()
+
+// ========================================
+// LOAD TRANSACTION HISTORY
+// ========================================
+
+async function loadTransactions() {
+  if (!token) return
+
+  const res = await fetch(`${API}/transactions`, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+
+  const transactions = await res.json()
+  const container = document.getElementById("transactionHistory")
+  if (!container) return
+
+  container.innerHTML = ""
+
+  if (!transactions.length) {
+    container.innerHTML = "<p>No transactions yet</p>"
+    return
+  }
+
+  transactions.reverse().forEach(tx => {
+    container.innerHTML += `
+      <div class="transaction-card">
+        <h4>${tx.network || ""} - ${tx.type}</h4>
+        <p>₦${Number(tx.amount).toLocaleString()}</p>
+        <small>Status: ${tx.status}</small><br>
+        <small>${new Date(tx.created_at).toLocaleString()}</small>
+      </div>
+    `
+  })
 }
 
-/* =========================
-BUY AIRTIME
-========================= */
+// ========================================
+// LOAD DATA PLANS (FILTERED CORRECTLY)
+// ========================================
 
-async function buyAirtime(){
+async function loadPlans(network) {
 
-const phone=document.getElementById("airtimePhone").value
-const network=document.getElementById("airtimeNetwork").value
-const amount=document.getElementById("airtimeAmount").value
-const pin=prompt("Enter PIN")
+  document.querySelectorAll(".network-logo").forEach(logo => {
+    logo.classList.remove("active-network")
+  })
 
-if(!pin) return
+  const activeLogo = document.getElementById(network)
+  if (activeLogo) activeLogo.classList.add("active-network")
 
-const res = await fetch(API+"/api/buy-airtime",{
-method:"POST",
-headers:authHeader(),
-body:JSON.stringify({ phone, network, amount, pin })
-})
+  const res = await fetch(`${API}/plans?network=${network}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
 
-const data = await res.json()
+  const plans = await res.json()
+  const container = document.getElementById("plansContainer")
+  if (!container) return
 
-if(!res.ok){
-alert(data.message)
-return
+  container.innerHTML = ""
+
+  plans.forEach(plan => {
+    container.innerHTML += `
+      <div class="plan-card">
+        <h4>${plan.name}</h4>
+        <p>₦${Number(plan.price).toLocaleString()}</p>
+        <button onclick="openPinModal(${plan.plan_id}, 'data')">Buy</button>
+      </div>
+    `
+  })
 }
 
-successSound.play()
-alert("Airtime sent successfully")
+// ========================================
+// PURCHASE
+// ========================================
 
-loadDashboard()
-loadTransactions()
+let selectedPlan = null
+let purchaseType = null
+
+function openPinModal(id, type) {
+  selectedPlan = id
+  purchaseType = type
+  document.getElementById("pinModal").style.display = "flex"
 }
 
-/* =========================
-SET PIN
-========================= */
-
-async function setPin(){
-
-const pin=document.getElementById("newPin").value
-const confirm=document.getElementById("confirmPin").value
-
-if(pin!==confirm){
-alert("Pin does not match")
-return
+function closePinModal() {
+  document.getElementById("pinModal").style.display = "none"
 }
 
-const res = await fetch(API+"/api/set-pin",{
-method:"POST",
-headers:authHeader(),
-body:JSON.stringify({pin})
-})
+async function confirmPurchase() {
+  const phone = document.getElementById("phoneInput").value
+  const pin = document.getElementById("pinInput").value
 
-const data = await res.json()
-alert(data.message)
+  const res = await fetch(`${API}/buy-data`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      plan_id: selectedPlan,
+      phone,
+      pin
+    })
+  })
+
+  const data = await res.json()
+  if (!res.ok) return alert(data.message)
+
+  successSound.play()
+  alert("Purchase successful")
+  closePinModal()
+  loadDashboard()
 }
 
-/* =========================
-TRANSACTIONS
-========================= */
+// ========================================
+// ADMIN WITHDRAW
+// ========================================
 
-async function loadTransactions(){
-
-const res = await fetch(API+"/api/transactions",{ headers:authHeader() })
-const tx = await res.json()
-
-const box=document.getElementById("transactions")
-if(!box) return
-
-box.innerHTML=""
-
-tx.forEach(t=>{
-box.innerHTML+=`
-<div class="txCard">
-<div>${t.type.toUpperCase()}</div>
-<div>₦${Number(t.amount).toLocaleString()}</div>
-<div>${new Date(t.created_at).toLocaleString()}</div>
-</div>
-`
-})
+function openWithdrawModal(){
+  document.getElementById("withdrawModal").style.display="flex"
 }
 
-/* =========================
-ADMIN PROFIT
-========================= */
-
-async function loadAdmin(){
-
-const res = await fetch(API+"/api/admin/profit",{ headers:authHeader() })
-
-if(!res.ok){
-return
+function closeWithdrawModal(){
+  document.getElementById("withdrawModal").style.display="none"
 }
 
-const data = await res.json()
+async function confirmWithdraw(){
+  const bank = document.getElementById("bankName").value
+  const account_number = document.getElementById("accountNumber").value
+  const account_name = document.getElementById("accountName").value
+  const amount = document.getElementById("withdrawAmount").value
 
-const bal=document.getElementById("adminBalance")
-if(bal){
-bal.innerText="₦"+Number(data.admin_wallet).toLocaleString()
+  const res = await fetch(`${API}/admin/withdraw`,{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      Authorization:`Bearer ${token}`
+    },
+    body:JSON.stringify({ bank, account_number, account_name, amount })
+  })
+
+  const data = await res.json()
+  if(!res.ok) return alert(data.message)
+
+  alert("Withdrawal recorded")
+  closeWithdrawModal()
+  loadDashboard()
 }
 
+// ========================================
+// LOGOUT
+// ========================================
+
+function logout() {
+  localStorage.removeItem("token")
+  window.location.href = "index.html"
 }
-
-/* =========================
-ADMIN WITHDRAW
-========================= */
-
-async function adminWithdraw(){
-
-const amount=document.getElementById("amount").value
-const bank=document.getElementById("bank").value
-const account_number=document.getElementById("account_number").value
-const account_name=document.getElementById("account_name").value
-
-const res = await fetch(API+"/api/admin/withdraw",{
-method:"POST",
-headers:authHeader(),
-body:JSON.stringify({
-amount,
-bank,
-account_number,
-account_name
-})
-})
-
-const data = await res.json()
-
-if(!res.ok){
-alert(data.message)
-return
-}
-
-successSound.play()
-alert("Withdrawal submitted")
-
-loadAdmin()
-}
-
-/* =========================
-MORE TAB LOADER
-========================= */
-
-function loadMoreTab(){
-openTab("moreTab")
-}
-
-/* =========================
-PAGE INIT
-========================= */
-
-window.addEventListener("DOMContentLoaded",()=>{
-
-if(document.getElementById("usernameDisplay")){
-loadDashboard()
-loadPlans()
-loadTransactions()
-}
-
-if(document.getElementById("adminBalance")){
-loadAdmin()
-}
-
-})

@@ -642,4 +642,9 @@ input {
 }
 #adminBtn{
 display:none;
+}  .network-logo {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  cursor: pointer;
 }

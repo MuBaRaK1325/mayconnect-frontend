@@ -7,7 +7,29 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<!-- ADMIN PANEL -->
+<div id="adminPanel" style="display:none; margin-top:20px;">
+  <div class="card">
+    <h4>Admin Profit</h4>
+    <p id="adminWallet">₦0</p>
+    <button onclick="openWithdrawModal()">Withdraw Profit</button>
+  </div>
+</div>
 
+<!-- Withdraw Modal -->
+<div id="withdrawModal" class="modal">
+  <div class="modal-content">
+    <h3>Withdraw Profit</h3>
+
+    <input type="text" id="bankName" placeholder="Bank Name">
+    <input type="text" id="accountNumber" placeholder="Account Number">
+    <input type="text" id="accountName" placeholder="Account Name">
+    <input type="number" id="withdrawAmount" placeholder="Amount">
+
+    <button onclick="confirmWithdraw()">Confirm</button>
+    <button onclick="closeWithdrawModal()">Cancel</button>
+  </div>
+</div>
 <!-- SPLASH LOADER -->
 <div id="splashLoader" class="splash-loader hidden">
   <div id="loaderState" class="splash-content">
