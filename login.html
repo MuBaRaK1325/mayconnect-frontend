@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -117,7 +118,7 @@ display:block;
 
 <body>
 
-<img src="logo.png" class="logo">
+<img src="images/logo.png" class="logo">
 
 <div class="card">
 
@@ -134,7 +135,8 @@ display:block;
 
 <button class="loginBtn" onclick="login()">Login</button>
 
-<div class="biometric">
+<!-- BIOMETRIC LOGIN -->
+<div class="biometric" onclick="biometricLogin()">
 🔐 Login with Biometrics
 </div>
 
@@ -149,17 +151,19 @@ Create Account
 <script src="app.js"></script>
 
 <script>
+
 function togglePassword(){
 
-const pass = document.getElementById("loginPassword");
+const pass=document.getElementById("loginPassword")
 
-if(pass.type === "password"){
-pass.type = "text";
+if(pass.type==="password"){
+pass.type="text"
 }else{
-pass.type = "password";
+pass.type="password"
 }
 
 }
+
 </script>
 
 </body>

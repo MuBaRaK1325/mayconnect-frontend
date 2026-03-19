@@ -1,216 +1,148 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
+
 <head>
 <meta charset="UTF-8">
 <title>MAY-Connect | Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="styles.css"><style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-/* =========================
-SKELETON LOADER
-========================= */
+<link rel="stylesheet" href="styles.css">
 
-.skeleton{
-background:linear-gradient(90deg,#0c1a36 25%,#12264f 37%,#0c1a36 63%);
-background-size:400% 100%;
-animation:skeletonLoading 1.4s ease infinite;
-border-radius:10px;
-height:20px;
-margin:8px 0;
-}
+<style>
 
-@keyframes skeletonLoading{
-0%{background-position:100% 0}
-100%{background-position:0 0}
-}
-
-/* =========================
-TRANSACTION CARD
-========================= */
-
-.transaction-card{
-background:#0c1a36;
-padding:12px;
-border-radius:12px;
-margin-top:10px;
-box-shadow:0 4px 15px rgba(0,0,0,0.4);
-}
-
-/* =========================
-FLOATING QUICK ACTIONS
-========================= */
-
-.quickActions{
-position:fixed;
-bottom:90px;
-right:20px;
-display:flex;
-flex-direction:column;
-gap:12px;
-z-index:1000;
-}
-
-.quickActions button{
-background:#3b78e7;
-border:none;
-color:white;
-width:65px;
-height:65px;
-border-radius:50%;
-display:flex;
-flex-direction:column;
-align-items:center;
-justify-content:center;
-font-size:20px;
-box-shadow:0 5px 20px rgba(0,0,0,0.4);
-cursor:pointer;
-}
-
-.quickActions span{
-font-size:10px;
-}
-
-/* =========================
-BOTTOM NAV
-========================= */
-
-.bottomNav{
-position:fixed;
-bottom:0;
-left:0;
-width:100%;
-height:70px;
-background:#08142c;
-display:flex;
-justify-content:space-around;
-align-items:center;
-border-top:1px solid rgba(255,255,255,0.05);
-}
-
-.bottomNav button{
-background:none;
-border:none;
-color:white;
-display:flex;
-flex-direction:column;
-align-items:center;
-font-size:20px;
-cursor:pointer;
-}
-
-/* =========================
-MODAL
-========================= */
-
-.modalOverlay{
+#splashLoader{
 position:fixed;
 top:0;
 left:0;
 width:100%;
 height:100%;
-background:rgba(0,0,0,0.6);
+background:#020b1f;
 display:flex;
 align-items:center;
 justify-content:center;
-z-index:2000;
+z-index:99999;
+transition:opacity .4s ease;
 }
 
-.modalCard{
+#splashLoader.hide{
+opacity:0;
+pointer-events:none;
+}
+
+.wallet-card{
 background:#08142c;
 padding:20px;
 border-radius:12px;
-width:90%;
-max-width:350px;
+margin:20px;
+text-align:center;
 }
 
-.hidden{
-display:none;
+#adminPanel{
+background:#08142c;
+padding:20px;
+border-radius:12px;
+margin:20px;
 }
 
-.modalCard input{
+input{
 width:100%;
-padding:10px;
+padding:12px;
 margin-top:10px;
 border:none;
-border-radius:6px;
+border-radius:8px;
+background:#020b1f;
+color:white;
 }
 
-.modalCard button{
-margin-top:12px;
-padding:10px;
-width:100%;
+button{
+margin-top:10px;
+padding:12px;
 border:none;
-border-radius:6px;
 background:#3b78e7;
 color:white;
+border-radius:8px;
+width:100%;
 cursor:pointer;
 }
 
-</style></head><body><!-- SPLASH --><div id="splashLoader" class="splash-loader">
-<div class="splash-content">
-<div class="splash-ring"></div>
+</style>
+
+</head>
+
+<body>
+
+<!-- SPLASH LOADER -->
+
+<div id="splashLoader">
+<img src="images/logo.png" style="width:90px;border-radius:50%">
+</div>
+
+<!-- LOGO -->
+
+<div class="logo-circle">
 <img src="images/logo.png">
 </div>
-</div><!-- LOGO --><div class="logo-circle">
-<img src="images/logo.png">
-</div><!-- GREETING --><div style="text-align:center;margin-bottom:1rem;">
-<h3 id="usernameDisplay">Hello 👋 User</h3>
-</div><audio id="welcomeSound" src="sounds/welcome.mp3"></audio>
-<audio id="successSound" src="sounds/success.mp3"></audio>
 
-<!-- PROFILE PANEL --><div id="morePanel" class="more-panel hidden"><button onclick="openSetPin()">Set Transaction PIN</button>
-<button onclick="openChangePin()">Change PIN</button>
-<button onclick="openChangePassword()">Change Password</button>
-<button onclick="openForgotPassword()">Forgot Password</button>
+<!-- USER -->
 
-<button onclick="contactSupport()">Contact Support</button>
-<button onclick="callSupport()">Call Support</button>
+<h3 id="usernameDisplay" style="text-align:center;">Hello 👋 User</h3>
 
-<button onclick="logout()">Logout</button>
+<!-- WALLET -->
 
-<button onclick="toggleMore()">Close</button>
+<div class="wallet-card">
 
-</div><!-- DASHBOARD --><div class="dashboard-content"><div class="wallet-card">
 <p>Wallet Balance</p>
+
 <strong id="walletBalance">₦0</strong>
-</div><!-- ADMIN PANEL --><div id="adminPanel" class="admin-card" style="display:none;"><h3>Admin Profit Withdrawal</h3><input type="number" id="withdrawAmount" placeholder="Enter Amount">
+
+</div>
+
+<!-- ADMIN PANEL -->
+
+<div id="adminPanel" style="display:none;">
+
+<h3>Admin Profit Withdrawal</h3>
+
+<p>
+Profit Balance:
+<strong id="profitBalance">₦0</strong>
+</p>
+
+<input type="number" id="withdrawAmount" placeholder="Enter Amount">
+
 <input type="text" id="bankName" placeholder="Bank Name">
-<input type="text" id="accountNumber" placeholder="Account Number"><button onclick="adminWithdraw()">Withdraw Profit</button>
 
-</div><!-- QUICK BUTTONS --><div class="quick-actions"><button onclick="location.href='data.html'">💳 Buy Data</button>
-<button onclick="location.href='airtime.html'">📞 Buy Airtime</button>
+<input type="text" id="accountNumber" placeholder="Account Number">
 
-</div><!-- POPULAR PLAN --><div class="popular-plan"><h4>🔥 Most Popular Data Plan</h4>
-<p>1GB for ₦300</p><button onclick="location.href='data.html'">Buy Now</button>
+<button onclick="adminWithdraw()">Withdraw Profit</button>
 
-</div><!-- TRANSACTIONS --><h3 style="margin-top:20px;">Recent Transactions</h3><div id="transactionHistory"><div class="skeleton"></div>
-<div class="skeleton"></div>
-<div class="skeleton"></div></div></div><!-- FLOATING ACTIONS --><div class="quickActions"><button onclick="location.href='data.html'">
-📶
-<span>Data</span>
-</button><button onclick="location.href='airtime.html'">
-📞
-<span>Airtime</span>
-</button><button onclick="location.href='fund.html'">
-💳
-<span>Fund</span>
-</button></div><!-- NAVBAR --><div class="bottomNav"><button onclick="location.href='dashboard.html'">
-🏠
-<span>Home</span>
-</button><button onclick="location.href='data.html'">
-📶
-<span>Data</span>
-</button><button onclick="location.href='transactions.html'">
-📜
-<span>History</span>
-</button><button onclick="toggleMore()">
-👤
-<span>Profile</span>
-</button></div><!-- MODAL --><div id="modalOverlay" class="modalOverlay hidden">
-<div class="modalCard" id="modalContent"></div>
-</div><script src="app.js"></script><script>
+</div>
 
-function toggleMore(){
-document.getElementById("morePanel").classList.toggle("hidden")
-}
+<!-- TRANSACTIONS -->
 
-</script></body>
+<h3 style="margin-left:20px;">Recent Transactions</h3>
+
+<div id="transactionHistory" style="padding:20px;"></div>
+
+<!-- SET PIN MODAL -->
+
+<div id="setPinModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#0008;align-items:center;justify-content:center;z-index:9999;">
+
+<div style="background:#08142c;padding:25px;border-radius:12px;width:90%;max-width:300px;text-align:center;">
+
+<h3>Set Transaction PIN</h3>
+
+<input id="newPin" type="password" maxlength="4" placeholder="Enter 4-digit PIN" style="width:100%;padding:12px;margin-top:12px;border-radius:8px;border:none;">
+
+<button onclick="savePin()" style="margin-top:15px;width:100%;padding:12px;border:none;background:#3b78e7;color:white;border-radius:8px;">
+Save PIN
+</button>
+
+</div>
+
+</div>
+
+<script src="app.js"></script>
+
+</body>
 </html>
