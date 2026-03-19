@@ -1,7 +1,9 @@
 const API="https://mayconnect-backend-1.onrender.com"
 const token=localStorage.getItem("token")
 
-/* GLOBAL ERROR */
+/* ==============================
+GLOBAL ERROR
+============================== */
 
 window.onerror=function(){
 showToast("Something went wrong ⚠️")
@@ -14,11 +16,14 @@ showToast("Network issue ⚠️")
 hideLoader()
 }
 
-/* TOAST */
+/* ==============================
+TOAST
+============================== */
 
 function showToast(msg){
 
 const t=document.createElement("div")
+
 t.innerText=msg
 t.style.position="fixed"
 t.style.bottom="30px"
@@ -28,6 +33,7 @@ t.style.background="#000"
 t.style.padding="12px 20px"
 t.style.borderRadius="8px"
 t.style.color="#fff"
+t.style.zIndex="99999"
 
 document.body.appendChild(t)
 
@@ -35,7 +41,9 @@ setTimeout(()=>t.remove(),3000)
 
 }
 
-/* SPLASH */
+/* ==============================
+SPLASH LOADER
+============================== */
 
 function hideLoader(){
 
@@ -51,8 +59,6 @@ loader.remove()
 
 }
 
-/* FIX STUCK SPLASH */
-
 window.addEventListener("load",()=>{
 
 setTimeout(()=>{
@@ -61,17 +67,29 @@ hideLoader()
 
 })
 
-/* SMART FETCH */
+/* ==============================
+SMART FETCH
+============================== */
 
 async function smartFetch(url,options={}){
 
-const res=await fetch(url,options)
+try{
 
+const res=await fetch(url,options)
 return res
+
+}catch{
+
+showToast("Network error")
+throw new Error("Network")
 
 }
 
-/* LOGIN */
+}
+
+/* ==============================
+LOGIN
+============================== */
 
 async function login(){
 
@@ -81,7 +99,6 @@ const password=document.getElementById("loginPassword").value
 const res=await fetch(`${API}/api/login`,{
 
 method:"POST",
-
 headers:{
 "Content-Type":"application/json"
 },
@@ -95,7 +112,6 @@ const data=await res.json()
 if(!res.ok){
 
 alert(data.message)
-
 return
 
 }
@@ -106,13 +122,321 @@ window.location="dashboard.html"
 
 }
 
-/* DASHBOARD */
+/* ==============================
+REAL TIME WALLET
+============================== */
+
+let walletSocket
+
+function connectWalletSocket(){
+
+try{
+
+walletSocket=new WebSocket(`wss://mayconnect-backend-1.onrender.com/ws?token=${token}`)
+
+walletSocket.onmessage=(event)=>{
+
+const data=JSON.parse(event.data)
+
+if(data.type==="wallet_update"){
+
+updateWalletUI(data.balance)
+
+}
+
+if(data.type==="transaction"){
+
+loadTransactions()
+
+sendNotification("New Transaction","Transaction received")
+
+}
+
+}
+
+walletSocket.onclose=()=>{
+
+setTimeout(connectWalletSocket,4000)
+
+}
+
+}catch{
+
+console.log("Websocket failed")
+
+}
+
+}
+
+function updateWalletUI(balance){
+
+const walletEl=document.getElementById("walletBalance")
+
+if(walletEl){
+
+walletEl.innerText="₦"+Number(balance).toLocaleString()
+
+}
+
+}
+
+/* ==============================
+PUSH NOTIFICATIONS
+============================== */
+
+function enableNotifications(){
+
+if(!("Notification" in window)) return
+
+if(Notification.permission==="default"){
+
+Notification.requestPermission()
+
+}
+
+}
+
+function sendNotification(title,message){
+
+if(Notification.permission==="granted"){
+
+new Notification(title,{
+body:message
+})
+
+}
+
+}
+
+/* ==============================
+AUTOMATIC NETWORK DETECTION
+============================== */
+
+const NETWORK_PREFIX={
+MTN:["0803","0806","0813","0816","0703","0706","0903","0906"],
+AIRTEL:["0802","0808","0812","0701","0708","0901","0902"],
+GLO:["0805","0807","0811","0705","0905"],
+"9MOBILE":["0809","0817","0818","0908"]
+}
+
+function detectNetwork(phone){
+
+phone=phone.replace(/\D/g,"")
+
+const prefix=phone.substring(0,4)
+
+for(const network in NETWORK_PREFIX){
+
+if(NETWORK_PREFIX[network].includes(prefix)){
+
+return network
+
+}
+
+}
+
+return null
+
+}
+
+/* ==============================
+AUTO LOAD DATA PLANS
+============================== */
+
+async function loadDataPlans(network){
+
+try{
+
+const res=await fetch(`${API}/api/data-plans?network=${network}`)
+
+const plans=await res.json()
+
+const container=document.getElementById("plans")
+
+if(!container) return
+
+container.innerHTML=""
+
+plans.forEach(plan=>{
+
+const card=document.createElement("div")
+
+card.className="planCard"
+
+card.innerHTML=`
+<h4>${plan.name}</h4>
+<p>₦${plan.price}</p>
+<button onclick="selectPlan('${plan.id}')">Buy</button>
+`
+
+container.appendChild(card)
+
+})
+
+}catch{
+
+showToast("Failed to load data plans")
+
+}
+
+}
+
+/* ==============================
+BALANCE ANIMATION
+============================== */
+
+function animateBalance(balance){
+
+const el=document.getElementById("walletBalance")
+
+if(!el) return
+
+let start=0
+const step=balance/40
+
+const t=setInterval(()=>{
+
+start+=step
+
+if(start>=balance){
+
+el.innerText="₦"+balance.toLocaleString()
+clearInterval(t)
+
+}else{
+
+el.innerText="₦"+Math.floor(start).toLocaleString()
+
+}
+
+},30)
+
+}
+
+/* ==============================
+TRANSACTION CARD UI
+============================== */
+
+function createTransactionCard(t){
+
+const div=document.createElement("div")
+
+div.style.background="#08142c"
+div.style.padding="15px"
+div.style.borderRadius="10px"
+div.style.marginBottom="10px"
+
+div.innerHTML=`
+<strong>${t.type.toUpperCase()}</strong>
+<p>₦${Number(t.amount).toLocaleString()}</p>
+<small>${t.phone||""}</small>
+<br>
+<small>${new Date(t.created_at).toLocaleString()}</small>
+`
+
+return div
+
+}
+
+/* ==============================
+TRANSACTIONS
+============================== */
+
+async function loadTransactions(){
+
+try{
+
+const res=await fetch(`${API}/api/transactions`,{
+
+headers:{
+Authorization:`Bearer ${token}`
+}
+
+})
+
+const tx=await res.json()
+
+const container=document.getElementById("transactionHistory")
+
+if(!container) return
+
+container.innerHTML=""
+
+tx.forEach(t=>{
+
+container.appendChild(createTransactionCard(t))
+
+})
+
+calculateProfit(tx)
+
+}catch{}
+
+}
+
+/* ==============================
+ADMIN LIVE MONITOR
+============================== */
+
+function adminLiveMonitor(){
+
+if(!token) return
+
+const socket=new WebSocket(`wss://mayconnect-backend-1.onrender.com/admin?token=${token}`)
+
+socket.onmessage=(event)=>{
+
+const data=JSON.parse(event.data)
+
+if(data.type==="new_transaction"){
+
+loadTransactions()
+
+showToast("New user transaction")
+
+}
+
+}
+
+}
+
+/* ==============================
+ADMIN PROFIT CALCULATOR
+============================== */
+
+function calculateProfit(transactions){
+
+let profit=0
+
+transactions.forEach(t=>{
+
+if(t.profit){
+
+profit+=Number(t.profit)
+
+}
+
+})
+
+const profitEl=document.getElementById("profitBalance")
+
+if(profitEl){
+
+profitEl.innerText="₦"+profit.toLocaleString()
+
+}
+
+}
+
+/* ==============================
+DASHBOARD
+============================== */
 
 async function loadDashboard(){
 
 try{
 
-const res=await fetch(`${API}/api/me`,{
+const res=await smartFetch(`${API}/api/me`,{
 
 headers:{
 Authorization:`Bearer ${token}`
@@ -130,19 +454,15 @@ if(user.is_admin){
 
 document.getElementById("adminPanel").style.display="block"
 
-document.getElementById("profitBalance").innerText="₦"+user.profit_balance
+adminLiveMonitor()
 
 }
 
-if(!user.has_pin){
+enableNotifications()
 
-openSetPinModal()
+connectWalletSocket()
 
-}else{
-
-document.getElementById("pinBtn").innerText="Change Transaction PIN"
-
-}
+loadTransactions()
 
 }catch{
 
@@ -154,120 +474,15 @@ window.location="login.html"
 
 }
 
-/* LOAD DASHBOARD */
-
 if(window.location.pathname.includes("dashboard")){
 
 window.addEventListener("load",loadDashboard)
 
 }
 
-/* BALANCE */
-
-function animateBalance(balance){
-
-const el=document.getElementById("walletBalance")
-
-let start=0
-
-const step=balance/40
-
-const t=setInterval(()=>{
-
-start+=step
-
-if(start>=balance){
-
-el.innerText="₦"+balance
-
-clearInterval(t)
-
-}else{
-
-el.innerText="₦"+Math.floor(start)
-
-}
-
-},30)
-
-}
-
-/* PIN */
-
-function openSetPinModal(){
-
-document.getElementById("setPinModal").style.display="flex"
-
-}
-
-async function savePin(){
-
-const pin=document.getElementById("newPin").value
-
-await fetch(`${API}/api/set-pin`,{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json",
-Authorization:`Bearer ${token}`
-},
-
-body:JSON.stringify({pin})
-
-})
-
-showToast("PIN Saved")
-
-document.getElementById("setPinModal").style.display="none"
-
-}
-
-/* CHANGE PASSWORD */
-
-function openChangePasswordModal(){
-
-document.getElementById("passwordModal").style.display="flex"
-
-}
-
-async function changePassword(){
-
-const oldPassword=document.getElementById("oldPassword").value
-const newPassword=document.getElementById("newPassword").value
-
-const res=await fetch(`${API}/api/change-password`,{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json",
-Authorization:`Bearer ${token}`
-},
-
-body:JSON.stringify({oldPassword,newPassword})
-
-})
-
-const data=await res.json()
-
-showToast(data.message)
-
-document.getElementById("passwordModal").style.display="none"
-
-}
-
-/* BIOMETRIC */
-
-function toggleBiometric(){
-
-localStorage.setItem("biometric","enabled")
-
-showToast("Biometric login enabled")
-
-}
-
-/* LOGOUT */
+/* ==============================
+LOGOUT
+============================== */
 
 function logout(){
 

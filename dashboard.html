@@ -1,78 +1,105 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html>
 <head>
-<meta charset="UTF-8">
-<title>MAY-Connect | Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="styles.css">
+<title>MAY CONNECT</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script src="app.js"></script>
 
 <style>
 
-#splashLoader{
+body{
+margin:0;
+font-family:sans-serif;
+background:#f3f6ff;
+}
+
+/* HEADER */
+
+.header{
+
+background:#1c2cff;
+color:white;
+padding:20px;
+
+}
+
+/* WALLET CARD */
+
+.walletCard{
+
+background:linear-gradient(135deg,#1c2cff,#5b6cff);
+
+color:white;
+
+margin:20px;
+
+padding:20px;
+
+border-radius:15px;
+
+box-shadow:0 10px 25px rgba(0,0,0,0.2);
+
+}
+
+/* ACTION GRID */
+
+.actions{
+
+display:grid;
+
+grid-template-columns:repeat(4,1fr);
+
+gap:10px;
+
+margin:20px;
+
+}
+
+.actionBtn{
+
+background:white;
+
+padding:15px;
+
+border-radius:10px;
+
+text-align:center;
+
+box-shadow:0 3px 8px rgba(0,0,0,0.1);
+
+}
+
+/* TRANSACTIONS */
+
+.transactions{
+
+margin:20px;
+
+}
+
+/* BOTTOM NAV */
+
+.bottomNav{
+
 position:fixed;
-top:0;
-left:0;
+
+bottom:0;
+
 width:100%;
-height:100%;
-background:#020b1f;
+
+background:white;
+
 display:flex;
-align-items:center;
-justify-content:center;
-z-index:99999;
-transition:opacity .4s ease;
-}
 
-#splashLoader.hide{
-opacity:0;
-pointer-events:none;
-}
+justify-content:space-around;
 
-.wallet-card{
-background:#08142c;
-padding:20px;
-border-radius:12px;
-margin:20px;
-text-align:center;
-}
+padding:10px;
 
-.section{
-background:#08142c;
-padding:20px;
-border-radius:12px;
-margin:20px;
-}
+box-shadow:0 -3px 10px rgba(0,0,0,0.1);
 
-input{
-width:100%;
-padding:12px;
-margin-top:10px;
-border:none;
-border-radius:8px;
-background:#020b1f;
-color:white;
-}
-
-button{
-margin-top:10px;
-padding:12px;
-border:none;
-background:#3b78e7;
-color:white;
-border-radius:8px;
-width:100%;
-cursor:pointer;
-}
-
-.action-btn{
-margin-top:10px;
-background:#162a52;
-}
-
-.support{
-margin:20px;
-text-align:center;
 }
 
 </style>
@@ -81,73 +108,33 @@ text-align:center;
 
 <body>
 
-<!-- SPLASH LOADER -->
+<div class="header">
 
-<div id="splashLoader">
-<img src="images/logo.png" style="width:90px;border-radius:50%">
-</div>
-
-<!-- USER -->
-
-<h3 id="usernameDisplay" style="text-align:center;margin-top:20px;">
-Hello 👋 User
-</h3>
-
-<!-- WALLET -->
-
-<div class="wallet-card">
-<p>Wallet Balance</p>
-<strong id="walletBalance">₦0</strong>
-</div>
-
-<!-- ACCOUNT SETTINGS -->
-
-<div class="section">
-
-<h3>Account Settings</h3>
-
-<button class="action-btn" onclick="openSetPinModal()" id="pinBtn">
-Set Transaction PIN
-</button>
-
-<button class="action-btn" onclick="openChangePasswordModal()">
-Change Password
-</button>
-
-<button class="action-btn" onclick="toggleBiometric()">
-Enable Biometric Login
-</button>
-
-<button class="action-btn" onclick="logout()">
-Logout
-</button>
+<h3 id="usernameDisplay">Hello</h3>
 
 </div>
 
-<!-- ADMIN PANEL -->
+<div class="walletCard">
 
-<div id="adminPanel" class="section" style="display:none;">
+<h4>Wallet Balance</h4>
 
-<h3>Admin Profit Withdrawal</h3>
-
-<p>
-Profit Balance:
-<strong id="profitBalance">₦0</strong>
-</p>
-
-<input type="number" id="withdrawAmount" placeholder="Enter Amount">
-
-<input type="text" id="bankName" placeholder="Bank Name">
-
-<input type="text" id="accountNumber" placeholder="Account Number">
-
-<button onclick="adminWithdraw()">Withdraw Profit</button>
+<h1 id="walletBalance">₦0</h1>
 
 </div>
 
-<!-- TRANSACTIONS -->
+<div class="actions">
 
-<div class="section">
+<div class="actionBtn">Airtime</div>
+
+<div class="actionBtn">Data</div>
+
+<div class="actionBtn">Transfer</div>
+
+<div class="actionBtn">Pay Bills</div>
+
+</div>
+
+<div class="transactions">
 
 <h3>Recent Transactions</h3>
 
@@ -155,55 +142,25 @@ Profit Balance:
 
 </div>
 
-<!-- SUPPORT -->
+<div id="adminPanel" style="display:none;margin:20px">
 
-<div class="support">
+<h3>Admin Panel</h3>
 
-<a href="https://wa.me/2348117988561" target="_blank">
-
-<button style="background:#25D366;">
-Chat Support (08117988561)
-</button>
-
-</a>
+<p>Profit: <span id="profitBalance">₦0</span></p>
 
 </div>
 
-<!-- SET PIN MODAL -->
+<div class="bottomNav">
 
-<div id="setPinModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#0008;align-items:center;justify-content:center;z-index:9999;">
+<div>Home</div>
 
-<div style="background:#08142c;padding:25px;border-radius:12px;width:90%;max-width:300px;text-align:center;">
+<div>Payments</div>
 
-<h3>Set Transaction PIN</h3>
+<div>History</div>
 
-<input id="newPin" type="password" maxlength="4" placeholder="Enter 4-digit PIN">
-
-<button onclick="savePin()">Save PIN</button>
+<div onclick="logout()">Logout</div>
 
 </div>
-
-</div>
-
-<!-- CHANGE PASSWORD MODAL -->
-
-<div id="passwordModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#0008;align-items:center;justify-content:center;z-index:9999;">
-
-<div style="background:#08142c;padding:25px;border-radius:12px;width:90%;max-width:300px;text-align:center;">
-
-<h3>Change Password</h3>
-
-<input id="oldPassword" type="password" placeholder="Current Password">
-
-<input id="newPassword" type="password" placeholder="New Password">
-
-<button onclick="changePassword()">Update Password</button>
-
-</div>
-
-</div>
-
-<script src="app.js?v=3"></script>
 
 </body>
 </html>
