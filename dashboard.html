@@ -10,9 +10,7 @@
 
 <style>
 
-/* =========================
-GENERAL THEME
-========================= */
+/* GENERAL THEME */
 
 body{
 background:#000;
@@ -20,9 +18,7 @@ color:white;
 font-family:Arial;
 }
 
-/* =========================
-PROFILE PANEL
-========================= */
+/* PROFILE PANEL */
 
 .profilePanel{
 position:fixed;
@@ -66,9 +62,7 @@ color:white;
 text-align:left;
 }
 
-/* =========================
-PIN MODAL
-========================= */
+/* PIN MODAL */
 
 .pinModal{
 position:fixed;
@@ -109,9 +103,7 @@ background:black;
 color:white;
 }
 
-/* =========================
-SKELETON LOADER
-========================= */
+/* SKELETON */
 
 .skeleton{
 background:linear-gradient(90deg,#0c1a36 25%,#12264f 37%,#0c1a36 63%);
@@ -127,21 +119,16 @@ margin:8px 0;
 100%{background-position:0 0}
 }
 
-/* =========================
-TRANSACTION CARD
-========================= */
+/* TRANSACTION CARD */
 
 .transaction-card{
 background:#0c1a36;
 padding:12px;
 border-radius:12px;
 margin-top:10px;
-box-shadow:0 4px 15px rgba(0,0,0,0.4);
 }
 
-/* =========================
-BOTTOM NAV
-========================= */
+/* BOTTOM NAV */
 
 .bottomNav{
 position:fixed;
@@ -209,11 +196,11 @@ font-size:11px;
 
 </div>
 
-<button class="profileBtn" onclick="openPinModal()">🔐 Set Transaction PIN</button>
+<button id="setPinBtn" class="profileBtn" onclick="openPinModal()">🔐 Set Transaction PIN</button>
 
-<button class="profileBtn" onclick="openTab('changePinSection')">🔑 Change PIN</button>
+<button id="changePinBtn" class="profileBtn" style="display:none;">🔑 Change PIN</button>
 
-<button class="profileBtn" onclick="openTab('changePasswordSection')">🔒 Change Password</button>
+<button class="profileBtn">🔒 Change Password</button>
 
 <button class="profileBtn" onclick="toggleBiometric()">🧬 Enable Biometric Login/Purchase</button>
 
@@ -280,7 +267,7 @@ font-size:11px;
 
 <script>
 
-/* PROFILE */
+/* PROFILE PANEL */
 
 function toggleProfile(){
 
@@ -291,11 +278,15 @@ document.getElementById("profilePanel").classList.toggle("show")
 /* SUPPORT */
 
 function callSupport(){
+
 window.location.href="tel:08117988561"
+
 }
 
 function chatSupport(){
+
 window.location.href="https://wa.me/2348117988561"
+
 }
 
 /* BIOMETRIC */
@@ -326,7 +317,7 @@ document.querySelector(".pinInputs input").focus()
 
 }
 
-/* PIN INPUT AUTO MOVE */
+/* PIN AUTO MOVE */
 
 function movePin(el,index){
 
@@ -357,17 +348,24 @@ return
 
 }
 
-await fetch("/api/set-pin",{
+await fetch("https://mayconnect-backend-1.onrender.com/api/set-pin",{
 
 method:"POST",
 headers:{
-"Content-Type":"application/json"
+"Content-Type":"application/json",
+Authorization:`Bearer ${localStorage.getItem("token")}`
 },
 body:JSON.stringify({pin})
 
 })
 
+localStorage.setItem("pinSet","true")
+
 document.getElementById("pinModal").style.display="none"
+
+document.getElementById("setPinBtn").style.display="none"
+
+document.getElementById("changePinBtn").style.display="block"
 
 alert("PIN Saved")
 
@@ -379,9 +377,15 @@ async function loadProfile(){
 
 try{
 
-const res=await fetch("/api/me")
+const token = localStorage.getItem("token")
 
-const user=await res.json()
+const res = await fetch("https://mayconnect-backend-1.onrender.com/api/me",{
+headers:{
+Authorization:`Bearer ${token}`
+}
+})
+
+const user = await res.json()
 
 document.getElementById("profileName").innerText=user.username
 
@@ -389,7 +393,26 @@ document.getElementById("profileEmail").innerText=user.email
 
 document.getElementById("avatar").innerText=user.username.charAt(0).toUpperCase()
 
-}catch{}
+/* CHECK PIN STATUS */
+
+if(localStorage.getItem("pinSet")){
+
+document.getElementById("setPinBtn").style.display="none"
+document.getElementById("changePinBtn").style.display="block"
+
+}else{
+
+setTimeout(()=>{
+openPinModal()
+},800)
+
+}
+
+}catch(e){
+
+console.log(e)
+
+}
 
 }
 
