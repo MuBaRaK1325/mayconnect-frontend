@@ -1,5 +1,12 @@
 const API="https://mayconnect-backend-1.onrender.com"
-const token=localStorage.getItem("token")
+
+/* ==============================
+TOKEN HELPER
+============================== */
+
+function getToken(){
+return localStorage.getItem("token")
+}
 
 /* ==============================
 GLOBAL ERROR
@@ -47,15 +54,11 @@ SPLASH LOADER
 
 function hideLoader(){
 
-const loader=document.getElementById("splashLoader")
+const loader=document.getElementById("splashLoader") || document.getElementById("dashboardLoader")
 
 if(!loader) return
 
-loader.classList.add("hide")
-
-setTimeout(()=>{
-loader.remove()
-},500)
+loader.style.display="none"
 
 }
 
@@ -99,6 +102,7 @@ const password=document.getElementById("loginPassword").value
 const res=await fetch(`${API}/api/login`,{
 
 method:"POST",
+
 headers:{
 "Content-Type":"application/json"
 },
@@ -129,6 +133,10 @@ REAL TIME WALLET
 let walletSocket
 
 function connectWalletSocket(){
+
+const token=getToken()
+
+if(!token) return
 
 try{
 
@@ -209,7 +217,7 @@ body:message
 }
 
 /* ==============================
-AUTOMATIC NETWORK DETECTION
+NETWORK DETECTION
 ============================== */
 
 const NETWORK_PREFIX={
@@ -240,7 +248,7 @@ return null
 }
 
 /* ==============================
-AUTO LOAD DATA PLANS
+LOAD DATA PLANS
 ============================== */
 
 async function loadDataPlans(network){
@@ -314,17 +322,14 @@ el.innerText="₦"+Math.floor(start).toLocaleString()
 }
 
 /* ==============================
-TRANSACTION CARD UI
+TRANSACTION CARD
 ============================== */
 
 function createTransactionCard(t){
 
 const div=document.createElement("div")
 
-div.style.background="#08142c"
-div.style.padding="15px"
-div.style.borderRadius="10px"
-div.style.marginBottom="10px"
+div.className="transaction-card"
 
 div.innerHTML=`
 <strong>${t.type.toUpperCase()}</strong>
@@ -343,6 +348,10 @@ TRANSACTIONS
 ============================== */
 
 async function loadTransactions(){
+
+const token=getToken()
+
+if(!token) return
 
 try{
 
@@ -363,9 +372,7 @@ if(!container) return
 container.innerHTML=""
 
 tx.forEach(t=>{
-
 container.appendChild(createTransactionCard(t))
-
 })
 
 calculateProfit(tx)
@@ -375,10 +382,12 @@ calculateProfit(tx)
 }
 
 /* ==============================
-ADMIN LIVE MONITOR
+ADMIN MONITOR
 ============================== */
 
 function adminLiveMonitor(){
+
+const token=getToken()
 
 if(!token) return
 
@@ -401,7 +410,7 @@ showToast("New user transaction")
 }
 
 /* ==============================
-ADMIN PROFIT CALCULATOR
+PROFIT CALCULATOR
 ============================== */
 
 function calculateProfit(transactions){
@@ -411,9 +420,7 @@ let profit=0
 transactions.forEach(t=>{
 
 if(t.profit){
-
 profit+=Number(t.profit)
-
 }
 
 })
@@ -434,6 +441,15 @@ DASHBOARD
 
 async function loadDashboard(){
 
+const token=getToken()
+
+if(!token){
+
+window.location="login.html"
+return
+
+}
+
 try{
 
 const res=await smartFetch(`${API}/api/me`,{
@@ -444,25 +460,29 @@ Authorization:`Bearer ${token}`
 
 })
 
-const user=await res.json()
+if(!res.ok){
 
-document.getElementById("usernameDisplay").innerText=`Hello 👋 ${user.username}`
-
-animateBalance(user.wallet_balance||0)
-
-if(user.is_admin){
-
-document.getElementById("adminPanel").style.display="block"
-
-adminLiveMonitor()
+localStorage.removeItem("token")
+window.location="login.html"
+return
 
 }
+
+const user=await res.json()
+
+animateBalance(user.wallet_balance||0)
 
 enableNotifications()
 
 connectWalletSocket()
 
 loadTransactions()
+
+if(user.is_admin){
+
+adminLiveMonitor()
+
+}
 
 }catch{
 

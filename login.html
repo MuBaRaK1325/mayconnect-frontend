@@ -25,6 +25,36 @@ height:100vh;
 flex-direction:column;
 }
 
+/* LOGIN SPLASH */
+
+#loginLoader{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:#020b1f;
+display:none;
+align-items:center;
+justify-content:center;
+z-index:9999;
+flex-direction:column;
+}
+
+.loaderRing{
+width:70px;
+height:70px;
+border:6px solid #0c1a36;
+border-top:6px solid #3b78e7;
+border-radius:50%;
+animation:spin 1s linear infinite;
+}
+
+@keyframes spin{
+0%{transform:rotate(0deg)}
+100%{transform:rotate(360deg)}
+}
+
 .logo{
 width:110px;
 height:110px;
@@ -118,6 +148,16 @@ display:block;
 
 <body>
 
+<!-- LOGIN LOADER -->
+
+<div id="loginLoader">
+
+<div class="loaderRing"></div>
+
+<p style="margin-top:15px">Logging in...</p>
+
+</div>
+
 <img src="images/logo.png" class="logo">
 
 <div class="card">
@@ -136,6 +176,7 @@ display:block;
 <button class="loginBtn" onclick="login()">Login</button>
 
 <!-- BIOMETRIC LOGIN -->
+
 <div class="biometric" onclick="biometricLogin()">
 🔐 Login with Biometrics
 </div>
@@ -152,6 +193,8 @@ Create Account
 
 <script>
 
+/* TOGGLE PASSWORD */
+
 function togglePassword(){
 
 const pass=document.getElementById("loginPassword")
@@ -160,6 +203,85 @@ if(pass.type==="password"){
 pass.type="text"
 }else{
 pass.type="password"
+}
+
+}
+
+/* LOGIN FUNCTION */
+
+async function login(){
+
+const username=document.getElementById("loginUsername").value.trim()
+const password=document.getElementById("loginPassword").value.trim()
+
+if(!username || !password){
+alert("Enter username and password")
+return
+}
+
+/* SHOW LOADER */
+
+document.getElementById("loginLoader").style.display="flex"
+
+try{
+
+const res = await fetch("https://mayconnect-backend-1.onrender.com/api/login",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+username,
+password
+})
+
+})
+
+const data = await res.json()
+
+if(data.token){
+
+/* SAVE TOKEN */
+
+localStorage.setItem("token",data.token)
+
+/* REDIRECT */
+
+window.location.href="dashboard.html"
+
+}else{
+
+document.getElementById("loginLoader").style.display="none"
+
+alert(data.message || "Login failed")
+
+}
+
+}catch(err){
+
+document.getElementById("loginLoader").style.display="none"
+
+alert("Network error")
+
+}
+
+}
+
+/* BIOMETRIC LOGIN */
+
+function biometricLogin(){
+
+if(localStorage.getItem("biometric")==="true"){
+
+alert("Biometric login coming soon")
+
+}else{
+
+alert("Biometric login not enabled")
+
 }
 
 }
