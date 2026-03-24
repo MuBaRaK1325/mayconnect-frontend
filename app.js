@@ -1,7 +1,7 @@
 const API="https://mayconnect-backend-1.onrender.com"
 
 /* ==============================
-TOKEN HELPER
+TOKEN
 ============================== */
 
 function getToken(){
@@ -9,7 +9,7 @@ return localStorage.getItem("token")
 }
 
 /* ==============================
-DEVICE SESSION PROTECTION
+DEVICE SESSION
 ============================== */
 
 const DEVICE_ID="mayconnect_device"
@@ -34,28 +34,28 @@ const now=Date.now()
 
 if(RATE_LIMIT[key] && now-RATE_LIMIT[key]<delay){
 
-showToast("Please wait a moment")
-
+showToast("Please wait...")
 return false
 
 }
 
 RATE_LIMIT[key]=now
 return true
-
 }
 
 /* ==============================
 GLOBAL ERROR
 ============================== */
 
-window.onerror=function(){
+window.onerror=function(e){
+console.error(e)
 showToast("Something went wrong ⚠️")
 hideLoader()
 return true
 }
 
-window.onunhandledrejection=function(){
+window.onunhandledrejection=function(e){
+console.error(e)
 showToast("Network issue ⚠️")
 hideLoader()
 }
@@ -86,24 +86,20 @@ setTimeout(()=>t.remove(),3000)
 }
 
 /* ==============================
-SPLASH LOADER
+LOADER
 ============================== */
 
 function hideLoader(){
 
 const loader=document.getElementById("splashLoader") || document.getElementById("dashboardLoader")
 
-if(!loader) return
-
-loader.style.display="none"
+if(loader) loader.style.display="none"
 
 }
 
 window.addEventListener("load",()=>{
 
-setTimeout(()=>{
-hideLoader()
-},800)
+setTimeout(hideLoader,800)
 
 })
 
@@ -118,10 +114,10 @@ try{
 const res=await fetch(url,options)
 return res
 
-}catch{
+}catch(err){
 
 showToast("Network error")
-throw new Error("Network")
+throw err
 
 }
 
@@ -141,26 +137,16 @@ const password=document.getElementById("loginPassword").value
 const res=await fetch(`${API}/api/login`,{
 
 method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-username,
-password,
-device:getDevice()
-})
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({username,password})
 
 })
 
 const data=await res.json()
 
 if(!res.ok){
-
 alert(data.message)
 return
-
 }
 
 localStorage.setItem("token",data.token)
@@ -170,7 +156,7 @@ window.location="dashboard.html"
 }
 
 /* ==============================
-REAL TIME WALLET
+WEBSOCKET WALLET
 ============================== */
 
 let walletSocket
@@ -183,26 +169,14 @@ if(!token) return
 
 try{
 
-walletSocket=new WebSocket(`wss://mayconnect-backend-1.onrender.com/ws?token=${token}`)
+walletSocket=new WebSocket(`wss://mayconnect-backend-1.onrender.com?token=${token}`)
 
 walletSocket.onmessage=(event)=>{
 
 const data=JSON.parse(event.data)
 
 if(data.type==="wallet_update"){
-
 animateBalance(data.balance)
-
-}
-
-if(data.type==="transaction"){
-
-loadTransactions()
-
-playSuccessSound()
-
-sendNotification("New Transaction","Transaction received")
-
 }
 
 }
@@ -213,37 +187,9 @@ setTimeout(connectWalletSocket,4000)
 
 }
 
-}catch{
+}catch(err){
 
-console.log("Websocket failed")
-
-}
-
-}
-
-/* ==============================
-PUSH NOTIFICATIONS
-============================== */
-
-function enableNotifications(){
-
-if(!("Notification" in window)) return
-
-if(Notification.permission==="default"){
-
-Notification.requestPermission()
-
-}
-
-}
-
-function sendNotification(title,message){
-
-if(Notification.permission==="granted"){
-
-new Notification(title,{
-body:message
-})
+console.log("WebSocket failed",err)
 
 }
 
@@ -274,8 +220,7 @@ return network
 
 }
 
-return null
-
+return "MTN"
 }
 
 /* ==============================
@@ -286,7 +231,7 @@ async function loadDataPlans(network){
 
 try{
 
-const res=await fetch(`${API}/api/data-plans?network=${network}`)
+const res=await fetch(`${API}/api/plans?network=${network}`)
 
 const plans=await res.json()
 
@@ -305,7 +250,7 @@ card.className="planCard"
 card.innerHTML=`
 <h4>${plan.name}</h4>
 <p>₦${plan.price}</p>
-<button onclick="selectPlan('${plan.id}')">Buy</button>
+<button onclick="buyData('${plan.plan_id}')">Buy</button>
 `
 
 container.appendChild(card)
@@ -314,14 +259,96 @@ container.appendChild(card)
 
 }catch{
 
-showToast("Failed to load data plans")
+showToast("Failed to load plans")
 
 }
 
 }
 
 /* ==============================
-BALANCE ANIMATION
+BUY DATA
+============================== */
+
+async function buyData(planId){
+
+const phone=document.getElementById("phone").value
+const pin=prompt("Enter PIN")
+
+const token=getToken()
+
+const res=await fetch(`${API}/api/buy-data`,{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+Authorization:`Bearer ${token}`
+},
+
+body:JSON.stringify({
+plan_id:planId,
+phone,
+pin
+})
+
+})
+
+const data=await res.json()
+
+if(!res.ok){
+showToast(data.message)
+return
+}
+
+showToast("Data purchase successful")
+loadDashboard()
+
+}
+
+/* ==============================
+BUY AIRTIME
+============================== */
+
+async function buyAirtime(){
+
+const phone=document.getElementById("phone").value
+const amount=document.getElementById("amount").value
+const pin=prompt("Enter PIN")
+
+const token=getToken()
+
+const res=await fetch(`${API}/api/buy-airtime`,{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+Authorization:`Bearer ${token}`
+},
+
+body:JSON.stringify({
+network:detectNetwork(phone),
+phone,
+amount,
+pin
+})
+
+})
+
+const data=await res.json()
+
+if(!res.ok){
+showToast(data.message)
+return
+}
+
+showToast("Airtime successful")
+loadDashboard()
+
+}
+
+/* ==============================
+BALANCE
 ============================== */
 
 function animateBalance(balance){
@@ -330,47 +357,7 @@ const el=document.getElementById("walletBalance")
 
 if(!el) return
 
-let start=0
-const step=balance/40
-
-const t=setInterval(()=>{
-
-start+=step
-
-if(start>=balance){
-
-el.innerText="₦"+balance.toLocaleString()
-clearInterval(t)
-
-}else{
-
-el.innerText="₦"+Math.floor(start).toLocaleString()
-
-}
-
-},30)
-
-}
-
-/* ==============================
-TRANSACTION CARD
-============================== */
-
-function createTransactionCard(t){
-
-const div=document.createElement("div")
-
-div.className="transaction-card"
-
-div.innerHTML=`
-<strong>${t.type.toUpperCase()}</strong>
-<p>₦${Number(t.amount).toLocaleString()}</p>
-<small>${t.phone||""}</small>
-<br>
-<small>${new Date(t.created_at).toLocaleString()}</small>
-`
-
-return div
+el.innerText="₦"+Number(balance).toLocaleString()
 
 }
 
@@ -382,15 +369,9 @@ async function loadTransactions(){
 
 const token=getToken()
 
-if(!token) return
-
-try{
-
 const res=await fetch(`${API}/api/transactions`,{
 
-headers:{
-Authorization:`Bearer ${token}`
-}
+headers:{Authorization:`Bearer ${token}`}
 
 })
 
@@ -403,62 +384,19 @@ if(!container) return
 container.innerHTML=""
 
 tx.forEach(t=>{
-container.appendChild(createTransactionCard(t))
+
+const div=document.createElement("div")
+
+div.className="transaction-card"
+
+div.innerHTML=`
+<strong>${t.type}</strong>
+<p>₦${t.amount}</p>
+`
+
+container.appendChild(div)
+
 })
-
-calculateProfit(tx)
-
-}catch{}
-
-}
-
-/* ==============================
-ADMIN MONITOR
-============================== */
-
-function adminLiveMonitor(){
-
-const token=getToken()
-
-if(!token) return
-
-const socket=new WebSocket(`wss://mayconnect-backend-1.onrender.com/admin?token=${token}`)
-
-socket.onmessage=(event)=>{
-
-const data=JSON.parse(event.data)
-
-if(data.type==="new_transaction"){
-
-loadTransactions()
-
-showToast("New user transaction")
-
-}
-
-}
-
-}
-
-/* ==============================
-PROFIT CALCULATOR
-============================== */
-
-function calculateProfit(transactions){
-
-let profit=0
-
-transactions.forEach(t=>{
-if(t.profit){
-profit+=Number(t.profit)
-}
-})
-
-const profitEl=document.getElementById("profitBalance")
-
-if(profitEl){
-profitEl.innerText="₦"+profit.toLocaleString()
-}
 
 }
 
@@ -471,8 +409,10 @@ async function loadDashboard(){
 const token=getToken()
 
 if(!token){
+
 window.location="login.html"
 return
+
 }
 
 try{
@@ -481,78 +421,18 @@ const res=await smartFetch(`${API}/api/me`,{
 headers:{Authorization:`Bearer ${token}`}
 })
 
-if(!res.ok){
-localStorage.removeItem("token")
-window.location="login.html"
-return
-}
-
 const user=await res.json()
 
-/* USERNAME */
+animateBalance(user.wallet_balance)
 
-const nameEl=document.getElementById("usernameDisplay")
-if(nameEl){
-nameEl.innerText=`Hello 👋 ${user.username}`
+const name=document.getElementById("usernameDisplay")
+
+if(name){
+name.innerText=`Hello ${user.username}`
 }
 
-/* PROFILE */
-
-const avatar=document.getElementById("avatar")
-if(avatar){
-avatar.innerText=user.username.charAt(0).toUpperCase()
-}
-
-const profileName=document.getElementById("profileName")
-if(profileName){
-profileName.innerText=user.username
-}
-
-const profileEmail=document.getElementById("profileEmail")
-if(profileEmail){
-profileEmail.innerText=user.email
-}
-
-/* WALLET */
-
-animateBalance(user.wallet_balance||0)
-
-/* ADMIN PANEL */
-
-const adminPanel=document.getElementById("adminPanel")
-
-if(adminPanel){
-
-if(user.is_admin){
-
-adminPanel.style.display="block"
-adminLiveMonitor()
-
-}else{
-
-adminPanel.style.display="none"
-
-}
-
-}
-
-/* SYSTEMS */
-
-enableNotifications()
 connectWalletSocket()
 loadTransactions()
-
-/* WELCOME SOUND */
-
-const sound=document.getElementById("welcomeSound")
-
-if(sound){
-setTimeout(()=>{
-sound.play().catch(()=>{})
-},1200)
-}
-
-hideLoader()
 
 }catch{
 
@@ -568,84 +448,12 @@ window.addEventListener("load",loadDashboard)
 }
 
 /* ==============================
-BIOMETRIC AUTH
-============================== */
-
-async function biometricAuth(){
-
-if(!window.PublicKeyCredential){
-showToast("Biometric not supported")
-return false
-}
-
-try{
-
-await navigator.credentials.get({
-publicKey:{
-challenge:new Uint8Array(32),
-timeout:60000,
-userVerification:"required"
-}
-})
-
-return true
-
-}catch{
-
-showToast("Biometric verification failed")
-return false
-
-}
-
-}
-
-/* ==============================
-BIOMETRIC LOGIN
-============================== */
-
-async function biometricLogin(){
-
-if(localStorage.getItem("biometric")!=="true"){
-alert("Biometric login not enabled")
-return
-}
-
-const verified=await biometricAuth()
-
-if(!verified) return
-
-const token=localStorage.getItem("token")
-
-if(token){
-window.location="dashboard.html"
-}else{
-alert("Login once with password first")
-}
-
-}
-
-/* ==============================
-SUCCESS SOUND
-============================== */
-
-function playSuccessSound(){
-
-const sound=document.getElementById("successSound")
-
-if(sound){
-sound.play().catch(()=>{})
-}
-
-}
-
-/* ==============================
 LOGOUT
 ============================== */
 
 function logout(){
 
 localStorage.removeItem("token")
-
 window.location="login.html"
 
 }
