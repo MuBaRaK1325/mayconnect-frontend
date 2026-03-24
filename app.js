@@ -1,16 +1,12 @@
 const API="https://mayconnect-backend-1.onrender.com"
 
-/* ==============================
-TOKEN
-============================== */
+/* ================= TOKEN ================= */
 
 function getToken(){
 return localStorage.getItem("token")
 }
 
-/* ==============================
-DEVICE SESSION
-============================== */
+/* ================= DEVICE ================= */
 
 const DEVICE_ID="mayconnect_device"
 
@@ -22,9 +18,7 @@ function getDevice(){
 return localStorage.getItem(DEVICE_ID)
 }
 
-/* ==============================
-RATE LIMIT
-============================== */
+/* ================= RATE LIMIT ================= */
 
 const RATE_LIMIT={}
 
@@ -34,41 +28,49 @@ const now=Date.now()
 
 if(RATE_LIMIT[key] && now-RATE_LIMIT[key]<delay){
 
-showToast("Please wait...")
+showToast("Please wait a moment")
+
 return false
 
 }
 
 RATE_LIMIT[key]=now
 return true
+
 }
 
-/* ==============================
-GLOBAL ERROR
-============================== */
+/* ================= ERROR HANDLER ================= */
 
 window.onerror=function(e){
-console.error(e)
+
+console.log(e)
+
 showToast("Something went wrong ⚠️")
+
 hideLoader()
+
 return true
+
 }
 
 window.onunhandledrejection=function(e){
-console.error(e)
+
+console.log(e)
+
 showToast("Network issue ⚠️")
+
 hideLoader()
+
 }
 
-/* ==============================
-TOAST
-============================== */
+/* ================= TOAST ================= */
 
 function showToast(msg){
 
 const t=document.createElement("div")
 
 t.innerText=msg
+
 t.style.position="fixed"
 t.style.bottom="30px"
 t.style.left="50%"
@@ -85,9 +87,7 @@ setTimeout(()=>t.remove(),3000)
 
 }
 
-/* ==============================
-LOADER
-============================== */
+/* ================= LOADER ================= */
 
 function hideLoader(){
 
@@ -103,29 +103,7 @@ setTimeout(hideLoader,800)
 
 })
 
-/* ==============================
-SMART FETCH
-============================== */
-
-async function smartFetch(url,options={}){
-
-try{
-
-const res=await fetch(url,options)
-return res
-
-}catch(err){
-
-showToast("Network error")
-throw err
-
-}
-
-}
-
-/* ==============================
-LOGIN
-============================== */
+/* ================= LOGIN ================= */
 
 async function login(){
 
@@ -137,16 +115,27 @@ const password=document.getElementById("loginPassword").value
 const res=await fetch(`${API}/api/login`,{
 
 method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({username,password})
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+username,
+password,
+device:getDevice()
+})
 
 })
 
 const data=await res.json()
 
 if(!res.ok){
+
 alert(data.message)
+
 return
+
 }
 
 localStorage.setItem("token",data.token)
@@ -155,9 +144,7 @@ window.location="dashboard.html"
 
 }
 
-/* ==============================
-WEBSOCKET WALLET
-============================== */
+/* ================= WEBSOCKET ================= */
 
 let walletSocket
 
@@ -167,8 +154,6 @@ const token=getToken()
 
 if(!token) return
 
-try{
-
 walletSocket=new WebSocket(`wss://mayconnect-backend-1.onrender.com?token=${token}`)
 
 walletSocket.onmessage=(event)=>{
@@ -176,7 +161,9 @@ walletSocket.onmessage=(event)=>{
 const data=JSON.parse(event.data)
 
 if(data.type==="wallet_update"){
+
 animateBalance(data.balance)
+
 }
 
 }
@@ -187,23 +174,17 @@ setTimeout(connectWalletSocket,4000)
 
 }
 
-}catch(err){
-
-console.log("WebSocket failed",err)
-
 }
 
-}
-
-/* ==============================
-NETWORK DETECTION
-============================== */
+/* ================= NETWORK DETECTION ================= */
 
 const NETWORK_PREFIX={
+
 MTN:["0803","0806","0813","0816","0703","0706","0903","0906"],
 AIRTEL:["0802","0808","0812","0701","0708","0901","0902"],
 GLO:["0805","0807","0811","0705","0905"],
 "9MOBILE":["0809","0817","0818","0908"]
+
 }
 
 function detectNetwork(phone){
@@ -221,15 +202,12 @@ return network
 }
 
 return "MTN"
+
 }
 
-/* ==============================
-LOAD DATA PLANS
-============================== */
+/* ================= LOAD DATA PLANS ================= */
 
 async function loadDataPlans(network){
-
-try{
 
 const res=await fetch(`${API}/api/plans?network=${network}`)
 
@@ -257,21 +235,14 @@ container.appendChild(card)
 
 })
 
-}catch{
-
-showToast("Failed to load plans")
-
 }
 
-}
-
-/* ==============================
-BUY DATA
-============================== */
+/* ================= BUY DATA ================= */
 
 async function buyData(planId){
 
 const phone=document.getElementById("phone").value
+
 const pin=prompt("Enter PIN")
 
 const token=getToken()
@@ -296,23 +267,26 @@ pin
 const data=await res.json()
 
 if(!res.ok){
+
 showToast(data.message)
+
 return
+
 }
 
 showToast("Data purchase successful")
+
 loadDashboard()
 
 }
 
-/* ==============================
-BUY AIRTIME
-============================== */
+/* ================= BUY AIRTIME ================= */
 
 async function buyAirtime(){
 
 const phone=document.getElementById("phone").value
 const amount=document.getElementById("amount").value
+
 const pin=prompt("Enter PIN")
 
 const token=getToken()
@@ -338,18 +312,63 @@ pin
 const data=await res.json()
 
 if(!res.ok){
+
 showToast(data.message)
+
 return
+
 }
 
 showToast("Airtime successful")
+
 loadDashboard()
 
 }
 
-/* ==============================
-BALANCE
-============================== */
+/* ================= ADMIN WITHDRAW ================= */
+
+async function adminWithdraw(){
+
+const amount=document.getElementById("withdrawAmount").value
+const bank=document.getElementById("bank").value
+const account=document.getElementById("accountNumber").value
+const name=document.getElementById("accountName").value
+
+const token=getToken()
+
+const res=await fetch(`${API}/api/admin/withdraw`,{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+Authorization:`Bearer ${token}`
+},
+
+body:JSON.stringify({
+amount,
+bank,
+account_number:account,
+account_name:name
+})
+
+})
+
+const data=await res.json()
+
+if(!res.ok){
+
+showToast(data.message)
+
+return
+
+}
+
+showToast("Withdrawal submitted")
+
+}
+
+/* ================= BALANCE ================= */
 
 function animateBalance(balance){
 
@@ -361,9 +380,7 @@ el.innerText="₦"+Number(balance).toLocaleString()
 
 }
 
-/* ==============================
-TRANSACTIONS
-============================== */
+/* ================= TRANSACTIONS ================= */
 
 async function loadTransactions(){
 
@@ -371,7 +388,9 @@ const token=getToken()
 
 const res=await fetch(`${API}/api/transactions`,{
 
-headers:{Authorization:`Bearer ${token}`}
+headers:{
+Authorization:`Bearer ${token}`
+}
 
 })
 
@@ -400,9 +419,7 @@ container.appendChild(div)
 
 }
 
-/* ==============================
-DASHBOARD
-============================== */
+/* ================= DASHBOARD ================= */
 
 async function loadDashboard(){
 
@@ -415,10 +432,12 @@ return
 
 }
 
-try{
+const res=await fetch(`${API}/api/me`,{
 
-const res=await smartFetch(`${API}/api/me`,{
-headers:{Authorization:`Bearer ${token}`}
+headers:{
+Authorization:`Bearer ${token}`
+}
+
 })
 
 const user=await res.json()
@@ -428,32 +447,27 @@ animateBalance(user.wallet_balance)
 const name=document.getElementById("usernameDisplay")
 
 if(name){
-name.innerText=`Hello ${user.username}`
+name.innerText=`Hello 👋 ${user.username}`
 }
 
 connectWalletSocket()
+
 loadTransactions()
-
-}catch{
-
-localStorage.removeItem("token")
-window.location="login.html"
-
-}
 
 }
 
 if(window.location.pathname.includes("dashboard")){
+
 window.addEventListener("load",loadDashboard)
+
 }
 
-/* ==============================
-LOGOUT
-============================== */
+/* ================= LOGOUT ================= */
 
 function logout(){
 
 localStorage.removeItem("token")
+
 window.location="login.html"
 
 }
