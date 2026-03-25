@@ -6,7 +6,7 @@ function getToken(){
 return localStorage.getItem("token")
 }
 
-/* SAFE ELEMENT */
+/* ELEMENT */
 
 function el(id){
 return document.getElementById(id)
@@ -17,6 +17,7 @@ return document.getElementById(id)
 function showToast(msg){
 
 const t=document.createElement("div")
+
 t.innerText=msg
 t.style.position="fixed"
 t.style.bottom="30px"
@@ -47,6 +48,8 @@ GLO:["0805","0807","0811","0705","0905"],
 
 function detectNetwork(phone){
 
+if(!phone) return null
+
 phone=phone.replace(/\D/g,"")
 
 if(phone.startsWith("234")){
@@ -64,6 +67,7 @@ return network
 }
 
 return null
+
 }
 
 /* NETWORK LOGO */
@@ -71,14 +75,13 @@ return null
 function showNetworkLogo(network){
 
 const logo=el("networkLogo")
-const badge=el("networkName")
 
 if(!logo) return
 
 const logos={
-MTN:"images/mtn.png",
-AIRTEL:"images/airtel.png",
-GLO:"images/glo.png",
+MTN:"images/Mtn.png",
+AIRTEL:"images/Airtel.png",
+GLO:"images/Glo.png",
 "9MOBILE":"images/9mobile.png"
 }
 
@@ -86,12 +89,7 @@ logo.src=logos[network] || ""
 logo.style.display="block"
 logo.style.border="3px solid #2f6bff"
 logo.style.borderRadius="50%"
-logo.style.padding="5px"
-
-if(badge){
-badge.innerText=network
-badge.style.display="inline-block"
-}
+logo.style.padding="4px"
 
 }
 
@@ -111,15 +109,11 @@ if(!network) return
 
 showNetworkLogo(network)
 
-/* STOP RELOADING SAME NETWORK */
-
 if(network===lastNetworkLoaded) return
 
 lastNetworkLoaded=network
 
-if(el("plans")){
 loadDataPlans(network)
-}
 
 }
 
@@ -135,7 +129,12 @@ const res=await fetch(`${API}/api/plans`,{
 headers:{Authorization:`Bearer ${token}`}
 })
 
-const plans=await res.json()
+let plans=await res.json()
+
+if(!Array.isArray(plans)){
+showToast("Failed to load plans")
+return
+}
 
 const container=el("plans")
 
@@ -143,47 +142,29 @@ if(!container) return
 
 container.innerHTML=""
 
-/* FILTER NETWORK */
-
-const filtered=plans.filter(p=>{
-
-if(!p.network) return false
-
-return p.network.toLowerCase().includes(network.toLowerCase())
-
-})
+const filtered=plans.filter(p=>p.network?.toUpperCase()===network)
 
 if(filtered.length===0){
 container.innerHTML="<p>No plans available</p>"
 return
 }
 
-/* RENDER */
-
 filtered.forEach(plan=>{
 
-const planName=plan.plan || plan.name || plan.title || "Data Plan"
-
-const validity=
-plan.validity ||
-plan.validity_days ||
-plan.duration ||
-plan.validity_text ||
-"N/A"
-
+const name=plan.plan || plan.name || "Data Plan"
 const price=plan.price || plan.amount || 0
-
-const planId=plan.plan_id || plan.id
+const validity=plan.validity || plan.duration || ""
+const id=plan.plan_id || plan.id
 
 const card=document.createElement("div")
 
 card.className="planCard"
 
 card.innerHTML=`
-<h4>${planName}</h4>
+<h4>${name}</h4>
 <p>₦${price}</p>
 <p>${validity}</p>
-<button onclick="openPinModal('${planId}','data')">Buy</button>
+<button onclick="openPinModal('${id}','data')">Buy</button>
 `
 
 container.appendChild(card)
@@ -192,9 +173,8 @@ container.appendChild(card)
 
 }catch(e){
 
-console.log("Plan load error:",e)
-
-showToast("Failed to load plans")
+console.log(e)
+showToast("Network error loading plans")
 
 }
 
@@ -210,34 +190,31 @@ function openPinModal(plan,type){
 selectedPlan=plan
 purchaseType=type
 
-el("pinModal")?.classList.remove("hidden")
+const modal=el("pinModal")
+
+if(modal) modal.classList.remove("hidden")
 
 }
 
 function closePinModal(){
-el("pinModal")?.classList.add("hidden")
-}
 
-/* BIOMETRIC PURCHASE */
+const modal=el("pinModal")
 
-function confirmBiometric(){
-
-if(!localStorage.getItem("biometric")){
-showToast("Biometric not enabled")
-return
-}
-
-confirmPurchase()
+if(modal) modal.classList.add("hidden")
 
 }
 
-/* BUY DATA */
+/* DATA PURCHASE */
 
 async function buyData(planId,pin){
 
 const phone=el("phone")?.value
-
 const token=getToken()
+
+if(!phone){
+showToast("Enter phone number")
+return
+}
 
 try{
 
@@ -260,7 +237,7 @@ pin
 
 const data=await res.json()
 
-if(!res.ok || data.status===false){
+if(!data.status){
 showToast(data.message || "Transaction failed")
 return
 }
@@ -275,11 +252,16 @@ showToast("Network error")
 
 }
 
-/* BUY AIRTIME */
+/* AIRTIME PURCHASE */
 
 async function buyAirtime(phone,amount,pin){
 
 const token=getToken()
+
+if(!phone || !amount){
+showToast("Enter phone and amount")
+return
+}
 
 try{
 
@@ -303,7 +285,7 @@ pin
 
 const data=await res.json()
 
-if(!res.ok || data.status===false){
+if(!data.status){
 showToast(data.message || "Airtime failed")
 return
 }
@@ -331,8 +313,8 @@ return
 
 if(purchaseType==="airtime"){
 
-const phone=el("phone").value
-const amount=el("amount").value
+const phone=el("phone")?.value
+const amount=el("amount")?.value
 
 buyAirtime(phone,amount,pin)
 
@@ -351,8 +333,12 @@ closePinModal()
 async function savePin(){
 
 const pin=el("pin")?.value
-
 const token=getToken()
+
+if(!pin){
+showToast("Enter PIN")
+return
+}
 
 try{
 
@@ -371,9 +357,7 @@ body:JSON.stringify({pin})
 
 const data=await res.json()
 
-showToast(data.message)
-
-localStorage.setItem("pinSet","true")
+showToast(data.message || "PIN saved")
 
 }catch{
 
@@ -383,19 +367,17 @@ showToast("Failed to save PIN")
 
 }
 
-/* BIOMETRIC */
+/* BIOMETRIC ENABLE */
 
-function toggleBiometric(){
+function enableBiometric(){
 
-const enabled=localStorage.getItem("biometric")
+if(!window.PublicKeyCredential){
 
-if(enabled){
+showToast("Biometric not supported")
 
-localStorage.removeItem("biometric")
+return
 
-showToast("Biometric disabled")
-
-}else{
+}
 
 localStorage.setItem("biometric","true")
 
@@ -403,12 +385,22 @@ showToast("Biometric enabled")
 
 }
 
+/* BIOMETRIC PURCHASE */
+
+function confirmBiometric(){
+
+if(!localStorage.getItem("biometric")){
+
+showToast("Enable biometric first")
+
+return
+
 }
 
-/* PASSWORD */
+showToast("Biometric confirmed")
 
-function changePassword(){
-showToast("Password feature coming soon")
+confirmPurchase()
+
 }
 
 /* DASHBOARD */
@@ -418,8 +410,11 @@ async function loadDashboard(){
 const token=getToken()
 
 if(!token){
+
 window.location="login.html"
+
 return
+
 }
 
 try{
@@ -431,38 +426,22 @@ headers:{Authorization:`Bearer ${token}`}
 const user=await res.json()
 
 if(el("usernameDisplay"))
-el("usernameDisplay").innerText=`Hello 👋 ${user.name}`
+el("usernameDisplay").innerText=`Hello ${user.name}`
 
 if(el("walletBalance"))
 el("walletBalance").innerText=`₦${user.wallet || 0}`
 
-if(el("profileName"))
-el("profileName").innerText=user.name
-
-if(el("profileEmail"))
-el("profileEmail").innerText=user.email
-
-/* ADMIN PANEL */
-
-if((user.isAdmin || user.is_admin) && el("adminPanel")){
+if((user.is_admin || user.isAdmin) && el("adminPanel")){
 el("adminPanel").style.display="block"
-}
-
-/* PIN BUTTON */
-
-if(localStorage.getItem("pinSet")){
-if(el("pinBtn")) el("pinBtn").innerText="Change Transaction PIN"
 }
 
 }catch(e){
 
 console.log(e)
 
-showToast("Dashboard offline")
-
 }
 
-/* HIDE LOADER */
+/* REMOVE LOADER */
 
 const loader=el("dashboardLoader")
 
@@ -470,7 +449,9 @@ if(loader) loader.style.display="none"
 
 }
 
-/* LOADER SAFETY */
+/* PAGE LOAD */
+
+window.addEventListener("load",()=>{
 
 setTimeout(()=>{
 
@@ -478,15 +459,9 @@ const loader=el("dashboardLoader")
 
 if(loader) loader.style.display="none"
 
-},8000)
+},2000)
 
-/* START DASHBOARD */
-
-window.addEventListener("load",()=>{
-
-if(el("walletBalance")){
 loadDashboard()
-}
 
 })
 
