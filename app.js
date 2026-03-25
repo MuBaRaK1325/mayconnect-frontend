@@ -1,65 +1,18 @@
 const API="https://mayconnect-backend-1.onrender.com"
 
-/* TOKEN */
+/* ================= TOKEN ================= */
 
 function getToken(){
 return localStorage.getItem("token")
 }
 
-/* DEVICE */
-
-const DEVICE_ID="mayconnect_device"
-
-if(!localStorage.getItem(DEVICE_ID)){
-localStorage.setItem(DEVICE_ID,crypto.randomUUID())
-}
-
-function getDevice(){
-return localStorage.getItem(DEVICE_ID)
-}
-
-/* RATE LIMIT */
-
-const RATE_LIMIT={}
-
-function limitAction(key,delay=3000){
-
-const now=Date.now()
-
-if(RATE_LIMIT[key] && now-RATE_LIMIT[key]<delay){
-
-showToast("Please wait a moment")
-return false
-
-}
-
-RATE_LIMIT[key]=now
-return true
-}
-
-/* GLOBAL ERROR HANDLER */
-
-window.onerror=function(e){
-console.log(e)
-showToast("Something went wrong ⚠️")
-hideLoader()
-return true
-}
-
-window.onunhandledrejection=function(e){
-console.log(e)
-showToast("Network issue ⚠️")
-hideLoader()
-}
-
-/* TOAST */
+/* ================= TOAST ================= */
 
 function showToast(msg){
 
 const t=document.createElement("div")
 
 t.innerText=msg
-
 t.style.position="fixed"
 t.style.bottom="30px"
 t.style.left="50%"
@@ -76,82 +29,7 @@ setTimeout(()=>t.remove(),3000)
 
 }
 
-/* LOADER */
-
-function hideLoader(){
-
-const loader=document.getElementById("splashLoader") || document.getElementById("dashboardLoader")
-
-if(loader) loader.style.display="none"
-
-}
-
-window.addEventListener("load",()=>{
-setTimeout(hideLoader,800)
-})
-
-/* LOGIN */
-
-async function login(){
-
-if(!limitAction("login",2000)) return
-
-const username=document.getElementById("loginUsername").value
-const password=document.getElementById("loginPassword").value
-
-const res=await fetch(`${API}/api/login`,{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({username,password})
-
-})
-
-const data=await res.json()
-
-if(!res.ok){
-alert(data.message)
-return
-}
-
-localStorage.setItem("token",data.token)
-
-window.location="dashboard.html"
-
-}
-
-/* WEBSOCKET */
-
-let walletSocket
-
-function connectWalletSocket(){
-
-const token=getToken()
-if(!token) return
-
-walletSocket=new WebSocket(`wss://mayconnect-backend-1.onrender.com?token=${token}`)
-
-walletSocket.onmessage=(event)=>{
-
-const data=JSON.parse(event.data)
-
-if(data.type==="wallet_update"){
-animateBalance(data.balance)
-}
-
-}
-
-walletSocket.onclose=()=>{
-setTimeout(connectWalletSocket,4000)
-}
-
-}
-
-/* NETWORK DETECTION */
+/* ================= NETWORK PREFIX ================= */
 
 const NETWORK_PREFIX={
 MTN:["0803","0806","0813","0816","0703","0706","0903","0906"],
@@ -160,9 +38,15 @@ GLO:["0805","0807","0811","0705","0905"],
 "9MOBILE":["0809","0817","0818","0908"]
 }
 
+/* ================= DETECT NETWORK ================= */
+
 function detectNetwork(phone){
 
 phone=phone.replace(/\D/g,"")
+
+if(phone.startsWith("234")){
+phone="0"+phone.slice(3)
+}
 
 const prefix=phone.substring(0,4)
 
@@ -174,10 +58,10 @@ return network
 
 }
 
-return "MTN"
+return null
 }
 
-/* SHOW NETWORK LOGO */
+/* ================= SHOW NETWORK LOGO ================= */
 
 function showNetworkLogo(network){
 
@@ -191,13 +75,12 @@ AIRTEL:"images/Airtel.png",
 GLO:"images/Glo.png"
 }
 
-logo.src=logos[network] || "images/Mtn.png"
-
+logo.src=logos[network] || ""
 logo.style.display="block"
 
 }
 
-/* PHONE INPUT HANDLER */
+/* ================= PHONE INPUT ================= */
 
 function handlePhoneInput(input){
 
@@ -207,15 +90,19 @@ if(phone.length<4) return
 
 const network=detectNetwork(phone)
 
+if(!network) return
+
 showNetworkLogo(network)
 
 loadDataPlans(network)
 
 }
 
-/* LOAD DATA PLANS */
+/* ================= LOAD DATA PLANS ================= */
 
 async function loadDataPlans(network){
+
+try{
 
 const token=getToken()
 
@@ -231,72 +118,43 @@ if(!container) return
 
 container.innerHTML=""
 
-const filtered=plans.filter(p=>p.network===network)
+const filtered=plans.filter(
+p=>p.network.toUpperCase()===network
+)
 
-/* REMOVE DUPLICATES */
-
-const unique={}
-
-filtered.forEach(p=>{
-if(!unique[p.plan]){
-unique[p.plan]=p
-}
-})
-
-Object.values(unique).forEach(plan=>{
+filtered.forEach(plan=>{
 
 const card=document.createElement("div")
 
 card.className="planCard"
 
 card.innerHTML=`
+
 <h4>${plan.plan}</h4>
+
 <p>₦${plan.price}</p>
-<button onclick="openPinModal('${plan.id}')">Buy</button>
+
+<p>${plan.validity || ""}</p>
+
+<button onclick="openPinModal('${plan.plan_id}')">
+Buy
+</button>
+
 `
 
 container.appendChild(card)
 
 })
 
-}
+}catch{
 
-/* BUY AIRTIME */
-
-async function buyAirtime(phone,amount,pin){
-
-const token=getToken()
-
-const res=await fetch(`${API}/api/buy-airtime`,{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json",
-Authorization:`Bearer ${token}`
-},
-
-body:JSON.stringify({
-network:detectNetwork(phone),
-phone,
-amount,
-pin
-})
-
-})
-
-const data=await res.json()
-
-if(!res.ok){
-showToast(data.message)
-return
-}
-
-showToast("Airtime successful")
+showToast("Failed to load data plans")
 
 }
 
-/* BUY DATA */
+}
+
+/* ================= BUY DATA ================= */
 
 async function buyData(planId,pin){
 
@@ -330,9 +188,48 @@ return
 
 showToast("Data purchase successful")
 
+loadDashboard()
+
 }
 
-/* CONFIRM PURCHASE */
+/* ================= BUY AIRTIME ================= */
+
+async function buyAirtime(phone,amount,pin){
+
+const token=getToken()
+
+const res=await fetch(`${API}/api/buy-airtime`,{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+Authorization:`Bearer ${token}`
+},
+
+body:JSON.stringify({
+network:detectNetwork(phone),
+phone,
+amount,
+pin
+})
+
+})
+
+const data=await res.json()
+
+if(!res.ok){
+showToast(data.message)
+return
+}
+
+showToast("Airtime successful")
+
+loadDashboard()
+
+}
+
+/* ================= CONFIRM PURCHASE ================= */
 
 async function confirmPurchase(){
 
@@ -355,14 +252,13 @@ closePinModal()
 
 }
 
-/* ADMIN WITHDRAW */
+/* ================= ADMIN WITHDRAW ================= */
 
 async function adminWithdraw(){
 
 const amount=document.getElementById("withdrawAmount").value
-const bank=document.getElementById("bank").value
+const bank=document.getElementById("bankName").value
 const account=document.getElementById("accountNumber").value
-const name=document.getElementById("accountName").value
 
 const token=getToken()
 
@@ -378,24 +274,18 @@ Authorization:`Bearer ${token}`
 body:JSON.stringify({
 amount,
 bank,
-account_number:account,
-account_name:name
+account_number:account
 })
 
 })
 
 const data=await res.json()
 
-if(!res.ok){
 showToast(data.message)
-return
-}
-
-showToast("Withdrawal request sent")
 
 }
 
-/* BALANCE */
+/* ================= BALANCE ================= */
 
 function animateBalance(balance){
 
@@ -407,16 +297,18 @@ el.innerText="₦"+Number(balance).toLocaleString()
 
 }
 
-/* TRANSACTIONS */
+/* ================= TRANSACTIONS ================= */
 
 async function loadTransactions(){
 
 const token=getToken()
 
+if(!token) return
+
+try{
+
 const res=await fetch(`${API}/api/transactions`,{
-
 headers:{Authorization:`Bearer ${token}`}
-
 })
 
 const tx=await res.json()
@@ -442,9 +334,11 @@ container.appendChild(div)
 
 })
 
+}catch{}
+
 }
 
-/* DASHBOARD */
+/* ================= DASHBOARD ================= */
 
 async function loadDashboard(){
 
@@ -455,6 +349,8 @@ window.location="login.html"
 return
 }
 
+try{
+
 const res=await fetch(`${API}/api/me`,{
 headers:{Authorization:`Bearer ${token}`}
 })
@@ -464,29 +360,41 @@ const user=await res.json()
 animateBalance(user.wallet_balance)
 
 const name=document.getElementById("usernameDisplay")
-if(name) name.innerText=`Hello 👋 ${user.username}`
 
-const profileName=document.getElementById("profileName")
-if(profileName) profileName.innerText=user.username
+if(name){
+name.innerText=`Hello 👋 ${user.username}`
+}
 
 const avatar=document.getElementById("avatar")
-if(avatar) avatar.innerText=user.username.charAt(0).toUpperCase()
+
+if(avatar){
+avatar.innerText=user.username.charAt(0).toUpperCase()
+}
 
 /* ADMIN PANEL */
 
 if(user.is_admin){
 
 const panel=document.getElementById("adminPanel")
+
 if(panel) panel.style.display="block"
 
 const profit=document.getElementById("profitBalance")
-if(profit) profit.innerText="₦"+Number(user.admin_wallet).toLocaleString()
+
+if(profit){
+profit.innerText="₦"+Number(user.admin_wallet).toLocaleString()
+}
 
 }
 
-connectWalletSocket()
-
 loadTransactions()
+
+}catch{
+
+localStorage.removeItem("token")
+window.location="login.html"
+
+}
 
 }
 
@@ -494,7 +402,7 @@ if(window.location.pathname.includes("dashboard")){
 window.addEventListener("load",loadDashboard)
 }
 
-/* LOGOUT */
+/* ================= LOGOUT ================= */
 
 function logout(){
 
