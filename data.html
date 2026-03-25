@@ -2,6 +2,7 @@
 <html>
 
 <head>
+
 <title>Buy Data</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,8 +16,6 @@ font-family:Arial;
 padding:20px;
 }
 
-
-
 input{
 width:100%;
 padding:14px;
@@ -28,7 +27,7 @@ color:white;
 }
 
 #networkLogo{
-width:45px;
+width:50px;
 margin-top:10px;
 display:none;
 }
@@ -37,7 +36,7 @@ display:none;
 background:#08142c;
 padding:15px;
 border-radius:12px;
-margin-top:12px;
+margin-top:10px;
 }
 
 button{
@@ -46,9 +45,8 @@ border:none;
 padding:12px;
 border-radius:8px;
 color:white;
-margin-top:8px;
+margin-top:10px;
 width:100%;
-cursor:pointer;
 }
 
 .modalOverlay{
@@ -57,23 +55,22 @@ top:0;
 left:0;
 width:100%;
 height:100%;
-background:rgba(0,0,0,0.6);
+background:rgba(0,0,0,0.7);
 display:flex;
 align-items:center;
 justify-content:center;
-z-index:2000;
+}
+
+.hidden{
+display:none;
 }
 
 .modalCard{
 background:#08142c;
 padding:20px;
-border-radius:12px;
+border-radius:10px;
 width:90%;
 max-width:350px;
-}
-
-.hidden{
-display:none;
 }
 
 </style>
@@ -89,7 +86,7 @@ id="phone"
 placeholder="Enter phone number"
 oninput="handlePhoneInput(this)"
 >
-<img id="networkLogo" style="width:60px;display:none;margin:auto">
+
 <img id="networkLogo">
 
 <div id="plans"></div>
@@ -98,47 +95,19 @@ oninput="handlePhoneInput(this)"
 
 <div class="modalCard">
 
-<h3>Confirm Purchase</h3>
+<h3>Enter Transaction PIN</h3>
 
-<input
-type="password"
-id="pin"
-placeholder="Transaction PIN"
->
+<input type="password" id="pin">
 
 <button onclick="confirmPurchase()">Confirm</button>
 
 <button onclick="closePinModal()">Cancel</button>
 
 </div>
+
 </div>
 
 <script src="app.js"></script>
-
-<script>
-
-function openPinModal(planId){
-
-window.selectedPlan = planId
-window.purchaseType = "data"
-
-document
-.getElementById("pinModal")
-.classList
-.remove("hidden")
-
-}
-
-function closePinModal(){
-
-document
-.getElementById("pinModal")
-.classList
-.add("hidden")
-
-}
-
-</script>
 
 </body>
 </html>
