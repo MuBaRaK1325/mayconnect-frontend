@@ -23,11 +23,6 @@ function showToast(msg) {
   setTimeout(() => t.remove(), 3000);
 }
 
-/* TRANSACTION ID */
-function generateTransactionID() {
-  return "MC" + Date.now() + Math.floor(Math.random() * 1000);
-}
-
 /* WALLET ANIMATION */
 function animateWallet(newBalance) {
   const wallet = el("walletBalance");
@@ -36,7 +31,7 @@ function animateWallet(newBalance) {
   const step = (current - newBalance) / 20;
   const interval = setInterval(() => {
     current -= step;
-    if (current <= newBalance) {
+    if ((step>0 && current <= newBalance) || (step<0 && current >= newBalance)) {
       wallet.innerText = `₦${newBalance}`;
       clearInterval(interval);
     } else wallet.innerText = `₦${Math.floor(current)}`;
@@ -48,14 +43,15 @@ function saveTransaction(tx) {
   let history = JSON.parse(localStorage.getItem("transactions") || "[]");
   history.unshift(tx);
   localStorage.setItem("transactions", JSON.stringify(history));
+  renderTransactions();
 }
 
 /* RENDER USER TRANSACTIONS */
-function renderTransactions() {
-  const history = JSON.parse(localStorage.getItem("transactions") || "[]");
+function renderTransactions(transactions) {
   const container = el("transactionHistory");
   if (!container) return;
   container.innerHTML = "";
+  const history = transactions || JSON.parse(localStorage.getItem("transactions") || "[]");
   history.slice(0, 5).forEach(tx => {
     const div = document.createElement("div");
     div.className = "transaction-card";
@@ -68,7 +64,21 @@ function renderTransactions() {
   });
 }
 
-/* DETECT NETWORK */
+/* FETCH USER TRANSACTIONS FROM SERVER */
+async function fetchTransactions() {
+  try {
+    const token = getToken();
+    const res = await fetch(`${API}/api/transactions`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      localStorage.setItem("transactions", JSON.stringify(data));
+      renderTransactions(data);
+    }
+  } catch(e){ console.log("Failed to fetch transactions", e); }
+}
+
+/* NETWORK DETECTION */
 const NETWORK_PREFIX = {
   MTN: ["0803","0806","0703","0706","0813","0816","0810","0814","0903","0906","0913","0916"],
   AIRTEL: ["0802","0808","0701","0708","0812","0901","0902","0907","0911","0912"],
@@ -128,62 +138,117 @@ async function loadDataPlans(network) {
   } catch(e) { showToast("Failed to load plans"); }
 }
 
-/* PURCHASE VARIABLES */
+/* PURCHASE & PIN */
 let selectedPlan = null;
 let purchaseType = null;
 
-/* PIN MODAL */
 function openPinModal(plan, type) {
   selectedPlan = plan; purchaseType = type;
   const modal = el("pinModal"); if (!modal) return;
   modal.classList.remove("hidden");
   const title = el("pinModalTitle"); const body = el("pinModalBody"); if (!title || !body) return;
 
-  if(type==="setPin"){ title.innerText="Set Transaction PIN"; body.innerHTML=`<input type="password" id="pinInput" placeholder="Enter 4-digit PIN" maxlength="4"><button onclick="savePin()">Save PIN</button>`; }
-  else if(type==="data"||type==="airtime"){ title.innerText="Enter Transaction PIN"; body.innerHTML=`<input type="password" id="pin" placeholder="PIN" maxlength="4"><button onclick="confirmPurchase()">Confirm</button>`; }
-  else if(type==="changePin"){ title.innerText="Change Transaction PIN"; body.innerHTML=`<input type="password" id="currentPin" placeholder="Current PIN" maxlength="4"><input type="password" id="newPin" placeholder="New PIN" maxlength="4"><input type="password" id="confirmPin" placeholder="Confirm New PIN" maxlength="4"><button onclick="changePin()">Change PIN</button>`; }
-  else if(type==="changePassword"){ title.innerText="Change Password"; body.innerHTML=`<input type="password" id="currentPassword" placeholder="Current Password"><input type="password" id="newPassword" placeholder="New Password"><input type="password" id="confirmPassword" placeholder="Confirm Password"><button onclick="changePassword()">Change Password</button>`; }
+  if(type==="setPin") {
+    title.innerText="Set Transaction PIN";
+    body.innerHTML=`<input type="password" id="pinInput" placeholder="Enter 4-digit PIN" maxlength="4"><button onclick="savePin()">Save PIN</button>`;
+  } else if(type==="data"||type==="airtime") {
+    title.innerText="Enter Transaction PIN";
+    body.innerHTML=`<input type="password" id="pin" placeholder="PIN" maxlength="4"><button onclick="confirmPurchase()">Confirm</button>`;
+  }
 }
 function closePinModal(){ el("pinModal")?.classList.add("hidden"); }
-function savePin() { const pin = el("pinInput")?.value; if(!pin||pin.length!==4) return showToast("Enter 4-digit PIN"); localStorage.setItem("userPin",pin); showToast("Transaction PIN set"); closePinModal(); }
+function savePin() { 
+  const pin = el("pinInput")?.value; 
+  if(!pin||pin.length!==4) return showToast("Enter 4-digit PIN"); 
+  localStorage.setItem("userPin",pin); 
+  showToast("Transaction PIN set"); 
+  closePinModal(); 
+}
 function verifyPin(pin){ return localStorage.getItem("userPin")===pin; }
 
 /* PURCHASE HANDLERS */
-function purchasePlan(planId){ selectedPlan=planId; purchaseType="data"; if(!localStorage.getItem("userPin")) openPinModal(null,"setPin"); else openPinModal(planId,"data"); }
-function confirmPurchase(){
+function purchasePlan(planId){
+  selectedPlan=planId; 
+  purchaseType="data"; 
+  if(!localStorage.getItem("userPin")) openPinModal(null,"setPin"); 
+  else openPinModal(planId,"data"); 
+}
+async function confirmPurchase(){
   const pin=el("pin")?.value||localStorage.getItem("userPin");
   if(!pin) return showToast("Enter PIN");
-  let amount=0;
-  if(purchaseType==="airtime") amount=parseFloat(el("amount")?.value||0);
-  else if(purchaseType==="data"){ const sel=document.querySelector(".planCard.selected"); if(sel) amount=parseFloat(sel.dataset.price||0);}
-  const balance=parseFloat((el("walletBalance")?.innerText||"₦0").replace("₦",""));
-  if(balance<amount) return showToast("Insufficient funds");
-  if(purchaseType==="airtime") buyAirtime(el("phone")?.value,amount,pin);
-  else if(purchaseType==="data") buyData(selectedPlan||document.querySelector(".planCard.selected")?.dataset.planId,pin);
+
+  if(purchaseType==="airtime"){
+    const phone=el("phone")?.value;
+    const amount=parseFloat(el("amount")?.value||0);
+    if(!phone||!amount) return showToast("Phone and amount required");
+    await buyAirtime(phone, amount, pin);
+  } else if(purchaseType==="data") {
+    const planId = selectedPlan || document.querySelector(".planCard.selected")?.dataset.planId;
+    if(!planId) return showToast("Select a plan");
+    const phone = el("phone")?.value;
+    if(!phone) return showToast("Enter phone number");
+    await buyData(planId, pin, phone);
+  }
+
   closePinModal();
+  fetchTransactions(); // Refresh transactions from backend
 }
 
-/* BIOMETRIC LOGIN */
-async function biometricLogin(){ if(localStorage.getItem("biometricEnabled")!=="true") return; if(!window.PublicKeyCredential) return; try{ await navigator.credentials.get({publicKey:{challenge:new Uint8Array(32),timeout:60000,userVerification:"required"}});}catch(e){console.log("Biometric skipped");}}
+/* BUY DATA */
+async function buyData(planId, pin, phone){
+  try{
+    const token = getToken();
+    const res = await fetch(`${API}/api/buy-data`, {
+      method:"POST",
+      headers:{"Content-Type":"application/json", Authorization:`Bearer ${token}`},
+      body: JSON.stringify({ plan_id: planId, phone, pin })
+    });
+    const data = await res.json();
+    if(data.message){
+      showToast(data.message);
+      animateWallet(data.wallet_balance || parseFloat((el("walletBalance")?.innerText||"₦0").replace("₦","")));
+    } else showToast(data.message || "Data purchase failed");
+  }catch(e){ console.log(e); showToast("Data purchase failed"); }
+}
+
+/* BUY AIRTIME */
+async function buyAirtime(phone, amount, pin){
+  try{
+    const token = getToken();
+    const res = await fetch(`${API}/api/buy-airtime`, {
+      method:"POST",
+      headers:{"Content-Type":"application/json", Authorization:`Bearer ${token}`},
+      body: JSON.stringify({ phone, amount, pin })
+    });
+    const data = await res.json();
+    if(data.message){
+      showToast(data.message);
+      animateWallet(data.wallet_balance || parseFloat((el("walletBalance")?.innerText||"₦0").replace("₦","")));
+    } else showToast(data.message || "Airtime failed");
+  }catch(e){ console.log(e); showToast("Airtime failed"); }
+}
 
 /* DASHBOARD & ADMIN */
 async function loadDashboard(){
   const token=getToken(); if(!token){ window.location="login.html"; return; }
-  await biometricLogin();
+
   try{
     const res=await fetch(`${API}/api/me`,{headers:{Authorization:`Bearer ${token}`}});
     const user=await res.json();
+
     if(el("usernameDisplay")) el("usernameDisplay").innerText=`Hello ${user.username||"User"}`;
     if(el("walletBalance")) el("walletBalance").innerText=`₦${user.wallet_balance||0}`;
+
     const adminPanel=el("adminPanel");
-    if(user.is_admin===true||user.is_admin===1||user.username?.trim().toLowerCase()==="admin"){
+    if(user.is_admin){
       adminPanel?.classList.remove("hidden");
       el("profitBalance")&&(el("profitBalance").innerText=`₦${user.admin_wallet||0}`);
       loadAdminTransactions();
     } else adminPanel?.classList.add("hidden");
-    renderTransactions();
+
+    fetchTransactions(); // Load latest user transactions
+    connectWalletWebSocket(user.id); // Connect WebSocket for live updates
   }catch(e){ showToast("Failed to load dashboard"); }
-  el("dashboardLoader")?.remove();
 }
 
 /* ADMIN TRANSACTIONS */
@@ -201,7 +266,7 @@ async function loadAdminTransactions(){
   }catch(e){ showToast("Failed to load admin transactions"); }
 }
 
-/* WITHDRAWAL */
+/* WITHDRAW PROFIT */
 async function withdrawProfit(){
   const amount=parseFloat(el("withdrawAmount").value||0);
   const account=el("withdrawAccount").value.trim();
@@ -209,21 +274,56 @@ async function withdrawProfit(){
   try{
     const token=getToken();
     const res=await fetch(`${API}/api/admin/withdraw`,{
-      method:"POST", headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`},
+      method:"POST",
+      headers:{"Content-Type":"application/json", Authorization:`Bearer ${token}`},
       body:JSON.stringify({amount,account})
     });
     const data=await res.json();
-    if(data.error) return showToast(data.error);
-    showToast("Withdrawal submitted successfully");
+    if(data.message) showToast(data.message);
+    else if(data.error) showToast(data.error);
     el("withdrawAmount").value=""; el("withdrawAccount").value="";
-    loadDashboard(); // refresh profit & transactions
+    loadDashboard();
   }catch(e){ showToast("Withdrawal failed"); }
 }
 
 /* LOGOUT */
 function logout(){ localStorage.removeItem("token"); window.location.replace("login.html"); }
 
-/* EVENT LISTENERS */
+/* WEBSOCKET WALLET & ADMIN UPDATES */
+function connectWalletWebSocket(userId){
+  const token = getToken();
+  if(!token) return;
+
+  const ws = new WebSocket(`${API.replace(/^http/,"ws")}/?token=${token}`);
+
+  ws.onmessage = (msg)=>{
+    const data = JSON.parse(msg.data);
+
+    // User wallet updates
+    if(data.type === "wallet_update"){
+      animateWallet(data.balance);
+      fetchTransactions(); // Refresh user transactions
+    }
+
+    // Admin live transaction updates
+    if(data.type === "new_transaction" && el("transactionHistoryAdmin")){
+      const container = el("transactionHistoryAdmin");
+      const tx = data.transaction;
+      const div = document.createElement("div");
+      div.className = "transaction-card";
+      div.innerHTML = `<p><strong>${tx.type}</strong> - ₦${tx.amount}</p>
+                       <p>User: ${tx.username||"N/A"}</p>
+                       <p>Phone: ${tx.phone||"N/A"} (${tx.network||"N/A"})</p>
+                       <p>Date: ${tx.date}</p>`;
+      container.prepend(div);
+      while(container.children.length > 10) container.removeChild(container.lastChild);
+    }
+  };
+
+  ws.onclose = ()=>{ console.log("WebSocket closed"); };
+}
+
+/* EVENTS */
 document.addEventListener("DOMContentLoaded",loadDashboard);
 el("withdrawBtn")?.addEventListener("click",withdrawProfit);
 el("refreshProfit")?.addEventListener("click",loadDashboard);
