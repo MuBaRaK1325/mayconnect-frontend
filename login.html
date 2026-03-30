@@ -194,29 +194,33 @@ Create Account
 
 <script>
 
-/* AUTO LOGIN */
+/* WAIT FOR PAGE LOAD */
 
-window.onload=function(){
+document.addEventListener("DOMContentLoaded", function(){
 
-const token=localStorage.getItem("token")
+const token = localStorage.getItem("token")
 
 if(token){
 window.location.href="dashboard.html"
 }
 
-}
+})
 
-/* PASSWORD TOGGLE */
+/* TOGGLE PASSWORD */
 
 function togglePassword(){
 
 const pass=document.getElementById("loginPassword")
 
-pass.type = pass.type==="password" ? "text" : "password"
+if(pass.type==="password"){
+pass.type="text"
+}else{
+pass.type="password"
+}
 
 }
 
-/* LOGIN */
+/* LOGIN FUNCTION */
 
 async function login(){
 
@@ -241,16 +245,18 @@ const res=await fetch("https://mayconnect-backend-1.onrender.com/api/login",{
 
 method:"POST",
 headers:{ "Content-Type":"application/json" },
-body:JSON.stringify({ username,password })
+body:JSON.stringify({username,password})
 
 })
+
+const text=await res.text()
 
 let data
 
 try{
-data=await res.json()
+data=JSON.parse(text)
 }catch{
-throw new Error("Invalid server response")
+throw new Error("Server returned invalid JSON")
 }
 
 if(data.token){
@@ -288,14 +294,14 @@ const token=localStorage.getItem("token")
 
 if(biometricEnabled!=="true"){
 
-alert("Biometric login not enabled. Enable it in dashboard.")
+alert("Enable biometric inside dashboard first")
 return
 
 }
 
 if(!token){
 
-alert("Login normally first before using biometric.")
+alert("Login normally first before using biometric")
 return
 
 }
@@ -324,7 +330,7 @@ document.getElementById("loginLoader").style.display="flex"
 
 setTimeout(()=>{
 window.location.href="dashboard.html"
-},700)
+},600)
 
 }catch{
 
