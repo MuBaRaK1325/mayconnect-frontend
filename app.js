@@ -5,20 +5,7 @@ const successSound=new Audio("sounds/success.mp3")
 
 let cachedPlans=[]
 let currentBalance=0
-
-/* ================= NETWORK PREFIX MAP ================= */
-
-const networkPrefixes={
-MTN:["0803","0806","0703","0706","0813","0816","0810","0814","0903","0906"],
-Airtel:["0802","0808","0708","0812","0701","0902","0907"],
-Glo:["0805","0705","0815","0811","0905"]
-}
-
-const networkLogos={
-MTN:"images/mtn.png",
-Airtel:"images/airtel.png",
-Glo:"images/glo.png"
-}
+let ws
 
 /* ================= HELPERS ================= */
 
@@ -55,17 +42,28 @@ setTimeout(()=>t.remove(),3000)
 
 }
 
+/* ================= NETWORK ================= */
+
+const networkPrefixes={
+MTN:["0803","0806","0703","0706","0813","0816","0810","0814","0903","0906"],
+Airtel:["0802","0808","0708","0812","0701","0902","0907"],
+Glo:["0805","0705","0815","0811","0905"]
+}
+
+const networkLogos={
+MTN:"images/mtn.png",
+Airtel:"images/airtel.png",
+Glo:"images/glo.png"
+}
+
 /* ================= WALLET ================= */
 
 function animateWallet(balance){
 
 currentBalance=Number(balance||0)
 
-const wallet=el("walletBalance")
-
-if(wallet){
-wallet.innerText="₦"+currentBalance.toLocaleString()
-}
+if(el("walletBalance"))
+el("walletBalance").innerText="₦"+currentBalance.toLocaleString()
 
 }
 
@@ -83,7 +81,7 @@ return true
 try{
 
 const challenge=new Uint8Array(32)
-window.crypto.getRandomValues(challenge)
+crypto.getRandomValues(challenge)
 
 await navigator.credentials.get({
 publicKey:{
@@ -111,7 +109,7 @@ async function loadDashboard(){
 const token=getToken()
 
 if(!token){
-window.location="login.html"
+location="login.html"
 return
 }
 
@@ -125,20 +123,15 @@ if(!res.ok) throw new Error()
 
 const user=await res.json()
 
-if(el("usernameDisplay"))
 el("usernameDisplay").innerText="Hello "+user.username
 
 animateWallet(user.wallet_balance)
 
-try{ welcomeSound.play() }catch{}
-
-/* ADMIN PANEL */
+try{welcomeSound.play()}catch{}
 
 if(user.is_admin && el("admin")){
 el("admin").style.display="block"
 }
-
-/* LOAD DATA */
 
 fetchTransactions()
 loadPlans()
@@ -148,7 +141,7 @@ loadAdminProfit()
 }catch{
 
 showToast("Session expired")
-window.location="login.html"
+logout()
 
 }
 
@@ -170,7 +163,7 @@ const tx=await res.json()
 
 const container=el("transactionHistory")
 
-if(!container)return
+if(!container) return
 
 container.innerHTML=""
 
@@ -207,9 +200,7 @@ try{
 
 const res=await fetch(API+"/api/plans")
 
-const plans=await res.json()
-
-cachedPlans=plans
+cachedPlans=await res.json()
 
 updatePlans()
 
@@ -222,7 +213,7 @@ function updatePlans(){
 const network=el("networkSelect")?.value
 const select=el("planSelect")
 
-if(!select)return
+if(!select) return
 
 select.innerHTML=""
 
@@ -248,9 +239,7 @@ function detectNetwork(phone){
 const prefix=phone.substring(0,4)
 
 for(const net in networkPrefixes){
-
 if(networkPrefixes[net].includes(prefix)) return net
-
 }
 
 return null
@@ -283,10 +272,10 @@ updatePlans()
 
 async function buyData(pin){
 
-const phone=el("dataPhone")?.value
-const planId=el("planSelect")?.value
+const phone=el("dataPhone").value
+const planId=el("planSelect").value
 
-if(!phone||!planId){
+if(!phone || !planId){
 showToast("Fill all fields")
 return
 }
@@ -294,7 +283,7 @@ return
 const plan=cachedPlans.find(p=>p.id==planId)
 
 if(plan && currentBalance<plan.price){
-showToast("Insufficient wallet balance")
+showToast("Insufficient balance")
 return
 }
 
@@ -312,24 +301,22 @@ headers:{
 Authorization:"Bearer "+getToken()
 },
 
-body:JSON.stringify({
-phone,
-plan_id:planId,
-pin
-})
+body:JSON.stringify({phone,plan_id:planId,pin})
 
 })
 
 const data=await res.json()
 
-if(data.success){
+if(res.ok && data.success){
 
 successSound.play()
+
+animateWallet(currentBalance-plan.price)
 
 showToast("Data purchase successful")
 
 fetchTransactions()
-loadAdminProfit()
+showReceipt(data.transaction)
 
 }else{
 
@@ -349,8 +336,8 @@ showToast("Network error")
 
 async function buyAirtime(pin){
 
-const phone=el("airtimePhone")?.value
-const amount=Number(el("airtimeAmount")?.value)
+const phone=el("airtimePhone").value
+const amount=Number(el("airtimeAmount").value)
 
 if(!phone || !amount){
 showToast("Fill all fields")
@@ -358,7 +345,7 @@ return
 }
 
 if(currentBalance<amount){
-showToast("Insufficient wallet balance")
+showToast("Insufficient balance")
 return
 }
 
@@ -376,24 +363,22 @@ headers:{
 Authorization:"Bearer "+getToken()
 },
 
-body:JSON.stringify({
-phone,
-amount,
-pin
-})
+body:JSON.stringify({phone,amount,pin})
 
 })
 
 const data=await res.json()
 
-if(data.success){
+if(res.ok && data.success){
 
 successSound.play()
 
-showToast("Airtime sent successfully")
+animateWallet(currentBalance-amount)
+
+showToast("Airtime sent")
 
 fetchTransactions()
-loadAdminProfit()
+showReceipt(data.transaction)
 
 }else{
 
@@ -413,6 +398,8 @@ showToast("Network error")
 
 function showReceipt(t){
 
+if(!t) return
+
 const text=`
 MAY CONNECT RECEIPT
 
@@ -424,83 +411,131 @@ Reference: ${t.reference||"-"}
 Date: ${new Date(t.created_at).toLocaleString()}
 `
 
-const share=encodeURIComponent(text)
+alert(text)
 
-const box=document.createElement("div")
+}
 
-Object.assign(box.style,{
-position:"fixed",
-top:"0",
-left:"0",
-width:"100%",
-height:"100%",
-background:"rgba(0,0,0,0.92)",
-display:"flex",
-alignItems:"center",
-justifyContent:"center",
-zIndex:"9999"
+/* ================= ACCOUNT ================= */
+
+async function changePassword(){
+
+const oldPassword=prompt("Enter current password")
+const newPassword=prompt("Enter new password")
+
+if(!oldPassword||!newPassword) return
+
+try{
+
+const res=await fetch(API+"/api/change-password",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+getToken()
+},
+
+body:JSON.stringify({oldPassword,newPassword})
+
 })
 
-box.innerHTML=`
+const data=await res.json()
 
-<div style="background:#08142c;padding:25px;border-radius:16px;width:90%;max-width:420px;text-align:center">
+showToast(data.message||"Password updated")
 
-<h2>Transaction Receipt</h2>
+}catch{
 
-<pre style="white-space:pre-wrap">${text}</pre>
-
-<button onclick="window.open('https://wa.me/?text=${share}')">
-Share on WhatsApp
-</button>
-
-<button onclick="navigator.clipboard.writeText('${t.reference||""}')">
-Copy Reference
-</button>
-
-<button onclick="this.parentElement.parentElement.remove()">
-Close
-</button>
-
-</div>
-`
-
-document.body.appendChild(box)
+showToast("Error updating password")
 
 }
 
-/* ================= BIOMETRIC ================= */
+}
 
-function toggleBiometric(){
+async function changePin(){
 
-const enabled=localStorage.getItem("biometric")==="true"
+const oldPin=prompt("Enter old PIN")
+const newPin=prompt("Enter new PIN")
 
-localStorage.setItem("biometric",!enabled)
+if(!oldPin||!newPin) return
 
-showToast(!enabled?"Biometric enabled":"Biometric disabled")
+try{
+
+const res=await fetch(API+"/api/change-pin",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+getToken()
+},
+
+body:JSON.stringify({oldPin,newPin})
+
+})
+
+const data=await res.json()
+
+showToast(data.message||"PIN updated")
+
+}catch{
+
+showToast("Error updating PIN")
 
 }
 
-/* ================= LOGOUT ================= */
+}
 
-function logout(){
+/* ================= ADMIN ================= */
 
-localStorage.removeItem("token")
+async function withdrawProfit(){
 
-window.location="login.html"
+const amount=el("withdrawAmount").value
+const bank=el("withdrawBank").value
+const account=el("withdrawAccount").value
+
+if(!amount||!bank||!account){
+showToast("Fill all fields")
+return
+}
+
+try{
+
+const res=await fetch(API+"/api/admin/withdraw-profit",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+getToken()
+},
+
+body:JSON.stringify({amount,bank,account})
+
+})
+
+const data=await res.json()
+
+showToast(data.message||"Withdrawal processed")
+
+loadAdminProfit()
+
+}catch{
+
+showToast("Withdrawal failed")
+
+}
 
 }
 
 /* ================= WEBSOCKET ================= */
 
-let ws
-
 function connectWalletWebSocket(){
 
 const token=getToken()
 
-ws=new WebSocket(
-API.replace(/^http/,"ws")+"?token="+token
-)
+try{
+
+ws=new WebSocket(API.replace(/^http/,"ws")+"?token="+token)
 
 ws.onmessage=(msg)=>{
 
@@ -509,12 +544,17 @@ const data=JSON.parse(msg.data)
 if(data.type==="wallet_update"){
 
 animateWallet(data.balance)
-
 fetchTransactions()
 
 }
 
 }
+
+ws.onclose=()=>{
+setTimeout(connectWalletWebSocket,5000)
+}
+
+}catch{}
 
 }
 
@@ -539,6 +579,28 @@ el("adminTotalProfit").innerText="₦"+(data.total_profit||0)
 }
 
 setInterval(loadAdminProfit,30000)
+
+/* ================= BIOMETRIC ================= */
+
+function toggleBiometric(){
+
+const enabled=localStorage.getItem("biometric")==="true"
+
+localStorage.setItem("biometric",!enabled)
+
+showToast(!enabled?"Biometric enabled":"Biometric disabled")
+
+}
+
+/* ================= LOGOUT ================= */
+
+function logout(){
+
+localStorage.removeItem("token")
+
+location="login.html"
+
+}
 
 /* ================= START ================= */
 
