@@ -1,4 +1,4 @@
-const backendUrl = "https://mayconnect-backend-1.onrender.com";
+const API = "https://mayconnect-backend-1.onrender.com";
 
 const btn = document.getElementById("signupBtn");
 
@@ -11,7 +11,6 @@ const email = document.getElementById("email").value.trim();
 const password = document.getElementById("password").value.trim();
 const pin = document.getElementById("pin").value.trim();
 
-// VALIDATION
 if(!username || !email || !password || !pin){
 alert("All fields are required");
 return;
@@ -22,13 +21,12 @@ alert("PIN must be exactly 4 digits");
 return;
 }
 
-// LOADING STATE
 btn.disabled = true;
 btn.innerText = "Creating...";
 
 try{
 
-const res = await fetch(`${backendUrl}/api/signup`,{
+const res = await fetch(API + "/api/signup",{
 method:"POST",
 headers:{
 "Content-Type":"application/json"
@@ -45,20 +43,21 @@ const data = await res.json();
 
 if(!res.ok){
 alert(data.message || "Signup failed");
-btn.disabled = false;
-btn.innerText = "Create Account";
 return;
 }
 
+/* ✅ AUTO LOGIN */
+localStorage.setItem("token", data.token);
+
 alert("Account created successfully ✅");
 
-// redirect to login
-window.location.href = "login.html";
+/* ✅ GO TO DASHBOARD */
+window.location.href = "index.html";
 
 }catch(err){
 
-console.log(err);
-alert("Server error");
+console.error(err);
+alert("Server error. Try again.");
 
 }finally{
 
