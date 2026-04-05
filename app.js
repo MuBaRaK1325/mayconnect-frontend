@@ -6,7 +6,8 @@ const successSound=new Audio("sounds/success.mp3")
 let cachedPlans=[]
 let currentBalance=0
 let currentUser=null
-let ws
+let ws=null
+let hasPlayedWelcome=false
 
 /* ================= HELPERS ================= */
 
@@ -38,12 +39,69 @@ document.body.appendChild(t)
 setTimeout(()=>t.remove(),3000)
 }
 
+/* ================= LOADER ================= */
+
+function showLoader(){
+document.body.style.display="none"
+}
+
+function hideLoader(){
+document.body.style.display="block"
+}
+
 /* ================= AUTH CHECK ================= */
 
-if(!location.pathname.includes("index.html")){
 if(!getToken()){
 location.href="index.html"
 }
+
+/* ================= DASHBOARD ================= */
+
+async function loadDashboard(){
+
+showLoader()
+
+const token=getToken()
+
+try{
+
+const payload = JSON.parse(atob(token.split(".")[1]))
+currentUser = payload
+
+el("usernameDisplay").innerText="Hello "+payload.username
+
+animateWallet(0)
+
+/* ADMIN PANEL */
+if(payload.is_admin && el("admin")){
+el("admin").style.display="block"
+}
+
+/* ✅ PLAY SOUND ONCE */
+if(!hasPlayedWelcome){
+welcomeSound.play().catch(()=>{})
+hasPlayedWelcome=true
+}
+
+/* LOAD DATA */
+await Promise.all([
+fetchTransactions(),
+loadPlans(),
+loadAdminProfit()
+])
+
+connectWebSocket()
+
+}catch(err){
+
+console.log(err)
+showToast("Session expired")
+logout()
+return
+
+}
+
+hideLoader()
 }
 
 /* ================= WALLET ================= */
@@ -54,50 +112,6 @@ currentBalance=Number(balance||0)
 if(el("walletBalance")){
 el("walletBalance").innerText="₦"+currentBalance.toLocaleString()
 }
-}
-
-/* ================= DASHBOARD ================= */
-
-async function loadDashboard(){
-
-const token=getToken()
-
-if(!token){
-location="index.html"
-return
-}
-
-try{
-
-/* ✅ DECODE TOKEN INSTEAD OF /api/me */
-const payload = JSON.parse(atob(token.split(".")[1]))
-currentUser = payload
-
-el("usernameDisplay").innerText="Hello "+payload.username
-
-/* ⚠️ balance will be fetched later */
-animateWallet(0)
-
-if(payload.is_admin && el("admin")){
-el("admin").style.display="block"
-}
-
-try{welcomeSound.play()}catch{}
-
-await fetchTransactions()
-await loadPlans()
-connectWalletWebSocket()
-loadAdminProfit()
-
-}catch(err){
-
-console.log(err)
-showToast("Session expired")
-logout()
-
-}
-
-document.body.style.display="block"
 }
 
 /* ================= TRANSACTIONS ================= */
@@ -114,38 +128,52 @@ if(!res.ok) return
 
 const tx=await res.json()
 
-/* UPDATE WALLET FROM LAST TX (fallback) */
+/* UPDATE WALLET */
 if(tx.length){
 animateWallet(tx[0].wallet_balance || currentBalance)
 }
 
-const container=el("transactionHistory")
-if(!container) return
-
-container.innerHTML=""
+/* HOME */
+const home=el("transactionHistory")
+if(home){
+home.innerHTML=""
 
 tx.slice(0,5).forEach(t=>{
-
 const div=document.createElement("div")
 div.className="transactionCard"
-
 div.innerHTML=`
 <strong>${t.type}</strong> ₦${t.amount}<br>
 ${t.phone||""}<br>
 <span>${t.status}</span>
 `
-
-container.appendChild(div)
-
+home.appendChild(div)
 })
+}
+
+/* ALL */
+const all=el("allTransactions")
+if(all){
+all.innerHTML=""
+
+tx.forEach(t=>{
+const div=document.createElement("div")
+div.className="transactionCard"
+div.innerHTML=`
+<strong>${t.type}</strong> ₦${t.amount}<br>
+${t.phone||""}<br>
+<span>${t.status}</span>
+`
+all.appendChild(div)
+})
+}
 
 }catch{
-console.log("Transactions load failed")
+console.log("Transactions error")
 }
 
 }
 
-/* ================= LOAD PLANS ================= */
+/* ================= PLANS ================= */
 
 async function loadPlans(){
 
@@ -157,9 +185,9 @@ headers:{Authorization:"Bearer "+getToken()}
 
 if(!res.ok) throw new Error()
 
-const allPlans=await res.json()
+const plans=await res.json()
 
-cachedPlans = allPlans
+cachedPlans=plans.filter(p=>p.company===currentUser.company)
 
 updatePlans()
 
@@ -168,8 +196,6 @@ showToast("Failed to load plans")
 }
 
 }
-
-/* ================= UPDATE PLANS ================= */
 
 function updatePlans(){
 
@@ -183,24 +209,15 @@ select.innerHTML=""
 cachedPlans
 .filter(p=>!network || p.network===network)
 .forEach(plan=>{
-
 const opt=document.createElement("option")
 opt.value=plan.id
 opt.textContent=`${plan.name} - ₦${plan.price}`
-
 select.appendChild(opt)
-
 })
 
 }
 
-/* ================= NETWORK DETECTION ================= */
-
-const prefixes={
-MTN:["0803","0806","0703","0706","0813","0816","0810","0814","0903","0906"],
-Airtel:["0802","0808","0708","0812","0701","0902","0907"],
-Glo:["0805","0705","0815","0811","0905"]
-}
+/* ================= NETWORK ================= */
 
 const logos={
 MTN:"images/mtn.png",
@@ -208,31 +225,23 @@ Airtel:"images/airtel.png",
 Glo:"images/glo.png"
 }
 
-function detectNetwork(phone){
-
-const prefix=phone.substring(0,4)
-
-for(const n in prefixes){
-if(prefixes[n].includes(prefix)) return n
-}
-
-return null
-}
-
 function handlePhoneInput(input,select,logo){
 
 const phone=el(input)?.value
 if(!phone || phone.length<4) return
 
-const net=detectNetwork(phone)
+const prefix=phone.substring(0,4)
+
+let net=null
+
+if(["0803","0806","0703"].includes(prefix)) net="MTN"
+if(["0802","0808","0708"].includes(prefix)) net="Airtel"
+if(["0805","0705"].includes(prefix)) net="Glo"
 
 if(net){
-
 if(el(select)) el(select).value=net
 if(el(logo)) el(logo).src=logos[net]
-
 updatePlans()
-
 }
 
 }
@@ -266,7 +275,6 @@ if(res.ok && data.success){
 
 successSound.play()
 showToast("Data successful")
-
 fetchTransactions()
 
 }else{
@@ -279,50 +287,39 @@ showToast("Network error")
 
 }
 
-/* ================= BIOMETRIC ================= */
+/* ================= ADMIN ACTIONS ================= */
 
-async function biometricAuth(){
-
-if(localStorage.getItem("biometric")!=="true") return true
-
-if(!window.PublicKeyCredential){
-showToast("Not supported")
-return true
+function changePassword(){
+const newPass=prompt("Enter new password")
+if(!newPass) return
+showToast("Password change coming soon")
 }
 
-try{
-
-const challenge=new Uint8Array(32)
-crypto.getRandomValues(challenge)
-
-await navigator.credentials.get({
-publicKey:{
-challenge,
-timeout:60000,
-userVerification:"preferred"
-}
-})
-
-return true
-
-}catch{
-showToast("Biometric failed")
-return false
+function changePin(){
+const newPin=prompt("Enter new 4-digit PIN")
+if(!newPin) return
+showToast("PIN change coming soon")
 }
 
+function toggleBiometric(){
+const current=localStorage.getItem("biometric")==="true"
+localStorage.setItem("biometric",(!current).toString())
+showToast("Biometric "+(!current?"Enabled":"Disabled"))
 }
 
 /* ================= WEBSOCKET ================= */
 
-function connectWalletWebSocket(){
+function connectWebSocket(){
 
-const token=getToken()
+if(ws){
+ws.close()
+}
 
 try{
 
-const wsURL = API.replace("https","wss").replace("http","ws")
+const wsURL=API.replace("https","wss").replace("http","ws")
 
-ws=new WebSocket(wsURL+"?token="+token)
+ws=new WebSocket(wsURL+"?token="+getToken())
 
 ws.onmessage=(msg)=>{
 const data=JSON.parse(msg.data)
@@ -334,38 +331,27 @@ fetchTransactions()
 }
 
 ws.onclose=()=>{
-setTimeout(connectWalletWebSocket,5000)
+setTimeout(connectWebSocket,5000)
 }
 
 }catch{}
 
-}
-
-/* ================= ADMIN ================= */
-
-async function loadAdminProfit(){
-
-if(!el("adminTotalProfit")) return
-
-try{
-
-const res=await fetch(API+"/api/admin/profits",{
-headers:{Authorization:"Bearer "+getToken()}
-})
-
-if(!res.ok) return
-
-const data=await res.json()
-el("adminTotalProfit").innerText="₦"+(data.total_profit||0)
-
-}catch{}
 }
 
 /* ================= LOGOUT ================= */
 
 function logout(){
-localStorage.removeItem("token")
-location="index.html"
+
+try{
+if(ws) ws.close()
+}catch{}
+
+localStorage.clear()
+
+/* FORCE REDIRECT */
+window.location.href="index.html"
+setTimeout(()=>window.location.reload(),100)
+
 }
 
 /* ================= START ================= */
