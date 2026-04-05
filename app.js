@@ -41,9 +41,12 @@ setTimeout(()=>t.remove(),3000)
 
 /* ================= AUTH CHECK ================= */
 
-if(!getToken()){
+(function(){
+const token=getToken()
+if(!token){
 window.location.replace("index.html")
 }
+})()
 
 /* ================= DASHBOARD ================= */
 
@@ -57,20 +60,20 @@ return
 
 try{
 
-/* SAFE TOKEN DECODE */
+/* SAFE TOKEN */
 let payload
 try{
 payload = JSON.parse(atob(token.split(".")[1]))
 }catch{
-throw new Error("Bad token")
+throw new Error("Invalid token")
 }
 
 currentUser = payload
 
-/* SHOW UI FIRST (fixes blank/scatter) */
+/* ✅ SHOW UI IMMEDIATELY (FIX STUCK SCREEN) */
 document.body.style.display="block"
 
-/* USERNAME */
+/* USER */
 if(el("usernameDisplay")){
 el("usernameDisplay").innerText="Hello "+payload.username
 }
@@ -80,26 +83,25 @@ if(payload.is_admin && el("admin")){
 el("admin").style.display="block"
 }
 
-/* SOUND ONCE */
+/* ✅ SOUND ONLY ONCE */
 if(!hasPlayedWelcome){
 welcomeSound.play().catch(()=>{})
 hasPlayedWelcome=true
 }
 
-/* LOAD DATA (non-blocking) */
+/* LOAD DATA (SAFE NON-BLOCKING) */
 fetchTransactions()
 loadPlans()
 loadAdminProfit()
 
-/* DELAY WS (prevents freeze) */
-setTimeout(connectWebSocket,1000)
+/* DELAYED WS (PREVENT FREEZE) */
+setTimeout(connectWebSocket,1500)
 
 }catch(err){
 
 console.log(err)
 showToast("Session expired")
 logout()
-return
 
 }
 
@@ -133,6 +135,7 @@ if(tx.length && tx[0].wallet_balance !== undefined){
 animateWallet(tx[0].wallet_balance)
 }
 
+/* HOME */
 const home=el("transactionHistory")
 if(home){
 home.innerHTML=""
@@ -149,6 +152,7 @@ home.appendChild(div)
 })
 }
 
+/* ALL */
 const all=el("allTransactions")
 if(all){
 all.innerHTML=""
@@ -232,9 +236,9 @@ const prefix=phone.substring(0,4)
 
 let net=null
 
-if(["0803","0806","0703"].includes(prefix)) net="MTN"
-if(["0802","0808","0708"].includes(prefix)) net="Airtel"
-if(["0805","0705"].includes(prefix)) net="Glo"
+if(["0803","0806","0703","0706"].includes(prefix)) net="MTN"
+if(["0802","0808","0708","0812"].includes(prefix)) net="Airtel"
+if(["0805","0705","0815"].includes(prefix)) net="Glo"
 
 if(net){
 if(el(select)) el(select).value=net
@@ -309,6 +313,20 @@ console.log(err)
 
 }
 
+/* ADMIN ACTIONS */
+
+function changePassword(){
+const newPass=prompt("Enter new password")
+if(!newPass) return
+showToast("Password update coming soon")
+}
+
+function changePin(){
+const newPin=prompt("Enter new 4-digit PIN")
+if(!newPin) return
+showToast("PIN update coming soon")
+}
+
 function toggleBiometric(){
 const current=localStorage.getItem("biometric")==="true"
 localStorage.setItem("biometric",(!current).toString())
@@ -319,7 +337,9 @@ showToast("Biometric "+(!current?"Enabled":"Disabled"))
 
 function connectWebSocket(){
 
-if(ws) ws.close()
+if(ws){
+try{ws.close()}catch{}
+}
 
 try{
 
@@ -356,8 +376,11 @@ if(ws) ws.close()
 
 localStorage.clear()
 
-/* HARD REDIRECT (fixes sticking) */
-window.location.replace("index.html")
+/* ✅ HARD FIX (NO MORE STUCK) */
+window.location.href="index.html"
+setTimeout(()=>{
+window.location.reload()
+},100)
 
 }
 
