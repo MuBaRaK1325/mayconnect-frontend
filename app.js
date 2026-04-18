@@ -27,10 +27,9 @@ function showMsg(msg){
 if(!el("msgBox")) return alert(msg)
 
 el("msgBox").innerHTML=`
-<div style="text-align:center;color:white">
+<div style="text-align:center">
 <p>${msg}</p>
-<button onclick="closeModal('msgModal')" 
-style="background:#6c5ce7;padding:12px;border:none;border-radius:10px;color:#fff;width:100%">
+<button onclick="closeModal('msgModal')" class="primaryBtn">
 OK
 </button>
 </div>
@@ -43,11 +42,9 @@ openModal("msgModal")
 
 function showLoader(){
 el("msgBox").innerHTML=`
-<div style="text-align:center;color:white">
+<div style="text-align:center">
 <p>Processing...</p>
-<div style="margin-top:10px">
-<div style="width:40px;height:40px;border:4px solid #6c5ce7;border-top:4px solid transparent;border-radius:50%;margin:auto;animation:spin 1s linear infinite"></div>
-</div>
+<div class="loader"></div>
 </div>
 `
 openModal("msgModal")
@@ -62,14 +59,13 @@ closeModal("msgModal")
 function showReceipt(type, amount, phone){
 
 el("msgBox").innerHTML=`
-<div style="text-align:center;color:white">
-<h3 style="color:#6c5ce7">Transaction Successful ✅</h3>
+<div style="text-align:center">
+<h3 style="color:#00cec9">Transaction Successful ✅</h3>
 <p><strong>Type:</strong> ${type}</p>
 <p><strong>Amount:</strong> ₦${amount}</p>
 <p><strong>Phone:</strong> ${phone}</p>
 
-<button onclick="closeModal('msgModal')" 
-style="background:#6c5ce7;padding:12px;border:none;border-radius:10px;color:#fff;width:100%">
+<button onclick="closeModal('msgModal')" class="primaryBtn">
 Done
 </button>
 </div>
@@ -186,7 +182,12 @@ try{
 const res=await fetch(API+"/api/plans",{
 headers:{Authorization:"Bearer "+getToken()}
 })
-cachedPlans = await res.json()
+
+const data = await res.json()
+
+/* 🔥 FIX: ensure array */
+cachedPlans = Array.isArray(data) ? data : data.data || []
+
 }catch(e){
 console.log("PLANS ERROR",e)
 }
@@ -215,9 +216,11 @@ if(!list) return
 
 list.innerHTML=""
 
-const filtered = cachedPlans.filter(p=>
-(p.network || "").toLowerCase().includes(selectedNetwork)
-)
+/* 🔥 STRONG MATCH */
+const filtered = cachedPlans.filter(p=>{
+let net = (p.network || "").toLowerCase()
+return net.includes(selectedNetwork)
+})
 
 if(!filtered.length){
 list.innerHTML="<p>No plans available</p>"
@@ -254,13 +257,13 @@ function openConfirmModal(plan){
 let validity = plan.validity || plan.duration || plan.plan_validity || "N/A"
 
 el("msgBox").innerHTML=`
-<div style="text-align:center;color:white">
-<h3 style="color:#6c5ce7">Confirm Purchase</h3>
+<div style="text-align:center">
+<h3 style="color:#00cec9">Confirm Purchase</h3>
 <p>${plan.name}</p>
 <p>${validity}</p>
 <p>₦${plan.price}</p>
 
-<button onclick="openPinModal()">Enter PIN</button>
+<button onclick="openPinModal()" class="primaryBtn">Enter PIN</button>
 <button onclick="confirmBiometric()">Use Fingerprint</button>
 </div>
 `
@@ -309,7 +312,13 @@ pin
 })
 })
 
-const data=await res.json()
+/* 🔥 FIX: safe JSON */
+let data
+try{
+data = await res.json()
+}catch{
+data = {message:"Server error"}
+}
 
 hideLoader()
 
@@ -318,11 +327,13 @@ playSuccess()
 showReceipt("DATA", selectedPlan.price, phone)
 fetchTransactions()
 }else{
-showMsg(data.message)
+showMsg(data.message || "Transaction failed")
 }
-}catch{
+
+}catch(e){
 hideLoader()
-showMsg("Network error")
+console.log(e)
+showMsg("Server unreachable")
 }
 }
 
@@ -330,8 +341,8 @@ showMsg("Network error")
 
 async function buyAirtime(){
 
-const phone=el("airtimePhone").value
-const amount=el("airtimeAmount").value
+const phone=el("airtimePhone")?.value
+const amount=el("airtimeAmount")?.value
 
 if(!phone || !amount) return showMsg("Fill fields")
 
@@ -347,7 +358,12 @@ Authorization:"Bearer "+getToken()
 body:JSON.stringify({phone,amount})
 })
 
-const data=await res.json()
+let data
+try{
+data = await res.json()
+}catch{
+data = {message:"Server error"}
+}
 
 hideLoader()
 
@@ -356,11 +372,12 @@ playSuccess()
 showReceipt("AIRTIME", amount, phone)
 fetchTransactions()
 }else{
-showMsg(data.message)
+showMsg(data.message || "Failed")
 }
+
 }catch{
 hideLoader()
-showMsg("Network error")
+showMsg("Server unreachable")
 }
 }
 
@@ -374,10 +391,10 @@ return
 }
 
 el("msgBox").innerHTML=`
-<div style="text-align:center;color:white">
+<div style="text-align:center">
 <h3>🔒 Biometric</h3>
 <p>Touch fingerprint sensor</p>
-<button onclick="finishBiometric()">Continue</button>
+<button onclick="finishBiometric()" class="primaryBtn">Continue</button>
 </div>
 `
 
@@ -446,7 +463,6 @@ if(el(id)) el(id).style.display="none"
 /* ================= WS ================= */
 
 function connectWebSocket(){
-
 const wsURL=API.replace("https","wss")
 ws=new WebSocket(wsURL+"?token="+getToken())
 
