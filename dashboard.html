@@ -262,12 +262,28 @@ margin-top:8px;
 
 </section>
 
-<!-- AIRTIME -->
+<!-- ✅ AIRTIME FIXED -->
 <section id="airtime" class="section">
 
 <button onclick="showSection('home')">⬅ Back</button>
 
-<h3>Buy Airtime</h3>
+<h3>Select Network</h3>
+
+<div class="networkGrid">
+
+<div class="networkItem" onclick="selectNetwork('mtn', this)">
+<img src="images/mtn.png"><p>MTN</p>
+</div>
+
+<div class="networkItem" onclick="selectNetwork('glo', this)">
+<img src="images/glo.png"><p>GLO</p>
+</div>
+
+<div class="networkItem" onclick="selectNetwork('airtel', this)">
+<img src="images/airtel.png"><p>AIRTEL</p>
+</div>
+
+</div>
 
 <input id="airtimePhone" placeholder="Phone Number">
 <input id="airtimeAmount" placeholder="Amount">
@@ -292,9 +308,9 @@ margin-top:8px;
 <button onclick="toggleBiometric()">Toggle Biometric</button>
 <button onclick="logout()">Logout</button>
 
-<!-- ADMIN PANEL -->
-<div class="adminOnly">
-<h3>Admin Panel</h3>
+<!-- ✅ ADMIN PANEL FIXED -->
+<div class="adminOnly" id="adminPanel">
+<h3>Admin Withdrawal Panel</h3>
 
 <input id="withdrawUser" placeholder="Username">
 <input id="withdrawAmount" placeholder="Amount">
@@ -306,7 +322,7 @@ margin-top:8px;
 <p>Need Help?</p>
 
 <a href="https://wa.me/2347047457735" target="_blank">
-📞 Contact Support (0704 745 7735)
+📞 Contact Support (08117988561)
 </a>
 
 <a href="https://wa.me/2348117988561" target="_blank">
