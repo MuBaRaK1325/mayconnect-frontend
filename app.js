@@ -36,7 +36,45 @@ OK
 </div>
 `
 
-applyModalTheme()
+openModal("msgModal")
+}
+
+/* ================= LOADER ================= */
+
+function showLoader(){
+el("msgBox").innerHTML=`
+<div style="text-align:center;color:white">
+<p>Processing...</p>
+<div style="margin-top:10px">
+<div style="width:40px;height:40px;border:4px solid #6c5ce7;border-top:4px solid transparent;border-radius:50%;margin:auto;animation:spin 1s linear infinite"></div>
+</div>
+</div>
+`
+openModal("msgModal")
+}
+
+function hideLoader(){
+closeModal("msgModal")
+}
+
+/* ================= RECEIPT ================= */
+
+function showReceipt(type, amount, phone){
+
+el("msgBox").innerHTML=`
+<div style="text-align:center;color:white">
+<h3 style="color:#6c5ce7">Transaction Successful ✅</h3>
+<p><strong>Type:</strong> ${type}</p>
+<p><strong>Amount:</strong> ₦${amount}</p>
+<p><strong>Phone:</strong> ${phone}</p>
+
+<button onclick="closeModal('msgModal')" 
+style="background:#6c5ce7;padding:12px;border:none;border-radius:10px;color:#fff;width:100%">
+Done
+</button>
+</div>
+`
+
 openModal("msgModal")
 }
 
@@ -69,8 +107,8 @@ if(el("usernameDisplay")){
 el("usernameDisplay").innerText="Hello "+currentUser.username
 }
 
-/* ✅ ADMIN VISIBILITY */
-if(currentUser.role === "admin"){
+/* ADMIN */
+if(currentUser.role==="admin"){
 document.querySelectorAll(".adminOnly").forEach(e=>e.style.display="block")
 }
 
@@ -83,26 +121,16 @@ fetchTransactions()
 setTimeout(connectWebSocket,1000)
 }
 
-/* ================= NAVIGATION ================= */
+/* ================= NAV ================= */
 
 function initNavigation(){
-
-document.querySelectorAll(".section").forEach(s=>{
-s.style.display="none"
-})
-
+document.querySelectorAll(".section").forEach(s=>s.style.display="none")
 if(el("home")) el("home").style.display="block"
 }
 
 function showSection(id){
-
-document.querySelectorAll(".section").forEach(s=>{
-s.style.display="none"
-})
-
-if(el(id)){
-el(id).style.display="block"
-}
+document.querySelectorAll(".section").forEach(s=>s.style.display="none")
+if(el(id)) el(id).style.display="block"
 }
 
 /* ================= WALLET ================= */
@@ -171,13 +199,9 @@ function selectNetwork(network, element){
 selectedNetwork = (network || "").toLowerCase()
 selectedPlan = null
 
-document.querySelectorAll(".networkItem").forEach(n=>{
-n.classList.remove("active")
-})
+document.querySelectorAll(".networkItem").forEach(n=>n.classList.remove("active"))
 
-if(element){
-element.classList.add("active")
-}
+if(element) element.classList.add("active")
 
 renderPlans()
 }
@@ -196,7 +220,7 @@ const filtered = cachedPlans.filter(p=>
 )
 
 if(!filtered.length){
-list.innerHTML="<p style='color:white'>No plans available</p>"
+list.innerHTML="<p>No plans available</p>"
 return
 }
 
@@ -236,19 +260,11 @@ el("msgBox").innerHTML=`
 <p>${validity}</p>
 <p>₦${plan.price}</p>
 
-<button onclick="openPinModal()" 
-style="background:#6c5ce7;margin-top:10px;padding:12px;border:none;border-radius:10px;color:#fff;width:100%">
-Enter PIN
-</button>
-
-<button onclick="confirmBiometric()" 
-style="margin-top:10px;padding:12px;width:100%">
-Use Fingerprint
-</button>
+<button onclick="openPinModal()">Enter PIN</button>
+<button onclick="confirmBiometric()">Use Fingerprint</button>
 </div>
 `
 
-applyModalTheme()
 openModal("msgModal")
 }
 
@@ -256,21 +272,12 @@ openModal("msgModal")
 
 function openPinModal(){
 closeModal("msgModal")
-
-if(el("pinModal")){
 el("pinModal").style.display="flex"
-applyModalTheme()
-}else{
-showMsg("PIN modal missing in HTML")
-}
 }
 
 function confirmPurchase(){
-
-const pin=el("pinInput")?.value
-
+const pin=el("pinInput").value
 if(!pin) return showMsg("Enter PIN")
-
 closeModal("pinModal")
 buyData(pin)
 }
@@ -279,12 +286,14 @@ buyData(pin)
 
 async function buyData(pin){
 
-const phone=el("dataPhone")?.value
+const phone=el("dataPhone").value
 
 if(!phone || !selectedPlan){
 showMsg("Select plan & enter phone")
 return
 }
+
+showLoader()
 
 try{
 const res=await fetch(API+"/api/buy-data",{
@@ -302,14 +311,55 @@ pin
 
 const data=await res.json()
 
+hideLoader()
+
 if(res.ok){
-playSuccess() // 🔥 SUCCESS SOUND
-showMsg("Purchase Successful ✅")
+playSuccess()
+showReceipt("DATA", selectedPlan.price, phone)
 fetchTransactions()
 }else{
 showMsg(data.message)
 }
 }catch{
+hideLoader()
+showMsg("Network error")
+}
+}
+
+/* ================= BUY AIRTIME ================= */
+
+async function buyAirtime(){
+
+const phone=el("airtimePhone").value
+const amount=el("airtimeAmount").value
+
+if(!phone || !amount) return showMsg("Fill fields")
+
+showLoader()
+
+try{
+const res=await fetch(API+"/api/buy-airtime",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+getToken()
+},
+body:JSON.stringify({phone,amount})
+})
+
+const data=await res.json()
+
+hideLoader()
+
+if(res.ok){
+playSuccess()
+showReceipt("AIRTIME", amount, phone)
+fetchTransactions()
+}else{
+showMsg(data.message)
+}
+}catch{
+hideLoader()
 showMsg("Network error")
 }
 }
@@ -327,14 +377,10 @@ el("msgBox").innerHTML=`
 <div style="text-align:center;color:white">
 <h3>🔒 Biometric</h3>
 <p>Touch fingerprint sensor</p>
-<button onclick="finishBiometric()" 
-style="background:#6c5ce7;padding:12px;border:none;border-radius:10px;color:#fff;width:100%">
-Continue
-</button>
+<button onclick="finishBiometric()">Continue</button>
 </div>
 `
 
-applyModalTheme()
 openModal("msgModal")
 }
 
@@ -369,12 +415,10 @@ showMsg("Biometric Enabled ✅")
 /* ================= ACCOUNT ================= */
 
 async function loadAccount(){
-
 try{
 const res=await fetch(API+"/api/me",{
 headers:{Authorization:"Bearer "+getToken()}
 })
-
 const user=await res.json()
 
 if(el("bankName")) el("bankName").innerText=user.bank_name||"N/A"
@@ -383,21 +427,15 @@ if(el("accountNumber")) el("accountNumber").innerText=user.account_number||"N/A"
 }catch{}
 }
 
-/* ================= MODAL THEME ================= */
-
-function applyModalTheme(){
-document.querySelectorAll(".modalBox").forEach(box=>{
-box.style.background="#0b0b2a"   // 🔵 dark blue
-box.style.color="white"
-})
-}
-
 /* ================= MODALS ================= */
 
 function openModal(id){
 if(el(id)){
 el(id).style.display="flex"
-applyModalTheme()
+document.querySelectorAll(".modalBox").forEach(b=>{
+b.style.background="#0b0b2a"
+b.style.color="white"
+})
 }
 }
 
