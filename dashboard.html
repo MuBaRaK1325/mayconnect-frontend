@@ -102,7 +102,6 @@ border-radius:50%;
 text-align:center;
 cursor:pointer;
 border:2px solid transparent;
-transition:0.3s;
 }
 
 .networkItem img{
@@ -165,6 +164,15 @@ width:85%;
 text-align:center;
 }
 
+/* ADMIN */
+.adminOnly{
+display:none;
+background:#0f1735;
+padding:15px;
+border-radius:10px;
+margin-top:20px;
+}
+
 /* FOOTER */
 .footer{
 text-align:center;
@@ -174,7 +182,7 @@ opacity:0.9;
 }
 
 .footer a{
-color:#1417be;
+color:#3c6fff;
 text-decoration:none;
 display:block;
 margin-top:8px;
@@ -194,6 +202,7 @@ margin-top:8px;
 
 <!-- HOME -->
 <section id="home" class="section active">
+
 <h3 id="usernameDisplay"></h3>
 
 <div class="walletCard">
@@ -203,10 +212,12 @@ margin-top:8px;
 
 <div class="quickActions">
 <div class="quickCard" onclick="showSection('data')">📶 Buy Data</div>
+<div class="quickCard" onclick="showSection('airtime')">📞 Buy Airtime</div>
 <div class="quickCard" onclick="showSection('fund')">💰 Fund Wallet</div>
 </div>
 
 <div id="transactionHistory"></div>
+
 </section>
 
 <!-- FUND -->
@@ -251,6 +262,20 @@ margin-top:8px;
 
 </section>
 
+<!-- AIRTIME -->
+<section id="airtime" class="section">
+
+<button onclick="showSection('home')">⬅ Back</button>
+
+<h3>Buy Airtime</h3>
+
+<input id="airtimePhone" placeholder="Phone Number">
+<input id="airtimeAmount" placeholder="Amount">
+
+<button onclick="buyAirtime()">Buy Airtime</button>
+
+</section>
+
 <!-- HISTORY -->
 <section id="transactions" class="section">
 <button onclick="showSection('home')">⬅ Back</button>
@@ -267,11 +292,21 @@ margin-top:8px;
 <button onclick="toggleBiometric()">Toggle Biometric</button>
 <button onclick="logout()">Logout</button>
 
+<!-- ADMIN PANEL -->
+<div class="adminOnly">
+<h3>Admin Panel</h3>
+
+<input id="withdrawUser" placeholder="Username">
+<input id="withdrawAmount" placeholder="Amount">
+
+<button onclick="adminWithdraw()">Withdraw User Balance</button>
+</div>
+
 <div class="footer">
 <p>Need Help?</p>
 
 <a href="https://wa.me/2347047457735" target="_blank">
-📞 Contact Support (08117988561)
+📞 Contact Support (0704 745 7735)
 </a>
 
 <a href="https://wa.me/2348117988561" target="_blank">
