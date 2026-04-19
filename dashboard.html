@@ -30,14 +30,6 @@ padding:15px;
 background:var(--card);
 }
 
-.logo img{
-width:65px;
-height:65px;
-border-radius:50%;
-border:3px solid var(--primary);
-box-shadow:0 0 10px var(--primary);
-}
-
 /* WALLET */
 .walletCard{
 margin:20px;
@@ -102,12 +94,6 @@ border-radius:50%;
 text-align:center;
 cursor:pointer;
 border:2px solid transparent;
-}
-
-.networkItem img{
-width:45px;
-height:45px;
-border-radius:50%;
 }
 
 .networkItem.active{
@@ -193,9 +179,6 @@ margin-top:8px;
 <body>
 
 <header>
-<div class="logo">
-<img src="images/logo.png">
-</div>
 <h3>MAYCONNECT</h3>
 <div onclick="showSection('profile')">👤</div>
 </header>
@@ -225,10 +208,14 @@ margin-top:8px;
 <h3>Fund Wallet</h3>
 
 <div class="walletCard">
-<p id="bankName">Bank</p>
+<p id="bankName">Bank Name</p>
 <strong id="accountNumber">0000000000</strong>
+<p id="accountName">Account Name</p>
+
 <button onclick="copyAccount()">Copy Account Number</button>
 </div>
+
+<button onclick="fundWallet()">💳 Fund via Paystack</button>
 
 <button onclick="showSection('home')">⬅ Back</button>
 </section>
@@ -241,19 +228,9 @@ margin-top:8px;
 <h3>Select Network</h3>
 
 <div class="networkGrid">
-
-<div class="networkItem" onclick="selectNetwork('mtn', this)">
-<img src="images/mtn.png"><p>MTN</p>
-</div>
-
-<div class="networkItem" onclick="selectNetwork('glo', this)">
-<img src="images/glo.png"><p>GLO</p>
-</div>
-
-<div class="networkItem" onclick="selectNetwork('airtel', this)">
-<img src="images/airtel.png"><p>AIRTEL</p>
-</div>
-
+<div class="networkItem" onclick="selectNetwork('mtn', this)">MTN</div>
+<div class="networkItem" onclick="selectNetwork('glo', this)">GLO</div>
+<div class="networkItem" onclick="selectNetwork('airtel', this)">AIRTEL</div>
 </div>
 
 <input id="dataPhone" placeholder="Phone Number">
@@ -262,7 +239,7 @@ margin-top:8px;
 
 </section>
 
-<!-- ✅ AIRTIME FIXED -->
+<!-- AIRTIME -->
 <section id="airtime" class="section">
 
 <button onclick="showSection('home')">⬅ Back</button>
@@ -270,19 +247,9 @@ margin-top:8px;
 <h3>Select Network</h3>
 
 <div class="networkGrid">
-
-<div class="networkItem" onclick="selectNetwork('mtn', this)">
-<img src="images/mtn.png"><p>MTN</p>
-</div>
-
-<div class="networkItem" onclick="selectNetwork('glo', this)">
-<img src="images/glo.png"><p>GLO</p>
-</div>
-
-<div class="networkItem" onclick="selectNetwork('airtel', this)">
-<img src="images/airtel.png"><p>AIRTEL</p>
-</div>
-
+<div class="networkItem airtimeNet" onclick="selectAirtimeNetwork('mtn', this)">MTN</div>
+<div class="networkItem airtimeNet" onclick="selectAirtimeNetwork('glo', this)">GLO</div>
+<div class="networkItem airtimeNet" onclick="selectAirtimeNetwork('airtel', this)">AIRTEL</div>
 </div>
 
 <input id="airtimePhone" placeholder="Phone Number">
@@ -292,7 +259,7 @@ margin-top:8px;
 
 </section>
 
-<!-- HISTORY -->
+<!-- TRANSACTIONS -->
 <section id="transactions" class="section">
 <button onclick="showSection('home')">⬅ Back</button>
 <div id="allTransactions"></div>
@@ -305,31 +272,37 @@ margin-top:8px;
 
 <button onclick="openModal('passwordModal')">Change Password</button>
 <button onclick="openModal('pinModalBox')">Change PIN</button>
-<button onclick="toggleBiometric()">Toggle Biometric</button>
 <button onclick="logout()">Logout</button>
 
-<!-- ✅ ADMIN PANEL FIXED -->
-<div class="adminOnly" id="adminPanel">
-<h3>Admin Withdrawal Panel</h3>
+<!-- ADMIN PANEL -->
+<div class="adminOnly">
 
+<h3>Admin Withdrawal</h3>
 <input id="withdrawUser" placeholder="Username">
 <input id="withdrawAmount" placeholder="Amount">
+<button onclick="adminWithdraw()">Withdraw</button>
 
-<button onclick="adminWithdraw()">Withdraw User Balance</button>
+<hr>
+
+<h3>🔥 Top Users Control</h3>
+<input id="topUserEmail" placeholder="User Email">
+<button onclick="addTopUser()">Add Top User</button>
+<button onclick="removeTopUser()">Remove Top User</button>
+
 </div>
 
 <div class="footer">
 <p>Need Help?</p>
 
-<a href="https://wa.me/2347047457735" target="_blank">
-📞 Contact Support (08117988561)
-</a>
-
 <a href="https://wa.me/2348117988561" target="_blank">
-👨‍💻 Contact Developer (0811 798 8561)
+📞 Support (08117988561)
 </a>
 
-<p style="margin-top:10px;">© MAYCONNECT TECHNOLOGIES NIG LTD</p>
+<a href="https://wa.me/2347047457735" target="_blank">
+👨‍💻 Developer (07047457735)
+</a>
+
+<p>© MAYCONNECT TECHNOLOGIES NIG LTD</p>
 </div>
 
 </section>
@@ -337,7 +310,6 @@ margin-top:8px;
 <!-- PIN MODAL -->
 <div id="pinModal" class="modal">
 <div class="modalBox">
-<h3>Enter PIN</h3>
 <input id="pinInput" placeholder="Enter PIN">
 <button onclick="confirmPurchase()">Confirm</button>
 <button onclick="closeModal('pinModal')">Cancel</button>
