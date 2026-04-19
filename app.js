@@ -7,15 +7,7 @@ let ws=null
 let selectedNetwork=null
 let selectedPlan=null
 let airtimeNetwork=null
-
-/* ================= SOUND ================= */
-
-function playSuccess(){
-try{
-const audio = new Audio("success.mp3")
-audio.play()
-}catch{}
-}
+let actionType=null // DATA or AIRTIME
 
 /* ================= HELPERS ================= */
 
@@ -25,46 +17,22 @@ function el(id){ return document.getElementById(id) }
 /* ================= MESSAGE ================= */
 
 function showMsg(msg){
-if(!el("msgBox")) return alert(msg)
-
 el("msgBox").innerHTML=`
 <div style="text-align:center">
 <p>${msg}</p>
-<button onclick="closeModal('msgModal')" class="primaryBtn">OK</button>
-</div>
-`
+<button onclick="closeModal('msgModal')">OK</button>
+</div>`
 openModal("msgModal")
 }
 
 /* ================= LOADER ================= */
 
 function showLoader(){
-el("msgBox").innerHTML=`
-<div style="text-align:center">
-<p>Processing...</p>
-</div>
-`
+el("msgBox").innerHTML=`<p style="text-align:center">Processing...</p>`
 openModal("msgModal")
 }
 
-function hideLoader(){
-closeModal("msgModal")
-}
-
-/* ================= RECEIPT ================= */
-
-function showReceipt(type, amount, phone){
-el("msgBox").innerHTML=`
-<div style="text-align:center">
-<h3 style="color:#00cec9">Transaction Successful ✅</h3>
-<p><strong>Type:</strong> ${type}</p>
-<p><strong>Amount:</strong> ₦${amount}</p>
-<p><strong>Phone:</strong> ${phone}</p>
-<button onclick="closeModal('msgModal')" class="primaryBtn">Done</button>
-</div>
-`
-openModal("msgModal")
-}
+function hideLoader(){ closeModal("msgModal") }
 
 /* ================= AUTH ================= */
 
@@ -89,8 +57,6 @@ logout()
 return
 }
 
-document.body.style.display="block"
-
 if(el("usernameDisplay")){
 el("usernameDisplay").innerText="Hello "+currentUser.username
 }
@@ -98,21 +64,12 @@ el("usernameDisplay").innerText="Hello "+currentUser.username
 /* ADMIN */
 if(currentUser.is_admin){
 document.querySelectorAll(".adminOnly").forEach(e=>e.style.display="block")
-loadTopUsers()
 }
 
 initNavigation()
-
 await loadAccount()
 await loadPlans()
 fetchTransactions()
-
-/* PAYSTACK VERIFY */
-const urlParams = new URLSearchParams(window.location.search)
-const reference = urlParams.get("reference")
-if(reference){
-verifyPayment(reference)
-}
 
 setTimeout(connectWebSocket,1000)
 }
@@ -121,12 +78,12 @@ setTimeout(connectWebSocket,1000)
 
 function initNavigation(){
 document.querySelectorAll(".section").forEach(s=>s.style.display="none")
-if(el("home")) el("home").style.display="block"
+el("home").style.display="block"
 }
 
 function showSection(id){
 document.querySelectorAll(".section").forEach(s=>s.style.display="none")
-if(el(id)) el(id).style.display="block"
+el(id).style.display="block"
 }
 
 /* ================= WALLET ================= */
@@ -140,14 +97,11 @@ el("walletBalance").innerText="₦"+Number(balance).toLocaleString()
 /* ================= TRANSACTIONS ================= */
 
 async function fetchTransactions(){
-try{
 const res=await fetch(API+"/api/transactions",{
 headers:{Authorization:"Bearer "+getToken()}
 })
 
 const tx=await res.json()
-
-if(tx.length) updateWallet(tx[0].wallet_balance)
 
 if(el("transactionHistory")){
 el("transactionHistory").innerHTML=""
@@ -157,10 +111,6 @@ tx.slice(0,5).forEach(t=>el("transactionHistory").appendChild(txCard(t)))
 if(el("allTransactions")){
 el("allTransactions").innerHTML=""
 tx.forEach(t=>el("allTransactions").appendChild(txCard(t)))
-}
-
-}catch(e){
-console.log("TX ERROR",e)
 }
 }
 
@@ -178,105 +128,69 @@ return div
 /* ================= PLANS ================= */
 
 async function loadPlans(){
-try{
 const res=await fetch(API+"/api/plans",{
 headers:{Authorization:"Bearer "+getToken()}
 })
-
-const data = await res.json()
-cachedPlans = Array.isArray(data) ? data : data.data || []
-
-}catch(e){
-console.log("PLANS ERROR",e)
-}
+cachedPlans=await res.json()
 }
 
 /* ================= NETWORK ================= */
 
 function selectNetwork(network, element){
-selectedNetwork = (network || "").toLowerCase()
-selectedPlan = null
+selectedNetwork=network.toLowerCase()
+selectedPlan=null
 
 document.querySelectorAll(".networkItem").forEach(n=>n.classList.remove("active"))
-if(element) element.classList.add("active")
+element.classList.add("active")
 
 renderPlans()
 }
 
-/* ================= AIRTIME NETWORK ================= */
+/* ================= AIRTIME ================= */
 
 function selectAirtimeNetwork(network, element){
-airtimeNetwork = network
-
+airtimeNetwork=network
 document.querySelectorAll(".airtimeNet").forEach(n=>n.classList.remove("active"))
-if(element) element.classList.add("active")
+element.classList.add("active")
 }
 
-/* ================= RENDER PLANS ================= */
+/* ================= RENDER ================= */
 
 function renderPlans(){
 const list=el("planList")
-if(!list) return
-
 list.innerHTML=""
 
-const filtered = cachedPlans.filter(p=>{
-let net = (p.network || "").toLowerCase()
-return net.includes(selectedNetwork)
-})
-
-if(!filtered.length){
-list.innerHTML="<p>No plans available</p>"
-return
-}
+const filtered=cachedPlans.filter(p=>p.network.toLowerCase().includes(selectedNetwork))
 
 filtered.forEach(p=>{
-let validity = p.validity || p.duration || "N/A"
-
 const div=document.createElement("div")
 div.className="planItem"
-
-div.innerHTML=`
-<strong>${p.name}</strong><br>
-${validity}<br>
-<strong>₦${p.price}</strong>
-`
+div.innerHTML=`${p.name}<br>₦${p.price}`
 
 div.onclick=()=>{
-selectedPlan = p
-openConfirmModal(p)
+selectedPlan=p
+actionType="DATA"
+openPinModal()
 }
 
 list.appendChild(div)
 })
 }
 
-/* ================= CONFIRM ================= */
-
-function openConfirmModal(plan){
-el("msgBox").innerHTML=`
-<div style="text-align:center">
-<h3 style="color:#00cec9">Confirm Purchase</h3>
-<p>${plan.name}</p>
-<p>₦${plan.price}</p>
-<button onclick="openPinModal()" class="primaryBtn">Enter PIN</button>
-</div>
-`
-openModal("msgModal")
-}
-
-/* ================= PIN ================= */
+/* ================= PIN MODAL ================= */
 
 function openPinModal(){
-closeModal("msgModal")
 el("pinModal").style.display="flex"
 }
 
 function confirmPurchase(){
 const pin=el("pinInput").value
 if(!pin) return showMsg("Enter PIN")
+
 closeModal("pinModal")
-buyData(pin)
+
+if(actionType==="DATA") buyData(pin)
+if(actionType==="AIRTIME") buyAirtime(pin)
 }
 
 /* ================= BUY DATA ================= */
@@ -286,13 +200,11 @@ async function buyData(pin){
 const phone=el("dataPhone").value
 
 if(!phone || !selectedPlan){
-showMsg("Select plan & enter phone")
-return
+return showMsg("Select plan & phone")
 }
 
 showLoader()
 
-try{
 const res=await fetch(API+"/api/buy-data",{
 method:"POST",
 headers:{
@@ -310,34 +222,31 @@ const data=await res.json()
 hideLoader()
 
 if(res.ok){
-playSuccess()
-showReceipt("DATA", selectedPlan.price, phone)
+showMsg("Data purchase successful ✅")
 fetchTransactions()
 }else{
-showMsg(data.message || "Transaction failed")
-}
-
-}catch{
-hideLoader()
-showMsg("Server unreachable")
+showMsg(data.message)
 }
 }
 
 /* ================= BUY AIRTIME ================= */
 
-async function buyAirtime(){
+function openAirtimePin(){
+actionType="AIRTIME"
+openPinModal()
+}
 
-const phone=el("airtimePhone")?.value
-const amount=el("airtimeAmount")?.value
-const pin=prompt("Enter PIN")
+async function buyAirtime(pin){
+
+const phone=el("airtimePhone").value
+const amount=el("airtimeAmount").value
 
 if(!phone || !amount || !airtimeNetwork){
-return showMsg("Select network & fill fields")
+return showMsg("Fill all fields")
 }
 
 showLoader()
 
-try{
 const res=await fetch(API+"/api/buy-airtime",{
 method:"POST",
 headers:{
@@ -356,29 +265,28 @@ const data=await res.json()
 hideLoader()
 
 if(res.ok){
-playSuccess()
-showReceipt("AIRTIME", amount, phone)
+showMsg("Airtime successful ✅")
 fetchTransactions()
 }else{
-showMsg(data.message || "Failed")
-}
-
-}catch{
-hideLoader()
-showMsg("Server unreachable")
+showMsg(data.message)
 }
 }
 
-/* ================= PAYSTACK ================= */
+/* ================= FUND ================= */
 
-async function fundWallet(){
-const amount = prompt("Enter amount")
-if(!amount) return
+function openFundModal(){
+el("msgBox").innerHTML=`
+<input id="fundAmount" placeholder="Enter amount">
+<button onclick="confirmFund()">Continue</button>
+`
+openModal("msgModal")
+}
 
-showLoader()
+async function confirmFund(){
+const amount=el("fundAmount").value
+if(!amount) return showMsg("Enter amount")
 
-try{
-const res = await fetch(API+"/api/fund/init",{
+const res=await fetch(API+"/api/fund/init",{
 method:"POST",
 headers:{
 "Content-Type":"application/json",
@@ -387,58 +295,26 @@ Authorization:"Bearer "+getToken()
 body:JSON.stringify({amount})
 })
 
-const data = await res.json()
-hideLoader()
+const data=await res.json()
 
 if(data.url){
-window.location.href = data.url
+window.location.href=data.url
 }else{
 showMsg("Payment failed")
-}
-
-}catch{
-hideLoader()
-showMsg("Error starting payment")
-}
-}
-
-async function verifyPayment(reference){
-showLoader()
-
-try{
-await fetch(API+"/api/fund/verify/"+reference,{
-headers:{Authorization:"Bearer "+getToken()}
-})
-
-hideLoader()
-showMsg("Wallet funded successfully ✅")
-fetchTransactions()
-
-}catch{
-hideLoader()
 }
 }
 
 /* ================= ACCOUNT ================= */
 
 async function loadAccount(){
-try{
 const res=await fetch(API+"/api/me",{
 headers:{Authorization:"Bearer "+getToken()}
 })
 const user=await res.json()
 
-if(el("bankName")) el("bankName").innerText=user.bank_name||"N/A"
-if(el("accountNumber")) el("accountNumber").innerText=user.account_number||"N/A"
-if(el("accountName")) el("accountName").innerText=user.account_name||"N/A"
-
-}catch{}
-}
-
-function copyAccount(){
-const acc = el("accountNumber")?.innerText
-navigator.clipboard.writeText(acc)
-showMsg("Copied ✅")
+el("bankName").innerText=user.bank_name||"N/A"
+el("accountNumber").innerText=user.account_number||"N/A"
+el("accountName").innerText=user.account_name||"N/A"
 }
 
 /* ================= PASSWORD ================= */
@@ -446,8 +322,6 @@ showMsg("Copied ✅")
 async function submitPassword(){
 const oldPass=el("oldPassword").value
 const newPass=el("newPassword").value
-
-if(!oldPass || !newPass) return showMsg("Fill fields")
 
 const res=await fetch(API+"/api/change-password",{
 method:"POST",
@@ -468,8 +342,6 @@ async function submitPin(){
 const oldPin=el("oldPin").value
 const newPin=el("newPin").value
 
-if(!oldPin || !newPin) return showMsg("Fill fields")
-
 const res=await fetch(API+"/api/change-pin",{
 method:"POST",
 headers:{
@@ -489,8 +361,6 @@ async function adminWithdraw(){
 const username=el("withdrawUser").value
 const amount=el("withdrawAmount").value
 
-if(!username || !amount) return showMsg("Fill fields")
-
 const res=await fetch(API+"/api/admin/withdraw",{
 method:"POST",
 headers:{
@@ -501,29 +371,15 @@ body:JSON.stringify({username,amount})
 })
 
 const data=await res.json()
-showMsg(data.message || "Done")
+showMsg(data.message)
 }
 
-/* ================= TOP USERS ================= */
-
-async function loadTopUsers(){
-try{
-const res = await fetch(API+"/api/admin/top-users",{
-headers:{Authorization:"Bearer "+getToken()}
-})
-const users = await res.json()
-
-if(el("topUsersList")){
-el("topUsersList").innerHTML = users.map(u=>`<p>${u.email}</p>`).join("")
-}
-}catch{}
-}
+/* ================= TOP USER ================= */
 
 async function addTopUser(){
-const email = el("topUserEmail").value
-if(!email) return showMsg("Enter email")
+const email=el("topUserEmail").value
 
-const res = await fetch(API+"/api/admin/top-users/add",{
+const res=await fetch(API+"/api/admin/add-top-user",{
 method:"POST",
 headers:{
 "Content-Type":"application/json",
@@ -532,16 +388,14 @@ Authorization:"Bearer "+getToken()
 body:JSON.stringify({email})
 })
 
-const data = await res.json()
+const data=await res.json()
 showMsg(data.message)
-loadTopUsers()
 }
 
 async function removeTopUser(){
-const email = el("topUserEmail").value
-if(!email) return showMsg("Enter email")
+const email=el("topUserEmail").value
 
-const res = await fetch(API+"/api/admin/top-users/remove",{
+const res=await fetch(API+"/api/admin/remove-top-user",{
 method:"POST",
 headers:{
 "Content-Type":"application/json",
@@ -550,19 +404,36 @@ Authorization:"Bearer "+getToken()
 body:JSON.stringify({email})
 })
 
-const data = await res.json()
+const data=await res.json()
 showMsg(data.message)
-loadTopUsers()
 }
 
-/* ================= MODALS ================= */
+/* ================= REVERSAL ================= */
+
+async function reverseTransaction(){
+const reference=el("reverseRef").value
+
+const res=await fetch(API+"/api/admin/reverse",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+getToken()
+},
+body:JSON.stringify({reference})
+})
+
+const data=await res.json()
+showMsg(data.message)
+}
+
+/* ================= MODAL ================= */
 
 function openModal(id){
-if(el(id)) el(id).style.display="flex"
+el(id).style.display="flex"
 }
 
 function closeModal(id){
-if(el(id)) el(id).style.display="none"
+el(id).style.display="none"
 }
 
 /* ================= WS ================= */
@@ -582,7 +453,7 @@ updateWallet(data.balance)
 /* ================= LOGOUT ================= */
 
 function logout(){
-try{ if(ws) ws.close() }catch{}
+if(ws) ws.close()
 localStorage.clear()
 window.location.href="login.html"
 }
