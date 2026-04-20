@@ -30,6 +30,10 @@ padding:15px;
 background:var(--card);
 }
 
+header img{
+height:40px;
+}
+
 /* WALLET */
 .walletCard{
 margin:20px;
@@ -98,6 +102,11 @@ border:2px solid transparent;
 
 .networkItem.active{
 border:3px solid var(--primary);
+}
+
+.networkItem img{
+width:40px;
+height:40px;
 }
 
 /* PLAN */
@@ -179,7 +188,7 @@ margin-top:8px;
 <body>
 
 <header>
-<h3>MAYCONNECT</h3>
+<img src="images/logo.png" alt="MAYCONNECT Logo">
 <div onclick="showSection('profile')">👤</div>
 </header>
 
@@ -211,52 +220,42 @@ margin-top:8px;
 <p id="bankName">Bank Name</p>
 <strong id="accountNumber">0000000000</strong>
 <p id="accountName">Account Name</p>
-
 <button onclick="copyAccount()">Copy Account Number</button>
 </div>
 
-<button onclick="fundWallet()">💳 Fund via Paystack</button>
-
+<button onclick="openFundModal()">💳 Fund via Paystack</button>
 <button onclick="showSection('home')">⬅ Back</button>
 </section>
 
 <!-- DATA -->
 <section id="data" class="section">
-
 <button onclick="showSection('home')">⬅ Back</button>
-
 <h3>Select Network</h3>
 
 <div class="networkGrid">
-<div class="networkItem" onclick="selectNetwork('mtn', this)">MTN</div>
-<div class="networkItem" onclick="selectNetwork('glo', this)">GLO</div>
-<div class="networkItem" onclick="selectNetwork('airtel', this)">AIRTEL</div>
+<div class="networkItem" onclick="selectNetwork('mtn', this)"><img src="images/mtn.png"></div>
+<div class="networkItem" onclick="selectNetwork('glo', this)"><img src="images/glo.png"></div>
+<div class="networkItem" onclick="selectNetwork('airtel', this)"><img src="images/airtel.png"></div>
 </div>
 
 <input id="dataPhone" placeholder="Phone Number">
-
 <div id="planList"></div>
-
 </section>
 
 <!-- AIRTIME -->
 <section id="airtime" class="section">
-
 <button onclick="showSection('home')">⬅ Back</button>
-
 <h3>Select Network</h3>
 
 <div class="networkGrid">
-<div class="networkItem airtimeNet" onclick="selectAirtimeNetwork('mtn', this)">MTN</div>
-<div class="networkItem airtimeNet" onclick="selectAirtimeNetwork('glo', this)">GLO</div>
-<div class="networkItem airtimeNet" onclick="selectAirtimeNetwork('airtel', this)">AIRTEL</div>
+<div class="networkItem airtimeNet" onclick="selectAirtimeNetwork('mtn', this)"><img src="images/mtn.png"></div>
+<div class="networkItem airtimeNet" onclick="selectAirtimeNetwork('glo', this)"><img src="images/glo.png"></div>
+<div class="networkItem airtimeNet" onclick="selectAirtimeNetwork('airtel', this)"><img src="images/airtel.png"></div>
 </div>
 
 <input id="airtimePhone" placeholder="Phone Number">
 <input id="airtimeAmount" placeholder="Amount">
-
-<button onclick="buyAirtime()">Buy Airtime</button>
-
+<button onclick="openAirtimePin()">Buy Airtime</button>
 </section>
 
 <!-- TRANSACTIONS -->
@@ -267,16 +266,13 @@ margin-top:8px;
 
 <!-- PROFILE -->
 <section id="profile" class="section">
-
 <button onclick="showSection('home')">⬅ Back</button>
-
 <button onclick="openModal('passwordModal')">Change Password</button>
 <button onclick="openModal('pinModalBox')">Change PIN</button>
 <button onclick="logout()">Logout</button>
 
 <!-- ADMIN PANEL -->
 <div class="adminOnly">
-
 <h3>Admin Withdrawal</h3>
 <input id="withdrawUser" placeholder="Username">
 <input id="withdrawAmount" placeholder="Amount">
@@ -289,19 +285,17 @@ margin-top:8px;
 <button onclick="addTopUser()">Add Top User</button>
 <button onclick="removeTopUser()">Remove Top User</button>
 
+<hr>
+
+<h3>Transaction Reversal</h3>
+<input id="reverseRef" placeholder="Transaction Reference">
+<button onclick="reverseTransaction()">Reverse Transaction</button>
 </div>
 
 <div class="footer">
 <p>Need Help?</p>
-
-<a href="https://wa.me/2348117988561" target="_blank">
-📞 Support (08117988561)
-</a>
-
-<a href="https://wa.me/2347047457735" target="_blank">
-👨‍💻 Developer (07047457735)
-</a>
-
+<a href="https://wa.me/2348117988561" target="_blank">📞 Support (08117988561)</a>
+<a href="https://wa.me/2348117988561" target="_blank">👨‍💻 Developer (07047457735)</a>
 <p>© MAYCONNECT TECHNOLOGIES NIG LTD</p>
 </div>
 
@@ -350,6 +344,5 @@ margin-top:8px;
 </div>
 
 <script src="app.js"></script>
-
 </body>
 </html>
