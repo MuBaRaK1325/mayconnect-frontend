@@ -12,20 +12,23 @@ let actionType = null; // "DATA" or "AIRTIME"
 /* ================= HELPERS ================= */
 function getToken() { return localStorage.getItem("token"); }
 function el(id) { return document.getElementById(id); }
+function formatNaira(num) { return "₦" + Number(num || 0).toLocaleString(); }
+function formatDate(date) { return new Date(date).toLocaleDateString('en-GB'); }
 
 /* ================= MESSAGE ================= */
-function showMsg(msg) {
+function showMsg(msg, type = "info") {
+  const color = type === "error" ? "#ff4d4d" : type === "success" ? "#00c853" : "#2196f3";
   el("msgBox").innerHTML = `
     <div style="text-align:center">
-      <p>${msg}</p>
+      <p style="color:${color}">${msg}</p>
       <button onclick="closeModal('msgModal')" class="primaryBtn">OK</button>
     </div>`;
   openModal("msgModal");
 }
 
 /* ================= LOADER ================= */
-function showLoader() {
-  el("msgBox").innerHTML = `<p style="text-align:center">Processing...</p>`;
+function showLoader(text = "Processing...") {
+  el("msgBox").innerHTML = `<p style="text-align:center">${text}</p>`;
   openModal("msgModal");
 }
 function hideLoader() { closeModal("msgModal"); }
@@ -44,23 +47,29 @@ async function loadDashboard() {
   if (!checkAuth()) return;
 
   try {
-    currentUser = JSON.parse(atob(getToken().split(".")[1]));
+    const payload = JSON.parse(atob(getToken().split(".")[1]));
+    const res = await fetch(API + "/api/me", { headers: { Authorization: "Bearer " + getToken() } });
+    currentUser = await res.json();
   } catch {
     logout();
     return;
   }
 
+  // Update UI with user info
   if (el("usernameDisplay")) el("usernameDisplay").innerText = "Hello " + currentUser.username;
-
-  /* ADMIN PANEL FIX */
+  if (el("companyBadge")) el("companyBadge").innerText = currentUser.company.toUpperCase();
+  
+  // Show admin wallet + admin panels
   if (currentUser && currentUser.is_admin === true) {
     document.querySelectorAll(".adminOnly").forEach(e => e.style.display = "block");
+    if (el("adminWalletBalance")) el("adminWalletBalance").innerText = formatNaira(currentUser.admin_wallet);
   }
 
   initNavigation();
   await loadAccount();
   await loadPlans();
   fetchTransactions();
+  if (currentUser.is_admin) loadAdminData();
 
   setTimeout(connectWebSocket, 1000);
 }
@@ -74,11 +83,14 @@ function initNavigation() {
 function showSection(id) {
   document.querySelectorAll(".section").forEach(s => s.style.display = "none");
   el(id).style.display = "block";
+  if (id === "profitDashboard") loadProfitDashboard();
+  if (id === "topUsersManager") loadTopUsers();
+  if (id === "withdrawals") loadWithdrawals();
 }
 
 /* ================= WALLET ================= */
 function updateWallet(balance) {
-  if (el("walletBalance")) el("walletBalance").innerText = "₦" + Number(balance).toLocaleString();
+  if (el("walletBalance")) el("walletBalance").innerText = formatNaira(balance);
 }
 
 /* ================= TRANSACTIONS ================= */
@@ -104,14 +116,16 @@ async function fetchTransactions() {
 function txCard(t) {
   const div = document.createElement("div");
   div.className = "transactionCard";
+  const statusColor = t.status === "SUCCESS" ? "#00c853" : t.status === "FAILED" ? "#ff4d4d" : "#ffa000";
   div.innerHTML = `
-    <strong>${t.type}</strong> ₦${t.amount}<br>
-    ${t.phone || ""}<br>
-    <span>${t.status}</span>`;
+    <strong>${t.type}</strong> ${formatNaira(t.amount)}<br>
+    ${t.phone || t.network || ""}<br>
+    <span style="color:${statusColor}">${t.status}</span>
+    <small style="float:right">${formatDate(t.created_at)}</small>`;
   return div;
 }
 
-/* ================= PLANS ================= */
+/* ================= PLANS - WITH RESTRICTED FILTER ================= */
 async function loadPlans() {
   try {
     const res = await fetch(API + "/api/plans", {
@@ -140,7 +154,7 @@ function selectAirtimeNetwork(network, element) {
   if (element) element.classList.add("active");
 }
 
-/* ================= RENDER PLANS ================= */
+/* ================= RENDER PLANS - SHOW TOP USER PRICE ================= */
 function renderPlans() {
   const list = el("planList");
   if (!list) return;
@@ -150,19 +164,26 @@ function renderPlans() {
   const filtered = cachedPlans.filter(p => (p.network || "").toLowerCase().includes(selectedNetwork));
 
   if (!filtered.length) {
-    list.innerHTML = "<p>No plans available</p>";
+    list.innerHTML = "<p>No plans available for this network</p>";
     return;
   }
 
   filtered.forEach(p => {
     const div = document.createElement("div");
     div.className = "planItem";
-    div.innerHTML = `<strong>${p.name}</strong><br>${p.validity || ""}<br><strong>₦${p.price}</strong>`;
+    const priceDisplay = currentUser?.is_top_user && p.top_price ? p.top_price : p.price;
+    const badge = currentUser?.is_top_user && p.top_price ? `<span class="topUserBadge">TOP</span>` : "";
+    
+    div.innerHTML = `
+      <strong>${p.name}</strong> ${badge}<br>
+      ${p.validity || ""}<br>
+      <strong>${formatNaira(priceDisplay)}</strong>
+    `;
 
     div.onclick = () => {
-      selectedPlan = p;
+      selectedPlan = {...p, price: priceDisplay}; // use discounted price
       actionType = "DATA";
-      openConfirmModal(p);
+      openConfirmModal(selectedPlan);
     };
 
     list.appendChild(div);
@@ -175,7 +196,7 @@ function openConfirmModal(plan) {
     <div style="text-align:center">
       <h3>Confirm Purchase</h3>
       <p>${plan.name}</p>
-      <p>₦${plan.price}</p>
+      <p><strong>${formatNaira(plan.price)}</strong></p>
       <button onclick="proceedToPin()" class="primaryBtn">Continue</button>
     </div>`;
   openModal("msgModal");
@@ -190,11 +211,12 @@ function proceedToPin() {
 function openPinModal() {
   el("pinInput").value = "";
   el("pinModal").style.display = "flex";
+  setTimeout(() => el("pinInput").focus(), 100);
 }
 
 function confirmPurchase() {
   const pin = el("pinInput").value;
-  if (!pin) return showMsg("Enter PIN");
+  if (!pin) return showMsg("Enter PIN", "error");
   closeModal("pinModal");
   if (actionType === "DATA") buyData(pin);
   if (actionType === "AIRTIME") buyAirtime(pin);
@@ -203,8 +225,8 @@ function confirmPurchase() {
 /* ================= BUY DATA ================= */
 async function buyData(pin) {
   const phone = el("dataPhone").value;
-  if (!phone || !selectedPlan) return showMsg("Select plan & phone");
-  showLoader();
+  if (!phone ||!selectedPlan) return showMsg("Select plan & enter phone", "error");
+  showLoader("Purchasing data...");
 
   try {
     const res = await fetch(API + "/api/buy-data", {
@@ -215,12 +237,13 @@ async function buyData(pin) {
     const data = await res.json();
     hideLoader();
     if (res.ok) {
-      showMsg("Data purchase successful ✅");
+      showMsg("Data purchase successful ✅", "success");
+      updateWallet(data.balance);
       fetchTransactions();
-    } else showMsg(data.message);
+    } else showMsg(data.message, "error");
   } catch {
     hideLoader();
-    showMsg("Server error");
+    showMsg("Server error", "error");
   }
 }
 
@@ -233,9 +256,9 @@ function openAirtimePin() {
 async function buyAirtime(pin) {
   const phone = el("airtimePhone").value;
   const amount = el("airtimeAmount").value;
-  if (!phone || !amount || !airtimeNetwork) return showMsg("Fill all fields");
+  if (!phone ||!amount ||!airtimeNetwork) return showMsg("Fill all fields", "error");
 
-  showLoader();
+  showLoader("Purchasing airtime...");
   try {
     const res = await fetch(API + "/api/buy-airtime", {
       method: "POST",
@@ -245,12 +268,13 @@ async function buyAirtime(pin) {
     const data = await res.json();
     hideLoader();
     if (res.ok) {
-      showMsg("Airtime successful ✅");
+      showMsg("Airtime successful ✅", "success");
+      updateWallet(data.balance);
       fetchTransactions();
-    } else showMsg(data.message);
+    } else showMsg(data.message, "error");
   } catch {
     hideLoader();
-    showMsg("Server error");
+    showMsg("Server error", "error");
   }
 }
 
@@ -258,18 +282,19 @@ async function buyAirtime(pin) {
 function openFundModal() {
   el("msgBox").innerHTML = `
     <div style="text-align:center">
-      <input id="fundAmount" placeholder="Enter amount" />
+      <h3>Fund Wallet</h3>
+      <input id="fundAmount" type="number" placeholder="Enter amount" />
       <br><br>
-      <button onclick="confirmFund()" class="primaryBtn">Continue</button>
+      <button onclick="confirmFund()" class="primaryBtn">Pay with Paystack</button>
     </div>`;
   openModal("msgModal");
 }
 
 async function confirmFund() {
   const amount = el("fundAmount").value;
-  if (!amount) return showMsg("Enter amount");
+  if (!amount || amount < 100) return showMsg("Minimum funding is ₦100", "error");
 
-  showLoader();
+  showLoader("Initializing payment...");
   try {
     const res = await fetch(API + "/api/fund/init", {
       method: "POST",
@@ -279,105 +304,245 @@ async function confirmFund() {
     const data = await res.json();
     hideLoader();
     if (data.url) window.location.href = data.url;
-    else showMsg("Payment failed");
+    else showMsg("Payment failed", "error");
   } catch {
     hideLoader();
-    showMsg("Server error");
+    showMsg("Server error", "error");
+  }
+}
+
+/* ================= ADMIN: PROFIT DASHBOARD ================= */
+async function loadProfitDashboard() {
+  const from = el("profitFrom")?.value || new Date(new Date().setDate(1)).toISOString().split('T')[0];
+  const to = el("profitTo")?.value || new Date().toISOString().split('T')[0];
+  
+  showLoader("Loading profit data...");
+  try {
+    const res = await fetch(`${API}/admin/profit?from=${from}&to=${to}`, {
+      headers: { Authorization: "Bearer " + getToken() }
+    });
+    const data = await res.json();
+    hideLoader();
+
+    if (el("totalProfit")) el("totalProfit").innerText = formatNaira(data.total);
+    if (el("adminWalletBalance")) el("adminWalletBalance").innerText = formatNaira(data.admin_wallet);
+
+    const table = el("profitTable");
+    if (table) {
+      table.innerHTML = `<tr><th>Date</th><th>Sales</th><th>Profit</th></tr>`;
+      data.daily.forEach(d => {
+        table.innerHTML += `<tr>
+          <td>${formatDate(d.date)}</td>
+          <td>${d.total_sales}</td>
+          <td>${formatNaira(d.total_profit)}</td>
+        </tr>`;
+      });
+    }
+  } catch {
+    hideLoader();
+    showMsg("Failed to load profit data", "error");
+  }
+}
+
+/* ================= ADMIN: TOP USERS ================= */
+async function loadTopUsers() {
+  try {
+    const res = await fetch(API + "/admin/top-users", {
+      headers: { Authorization: "Bearer " + getToken() }
+    });
+    const users = await res.json();
+    const list = el("topUsersList");
+    if (list) {
+      list.innerHTML = "";
+      users.forEach(u => {
+        list.innerHTML += `<div class="userCard">
+          <strong>${u.username}</strong> - ${u.email}<br>
+          Spent: ${formatNaira(u.total_spent)} | Profit: ${formatNaira(u.total_profit_generated)}
+          <button onclick="removeTopUser('${u.email}')" class="dangerBtn">Remove</button>
+        </div>`;
+      });
+    }
+  } catch {}
+}
+
+async function addTopUser() {
+  const email = el("topUserEmail").value;
+  if (!email) return showMsg("Enter email", "error");
+
+  showLoader("Adding top user...");
+  try {
+    const res = await fetch(API + "/admin/top-users/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    hideLoader();
+    showMsg(data.message, res.ok ? "success" : "error");
+    if (res.ok) loadTopUsers();
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
+async function removeTopUser(email) {
+  showLoader("Removing...");
+  try {
+    const res = await fetch(API + "/admin/top-users/remove", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    hideLoader();
+    showMsg(data.message, res.ok ? "success" : "error");
+    if (res.ok) loadTopUsers();
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
+/* ================= ADMIN: WITHDRAWALS ================= */
+async function loadWithdrawals() {
+  try {
+    const res = await fetch(API + "/admin/withdrawals", {
+      headers: { Authorization: "Bearer " + getToken() }
+    });
+    const wds = await res.json();
+    const list = el("withdrawalsList");
+    if (list) {
+      list.innerHTML = "";
+      wds.forEach(w => {
+        const statusColor = w.status === "PAID" ? "#00c853" : w.status === "PENDING" ? "#ffa000" : "#ff4d4d";
+        list.innerHTML += `<div class="withdrawCard">
+          <strong>${formatNaira(w.amount)}</strong> - ${w.bank_name}<br>
+          ${w.account_number} - ${w.account_name}<br>
+          <span style="color:${statusColor}">${w.status}</span>
+          ${w.status === "PENDING" ? `<button onclick="approveWithdrawal('${w.reference}')" class="primaryBtn">Mark Paid</button>` : ""}
+        </div>`;
+      });
+    }
+  } catch {}
+}
+
+async function requestWithdrawal() {
+  const amount = el("withdrawAmount").value;
+  const bank_name = el("withdrawBank").value;
+  const account_number = el("withdrawAccountNumber").value;
+  const account_name = el("withdrawAccountName").value;
+  
+  if (!amount ||!bank_name ||!account_number ||!account_name) {
+    return showMsg("Fill all fields", "error");
+  }
+
+  showLoader("Creating request...");
+  try {
+    const res = await fetch(API + "/admin/withdraw-request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify({ amount, bank_name, account_number, account_name })
+    });
+    const data = await res.json();
+    hideLoader();
+    showMsg(data.message, res.ok ? "success" : "error");
+    if (res.ok) {
+      loadWithdrawals();
+      loadDashboard(); // refresh admin_wallet
+    }
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
+async function approveWithdrawal(reference) {
+  showLoader("Approving...");
+  try {
+    const res = await fetch(API + "/admin/withdraw/approve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify({ reference })
+    });
+    const data = await res.json();
+    hideLoader();
+    showMsg(data.message, res.ok ? "success" : "error");
+    if (res.ok) {
+      loadWithdrawals();
+      loadDashboard();
+    }
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
   }
 }
 
 /* ================= REVERSAL ================= */
 async function reverseTransaction() {
   const reference = el("reverseRef").value;
-  if (!reference) return showMsg("Enter transaction reference");
+  if (!reference) return showMsg("Enter transaction reference", "error");
 
+  showLoader("Reversing...");
   const res = await fetch(API + "/api/admin/reverse", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
     body: JSON.stringify({ reference })
   });
   const data = await res.json();
-  showMsg(data.message);
-}
-
-/* ================= TOP USERS ================= */
-async function addTopUser() {
-  const email = el("topUserEmail").value;
-  if (!email) return showMsg("Enter email");
-
-  const res = await fetch(API + "/api/admin/add-top-user", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-    body: JSON.stringify({ email })
-  });
-  const data = await res.json();
-  showMsg(data.message);
-}
-
-async function removeTopUser() {
-  const email = el("topUserEmail").value;
-  if (!email) return showMsg("Enter email");
-
-  const res = await fetch(API + "/api/admin/remove-top-user", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-    body: JSON.stringify({ email })
-  });
-  const data = await res.json();
-  showMsg(data.message);
+  hideLoader();
+  showMsg(data.message, res.ok ? "success" : "error");
+  if (res.ok) fetchTransactions();
 }
 
 /* ================= ACCOUNT ================= */
 async function loadAccount() {
   const res = await fetch(API + "/api/me", { headers: { Authorization: "Bearer " + getToken() } });
   const user = await res.json();
-  el("bankName").innerText = user.bank_name || "N/A";
-  el("accountNumber").innerText = user.account_number || "N/A";
-  el("accountName").innerText = user.account_name || "N/A";
-}
-
-/* ================= ADMIN WITHDRAW ================= */
-async function adminWithdraw() {
-  const username = el("withdrawUser").value;
-  const amount = el("withdrawAmount").value;
-  if (!username || !amount) return showMsg("Fill fields");
-
-  const res = await fetch(API + "/api/admin/withdraw", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-    body: JSON.stringify({ username, amount })
-  });
-  const data = await res.json();
-  showMsg(data.message);
+  if (el("bankName")) el("bankName").innerText = user.bank_name || "N/A";
+  if (el("accountNumber")) el("accountNumber").innerText = user.account_number || "N/A";
+  if (el("accountName")) el("accountName").innerText = user.account_name || "N/A";
+  updateWallet(user.wallet_balance);
 }
 
 /* ================= PASSWORD & PIN ================= */
 async function submitPassword() {
   const oldPass = el("oldPassword").value;
   const newPass = el("newPassword").value;
-  if (!oldPass || !newPass) return showMsg("Fill fields");
+  if (!oldPass ||!newPass) return showMsg("Fill fields", "error");
 
+  showLoader("Updating...");
   const res = await fetch(API + "/api/change-password", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
     body: JSON.stringify({ oldPass, newPass })
   });
   const data = await res.json();
-  showMsg(data.message);
+  hideLoader();
+  showMsg(data.message, res.ok ? "success" : "error");
 }
 
 async function submitPin() {
   const oldPin = el("oldPin").value;
   const newPin = el("newPin").value;
-  if (!oldPin || !newPin) return showMsg("Fill fields");
+  if (!oldPin ||!newPin) return showMsg("Fill fields", "error");
 
+  showLoader("Updating...");
   const res = await fetch(API + "/api/change-pin", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
     body: JSON.stringify({ oldPin, newPin })
   });
   const data = await res.json();
-  showMsg(data.message);
+  hideLoader();
+  showMsg(data.message, res.ok ? "success" : "error");
+}
+
+/* ================= ADMIN DATA LOADER ================= */
+function loadAdminData() {
+  loadProfitDashboard();
+  loadTopUsers();
+  loadWithdrawals();
 }
 
 /* ================= MODAL ================= */
@@ -392,6 +557,8 @@ function connectWebSocket() {
     const data = JSON.parse(msg.data);
     if (data.type === "wallet_update") updateWallet(data.balance);
   };
+  ws.onerror = () => console.log("WS error");
+  ws.onclose = () => setTimeout(connectWebSocket, 5000);
 }
 
 /* ================= LOGOUT ================= */
