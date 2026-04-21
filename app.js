@@ -63,6 +63,7 @@ async function loadDashboard() {
   if (currentUser && currentUser.is_admin === true) {
     document.querySelectorAll(".adminOnly").forEach(e => e.style.display = "block");
     if (el("adminWalletBalance")) el("adminWalletBalance").innerText = formatNaira(currentUser.admin_wallet);
+    if (el("adminWalletBalance2")) el("adminWalletBalance2").innerText = formatNaira(currentUser.admin_wallet);
   }
 
   initNavigation();
@@ -86,11 +87,20 @@ function showSection(id) {
   if (id === "profitDashboard") loadProfitDashboard();
   if (id === "topUsersManager") loadTopUsers();
   if (id === "withdrawals") loadWithdrawals();
+  if (id === "plansManager") loadAdminPlans();
+  if (id === "usersManager") loadAdminUsers();
 }
 
 /* ================= WALLET ================= */
 function updateWallet(balance) {
   if (el("walletBalance")) el("walletBalance").innerText = formatNaira(balance);
+}
+
+/* ================= COPY ACCOUNT ================= */
+function copyAccount() {
+  const acc = el("accountNumber").innerText;
+  navigator.clipboard.writeText(acc);
+  showMsg("Account number copied!", "success");
 }
 
 /* ================= TRANSACTIONS ================= */
@@ -304,7 +314,7 @@ async function confirmFund() {
     const data = await res.json();
     hideLoader();
     if (data.url) window.location.href = data.url;
-    else showMsg("Payment failed", "error");
+    else showMsg(data.message || "Payment failed", "error");
   } catch {
     hideLoader();
     showMsg("Server error", "error");
@@ -326,6 +336,7 @@ async function loadProfitDashboard() {
 
     if (el("totalProfit")) el("totalProfit").innerText = formatNaira(data.total);
     if (el("adminWalletBalance")) el("adminWalletBalance").innerText = formatNaira(data.admin_wallet);
+    if (el("adminWalletBalance2")) el("adminWalletBalance2").innerText = formatNaira(data.admin_wallet);
 
     const table = el("profitTable");
     if (table) {
@@ -358,7 +369,7 @@ async function loadTopUsers() {
         list.innerHTML += `<div class="userCard">
           <strong>${u.username}</strong> - ${u.email}<br>
           Spent: ${formatNaira(u.total_spent)} | Profit: ${formatNaira(u.total_profit_generated)}
-          <button onclick="removeTopUser('${u.email}')" class="dangerBtn">Remove</button>
+          ${u.is_top_user ? `<button onclick="removeTopUser('${u.email}')" class="dangerBtn">Remove</button>` : ''}
         </div>`;
       });
     }
@@ -398,6 +409,129 @@ async function removeTopUser(email) {
     hideLoader();
     showMsg(data.message, res.ok ? "success" : "error");
     if (res.ok) loadTopUsers();
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
+/* ================= ADMIN: PLANS MANAGER ================= */
+async function loadAdminPlans() {
+  try {
+    const res = await fetch(API + "/admin/plans", {
+      headers: { Authorization: "Bearer " + getToken() }
+    });
+    const plans = await res.json();
+    const list = el("adminPlansList");
+    if (list) {
+      list.innerHTML = "";
+      plans.forEach(p => {
+        const statusColor = p.is_active ? "#00c853" : "#ff4d4d";
+        list.innerHTML += `<div class="planItem">
+          <strong>${p.name}</strong> - ${p.network}<br>
+          Price: ${formatNaira(p.price)} | Top: ${formatNaira(p.top_price)} | Cost: ${formatNaira(p.cost)}<br>
+          <span style="color:${statusColor}">${p.is_active ? 'Active' : 'Disabled'}</span>
+          <button onclick="editPlan(${p.id})" class="primaryBtn">Edit</button>
+          <button onclick="togglePlan(${p.id}, ${!p.is_active})" class="dangerBtn">${p.is_active ? 'Disable' : 'Enable'}</button>
+        </div>`;
+      });
+    }
+  } catch {}
+}
+
+async function addPlan() {
+  const plan = {
+    plan_id: el("newPlanId").value,
+    network: el("newPlanNetwork").value,
+    name: el("newPlanName").value,
+    price: el("newPlanPrice").value,
+    top_price: el("newPlanTopPrice").value,
+    cost: el("newPlanCost").value,
+    validity: el("newPlanValidity").value,
+    restricted: el("newPlanRestricted").checked
+  };
+  
+  if (!plan.plan_id ||!plan.network ||!plan.name ||!plan.price ||!plan.cost) {
+    return showMsg("Fill all required fields", "error");
+  }
+
+  showLoader("Adding plan...");
+  try {
+    const res = await fetch(API + "/admin/plans", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify(plan)
+    });
+    const data = await res.json();
+    hideLoader();
+    showMsg(data.message, res.ok ? "success" : "error");
+    if (res.ok) {
+      loadAdminPlans();
+      loadPlans(); // refresh user plans too
+    }
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
+async function togglePlan(id, is_active) {
+  showLoader("Updating...");
+  try {
+    const res = await fetch(`${API}/admin/plans/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify({ is_active })
+    });
+    const data = await res.json();
+    hideLoader();
+    showMsg(data.message, res.ok ? "success" : "error");
+    if (res.ok) {
+      loadAdminPlans();
+      loadPlans();
+    }
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
+/* ================= ADMIN: USERS MANAGER ================= */
+async function loadAdminUsers() {
+  const search = el("userSearch")?.value || "";
+  try {
+    const res = await fetch(`${API}/admin/users?search=${search}`, {
+      headers: { Authorization: "Bearer " + getToken() }
+    });
+    const users = await res.json();
+    const list = el("adminUsersList");
+    if (list) {
+      list.innerHTML = "";
+      users.forEach(u => {
+        list.innerHTML += `<div class="userCard">
+          <strong>${u.username}</strong> - ${u.email}<br>
+          Wallet: ${formatNaira(u.wallet_balance)} | Top User: ${u.is_top_user ? 'Yes' : 'No'}<br>
+          <button onclick="toggleUserTop(${u.id}, ${!u.is_top_user})" class="primaryBtn">
+            ${u.is_top_user ? 'Remove Top' : 'Make Top'}
+          </button>
+        </div>`;
+      });
+    }
+  } catch {}
+}
+
+async function toggleUserTop(id, is_top_user) {
+  showLoader("Updating...");
+  try {
+    const res = await fetch(`${API}/admin/users/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify({ is_top_user })
+    });
+    const data = await res.json();
+    hideLoader();
+    showMsg(data.message, res.ok ? "success" : "error");
+    if (res.ok) loadAdminUsers();
   } catch {
     hideLoader();
     showMsg("Server error", "error");
@@ -543,6 +677,8 @@ function loadAdminData() {
   loadProfitDashboard();
   loadTopUsers();
   loadWithdrawals();
+  loadAdminPlans();
+  loadAdminUsers();
 }
 
 /* ================= MODAL ================= */
