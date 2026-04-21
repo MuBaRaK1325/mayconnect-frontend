@@ -1,6 +1,7 @@
 const API = "https://mayconnect-backend-1.onrender.com";
 
 let cachedPlans = [];
+let cachedAdminPlans = []; // for admin edit
 let currentUser = null;
 let ws = null;
 
@@ -8,6 +9,7 @@ let selectedNetwork = null;
 let selectedPlan = null;
 let airtimeNetwork = null;
 let actionType = null; // "DATA" or "AIRTIME"
+let editingPlanId = null; // for edit modal
 
 /* ================= HELPERS ================= */
 function getToken() { return localStorage.getItem("token"); }
@@ -422,13 +424,15 @@ async function loadAdminPlans() {
       headers: { Authorization: "Bearer " + getToken() }
     });
     const plans = await res.json();
+    cachedAdminPlans = plans; // cache for editing
     const list = el("adminPlansList");
     if (list) {
       list.innerHTML = "";
       plans.forEach(p => {
         const statusColor = p.is_active ? "#00c853" : "#ff4d4d";
-        list.innerHTML += `<div class="planItem">
-          <strong>${p.name}</strong> - ${p.network}<br>
+        const restrictBadge = p.restricted ? `<span class="badge badgeWarning">RESTRICTED</span>` : '';
+        list.innerHTML += `<div class="planCard">
+          <strong>${p.name}</strong> - ${p.network} ${restrictBadge}<br>
           Price: ${formatNaira(p.price)} | Top: ${formatNaira(p.top_price)} | Cost: ${formatNaira(p.cost)}<br>
           <span style="color:${statusColor}">${p.is_active ? 'Active' : 'Disabled'}</span>
           <button onclick="editPlan(${p.id})" class="primaryBtn">Edit</button>
@@ -468,6 +472,14 @@ async function addPlan() {
     if (res.ok) {
       loadAdminPlans();
       loadPlans(); // refresh user plans too
+      // clear form
+      el("newPlanId").value = "";
+      el("newPlanName").value = "";
+      el("newPlanPrice").value = "";
+      el("newPlanTopPrice").value = "";
+      el("newPlanCost").value = "";
+      el("newPlanValidity").value = "";
+      el("newPlanRestricted").checked = false;
     }
   } catch {
     hideLoader();
@@ -485,6 +497,59 @@ async function togglePlan(id, is_active) {
     });
     const data = await res.json();
     hideLoader();
+    showMsg(data.message, res.ok ? "success" : "error");
+    if (res.ok) {
+      loadAdminPlans();
+      loadPlans();
+    }
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
+
+async function editPlan(id) {
+  const plan = cachedAdminPlans.find(p => p.id === id);
+  if (!plan) return showMsg("Plan not found", "error");
+  
+  editingPlanId = id;
+  
+  el("editPlanName").value = plan.name || "";
+  el("editPlanPrice").value = plan.price || "";
+  el("editPlanTopPrice").value = plan.top_price || "";
+  el("editPlanCost").value = plan.cost || "";
+  el("editPlanValidity").value = plan.validity || "";
+  el("editPlanRestricted").checked = plan.restricted || false;
+  
+  openModal("editPlanModal");
+}
+
+async function savePlanEdit() {
+  if (!editingPlanId) return;
+  
+  const updated = {
+    name: el("editPlanName").value,
+    price: el("editPlanPrice").value,
+    top_price: el("editPlanTopPrice").value,
+    cost: el("editPlanCost").value,
+    validity: el("editPlanValidity").value,
+    restricted: el("editPlanRestricted").checked
+  };
+  
+  if (!updated.name || !updated.price || !updated.cost) {
+    return showMsg("Name, Price and Cost are required", "error");
+  }
+  
+  showLoader("Updating plan...");
+  try {
+    const res = await fetch(`${API}/admin/plans/${editingPlanId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify(updated)
+    });
+    const data = await res.json();
+    hideLoader();
+    closeModal("editPlanModal");
     showMsg(data.message, res.ok ? "success" : "error");
     if (res.ok) {
       loadAdminPlans();

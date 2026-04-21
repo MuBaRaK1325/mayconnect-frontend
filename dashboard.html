@@ -304,7 +304,20 @@ margin-top:8px;
 </head>
 
 <body>
-
+<!-- EDIT PLAN MODAL -->
+<div id="editPlanModal" class="modal">
+<div class="modalBox">
+  <h3>Edit Plan</h3>
+  <input id="editPlanName" placeholder="Plan Name">
+  <input id="editPlanPrice" type="number" placeholder="User Price">
+  <input id="editPlanTopPrice" type="number" placeholder="Top User Price">
+  <input id="editPlanCost" type="number" placeholder="Your Cost">
+  <input id="editPlanValidity" placeholder="Validity e.g 30 Days">
+  <label><input id="editPlanRestricted" type="checkbox"> Restricted to my company</label>
+  <button onclick="savePlanEdit()" class="successBtn">Save Changes</button>
+  <button onclick="closeModal('editPlanModal')" class="dangerBtn">Cancel</button>
+</div>
+</div>
 <header>
 <div class="logoContainer">
   <img src="images/logo.png" alt="Company Logo" id="companyLogo">
