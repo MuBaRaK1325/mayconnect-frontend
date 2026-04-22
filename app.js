@@ -417,7 +417,7 @@ async function removeTopUser(email) {
   }
 }
 
-/* ================= ADMIN: PLANS MANAGER ================= */
+/* ================= ADMIN: PLANS MANAGER - FULL CONTROL ================= */
 async function loadAdminPlans() {
   try {
     const res = await fetch(API + "/admin/plans", {
@@ -431,9 +431,11 @@ async function loadAdminPlans() {
       plans.forEach(p => {
         const statusColor = p.is_active ? "#00c853" : "#ff4d4d";
         const restrictBadge = p.restricted ? `<span class="badge badgeWarning">RESTRICTED</span>` : '';
+        const providerBadge = p.provider ? `<span class="badge">${p.provider.toUpperCase()}</span>` : '';
         list.innerHTML += `<div class="planCard">
-          <strong>${p.name}</strong> - ${p.network} ${restrictBadge}<br>
+          <strong>${p.name}</strong> - ${p.network} ${restrictBadge} ${providerBadge}<br>
           Price: ${formatNaira(p.price)} | Top: ${formatNaira(p.top_price)} | Cost: ${formatNaira(p.cost)}<br>
+          Provider: ${p.provider || 'N/A'} | Net ID: ${p.network_id || 'N/A'} | API ID: ${p.api_plan_id || 'N/A'}<br>
           <span style="color:${statusColor}">${p.is_active ? 'Active' : 'Disabled'}</span>
           <button onclick="editPlan(${p.id})" class="primaryBtn">Edit</button>
           <button onclick="togglePlan(${p.id}, ${!p.is_active})" class="dangerBtn">${p.is_active ? 'Disable' : 'Enable'}</button>
@@ -452,11 +454,14 @@ async function addPlan() {
     top_price: el("newPlanTopPrice").value,
     cost: el("newPlanCost").value,
     validity: el("newPlanValidity").value,
-    restricted: el("newPlanRestricted").checked
+    restricted: el("newPlanRestricted").checked,
+    provider: el("newPlanProvider").value,
+    network_id: el("newPlanNetworkId").value,
+    api_plan_id: el("newPlanApiId").value
   };
   
-  if (!plan.plan_id ||!plan.network ||!plan.name ||!plan.price ||!plan.cost) {
-    return showMsg("Fill all required fields", "error");
+  if (!plan.plan_id ||!plan.network ||!plan.name ||!plan.price ||!plan.cost ||!plan.provider ||!plan.network_id ||!plan.api_plan_id) {
+    return showMsg("Fill all required fields including provider details", "error");
   }
 
   showLoader("Adding plan...");
@@ -480,6 +485,9 @@ async function addPlan() {
       el("newPlanCost").value = "";
       el("newPlanValidity").value = "";
       el("newPlanRestricted").checked = false;
+      el("newPlanProvider").value = "";
+      el("newPlanNetworkId").value = "";
+      el("newPlanApiId").value = "";
     }
   } catch {
     hideLoader();
@@ -520,6 +528,10 @@ async function editPlan(id) {
   el("editPlanCost").value = plan.cost || "";
   el("editPlanValidity").value = plan.validity || "";
   el("editPlanRestricted").checked = plan.restricted || false;
+  el("editPlanProvider").value = plan.provider || "";
+  el("editPlanNetworkId").value = plan.network_id || "";
+  el("editPlanApiId").value = plan.api_plan_id || "";
+  el("editPlanActive").checked = plan.is_active !== false;
   
   openModal("editPlanModal");
 }
@@ -533,11 +545,15 @@ async function savePlanEdit() {
     top_price: el("editPlanTopPrice").value,
     cost: el("editPlanCost").value,
     validity: el("editPlanValidity").value,
-    restricted: el("editPlanRestricted").checked
+    restricted: el("editPlanRestricted").checked,
+    provider: el("editPlanProvider").value,
+    network_id: el("editPlanNetworkId").value,
+    api_plan_id: el("editPlanApiId").value,
+    is_active: el("editPlanActive").checked
   };
   
-  if (!updated.name || !updated.price || !updated.cost) {
-    return showMsg("Name, Price and Cost are required", "error");
+  if (!updated.name || !updated.price || !updated.cost || !updated.provider || !updated.network_id || !updated.api_plan_id) {
+    return showMsg("Name, Price, Cost, Provider, Network ID and API Plan ID are required", "error");
   }
   
   showLoader("Updating plan...");
@@ -575,7 +591,8 @@ async function loadAdminUsers() {
       users.forEach(u => {
         list.innerHTML += `<div class="userCard">
           <strong>${u.username}</strong> - ${u.email}<br>
-          Wallet: ${formatNaira(u.wallet_balance)} | Top User: ${u.is_top_user ? 'Yes' : 'No'}<br>
+          Wallet: ${formatNaira(u.wallet_balance)} | Phone: ${u.phone || 'N/A'}<br>
+          Top User: ${u.is_top_user ? 'Yes' : 'No'}<br>
           <button onclick="toggleUserTop(${u.id}, ${!u.is_top_user})" class="primaryBtn">
             ${u.is_top_user ? 'Remove Top' : 'Make Top'}
           </button>
