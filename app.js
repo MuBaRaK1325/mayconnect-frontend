@@ -725,8 +725,8 @@ function openFundModal() {
     <div style="text-align:center">
       <h3>Fund Wallet</h3>
       <input id="fundAmount" type="number" placeholder="Minimum ₦100" style="width:100%;padding:10px;margin:12px 0" min="100" />
-      <p style="font-size:13px;opacity:0.7;margin-bottom:12px">Payment via ${currentUser.company === 'sadeeq'? 'Flutterwave' : 'Monnify Bank Transfer'}</p>
-      <button onclick="confirmFund()" class="primaryBtn">Continue to Payment</button>
+      <p style="font-size:13px;opacity:0.7;margin-bottom:12px">Fund via PaymentPoint Bank Transfer</p>
+      <button onclick="confirmFund()" class="primaryBtn">Generate Account Details</button>
     </div>`;
   openModal("msgModal");
 }
@@ -735,7 +735,7 @@ async function confirmFund() {
   const amount = Number(el("fundAmount")?.value);
   if (!amount || amount < 100) return showMsg("Minimum funding is ₦100", "error");
 
-  showLoader("Initializing payment...");
+  showLoader("Generating account details...");
   try {
     const res = await fetch(API + "/api/fund/init", {
       method: "POST",
@@ -745,14 +745,11 @@ async function confirmFund() {
     const data = await res.json();
     hideLoader();
 
-    if (data.url) {
-      // Flutterwave for Sadeeq
-      window.location.href = data.url;
-    } else if (data.account_number) {
-      // Monnify for Mayconnect/BnHabeeb/Teeversh
-      showMonnifyDetails(data, amount);
+    if (data.account_number) {
+      // PaymentPoint bank transfer for all companies
+      showPaymentPointDetails(data, amount);
     } else {
-      showMsg(data.message || "Payment failed", "error");
+      showMsg(data.message || "Failed to generate account", "error");
     }
   } catch {
     hideLoader();
@@ -760,11 +757,11 @@ async function confirmFund() {
   }
 }
 
-function showMonnifyDetails(data, amount) {
+function showPaymentPointDetails(data, amount) {
   el("msgBox").innerHTML = `
     <div style="text-align:center">
       <h3>Bank Transfer Details</h3>
-      <p style="opacity:0.8;margin-bottom:15px">Transfer ₦${formatNaira(amount)} to the account below. Your wallet will be credited automatically.</p>
+      <p style="opacity:0.8;margin-bottom:15px">Transfer ₦${formatNaira(amount)} to the account below. Your wallet will be credited automatically within 1-2 minutes.</p>
 
       <div style="background:var(--card-bg);padding:15px;border-radius:12px;margin:15px 0;text-align:left">
         <div style="margin-bottom:10px">
@@ -773,7 +770,10 @@ function showMonnifyDetails(data, amount) {
         </div>
         <div style="margin-bottom:10px">
           <small style="opacity:0.6">Account Number</small>
-          <h4 style="margin:5px 0;font-family:monospace;font-size:18px">${data.account_number}</h4>
+          <h4 style="margin:5px 0;font-family:monospace;font-size:18px">
+            ${data.account_number}
+            <button onclick="copyToClipboard('${data.account_number}')" class="smallBtn" style="float:right">Copy</button>
+          </h4>
         </div>
         <div>
           <small style="opacity:0.6">Account Name</small>
@@ -783,7 +783,7 @@ function showMonnifyDetails(data, amount) {
 
       <small style="color:#ffa000">Reference: ${data.reference}</small>
       <br><br>
-      <button onclick="closeModal('msgModal')" class="secondaryBtn">I have made the transfer</button>
+      <button onclick="closeModal('msgModal')" class="secondaryBtn">Done</button>
     </div>`;
   openModal("msgModal");
 }
@@ -1381,18 +1381,21 @@ async function loadAccount() {
 }
 
 async function generateAccount() {
-  showLoader("Creating your dedicated account...");
+  showLoader("Creating your PaymentPoint account...");
   try {
-    const res = await fetch(API + "/api/generate-account", {
+    const res = await fetch(API + "/api/wallet/create-dva", {
       method: "POST",
       headers: { Authorization: "Bearer " + getToken() }
     });
     const data = await res.json();
     hideLoader();
-    showMsg(data.message, res.ok? "success" : "error");
-    if (res.ok) {
+    
+    if (res.ok && (data.success || data.account_number)) {
+      showMsg("Virtual account created successfully", "success");
       if (el("generateAccountBtn")) el("generateAccountBtn").style.display = "none";
       await loadAccount();
+    } else {
+      showMsg(data.message || data.error || "Failed to create account", "error");
     }
   } catch {
     hideLoader();
