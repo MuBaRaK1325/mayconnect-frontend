@@ -1,127 +1,265 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>mayconnect - Signup</title>
-
+<title>Mayconnect - Create Account</title>
+<meta name="theme-color" content="#4DA6FF">
 <style>
+:root{
+  --ice-50:#E6F3FF;
+  --ice-100:#B3D9FF;
+  --ice-400:#4DA6FF;
+  --ice-500:#2B7CD6;
+  --dark:#0A1A24;
+  --glass:rgba(255,255,255,0.65);
+  --glass-border:rgba(77,166,255,0.25);
+  --shadow:0 20px 60px rgba(43,124,214,0.18);
+  --shadow-soft:0 8px 24px rgba(43,124,214,0.12);
+}
 
-*{margin:0;padding:0;box-sizing:border-box;font-family:Arial;}
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Inter",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}
 
 body{
-background:#03121a;
-color:white;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-flex-direction:column;
+  background: radial-gradient(1200px 800px at 80% -10%, var(--ice-100) 0%, transparent 50%),
+              radial-gradient(800px 600px at -10% 110%, var(--ice-50) 0%, transparent 50%),
+              linear-gradient(135deg,#F0F8FF,#E6F3FF);
+  color:var(--dark);
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:24px;
+  animation:fadeIn 0.6s ease;
+}
+
+@keyframes fadeIn{
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.wrapper{
+  width:100%;
+  max-width:420px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:28px;
 }
 
 .logo{
-width:110px;
-height:110px;
-border-radius:50%;
-border:4px solid #2297c5;
-padding:8px;
-margin-bottom:40px;
-box-shadow:0 0 20px #2291c5;
+  width:110px;
+  height:110px;
+  border-radius:50%;
+  border:3px solid var(--ice-400);
+  padding:8px;
+  background:white;
+  box-shadow:0 0 0 6px rgba(77,166,255,0.15), 0 12px 30px rgba(43,124,214,0.25);
+  object-fit:cover;
+  transition:transform 0.3s ease, box-shadow 0.3s ease;
+}
+.logo:hover{
+  transform:scale(1.03);
+  box-shadow:0 0 0 8px rgba(77,166,255,0.2), 0 16px 40px rgba(43,124,214,0.3);
 }
 
 .card{
-background:#051f2e;
-padding:30px;
-border-radius:20px;
-width:90%;
-max-width:380px;
-box-shadow:0 0 30px rgba(34, 151, 197, 0.2);
+  width:100%;
+  background:var(--glass);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  border:1px solid var(--glass-border);
+  padding:32px 28px;
+  border-radius:24px;
+  box-shadow:var(--shadow);
 }
 
-.title{text-align:center;font-size:26px;margin-bottom:25px;}
+.title{
+  text-align:center;
+  font-size:28px;
+  font-weight:800;
+  margin-bottom:6px;
+  background:linear-gradient(135deg,var(--ice-500),var(--ice-400));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
 
-.inputBox{margin-bottom:18px;position:relative;}
+.subtitle{
+  text-align:center;
+  font-size:14px;
+  color:#4A5568;
+  margin-bottom:24px;
+}
+
+.inputBox{
+  margin-bottom:16px;
+  position:relative;
+}
+
+.inputBox label{
+  display:block;
+  font-size:13px;
+  font-weight:600;
+  color:#2D3748;
+  margin-bottom:6px;
+  margin-left:4px;
+}
 
 input{
-width:100%;
-padding:14px;
-border-radius:12px;
-border:none;
-background:#020e14;
-color:white;
+  width:100%;
+  padding:14px 16px;
+  border-radius:14px;
+  border:1.5px solid rgba(77,166,255,0.25);
+  background:rgba(255,255,255,0.8);
+  color:var(--dark);
+  font-size:15px;
+  transition:all 0.25s ease;
+}
+input::placeholder{color:#9CA3AF;}
+input:focus{
+  outline:none;
+  border-color:var(--ice-400);
+  background:white;
+  box-shadow:0 0 0 4px rgba(77,166,255,0.15);
 }
 
 .showBtn{
-position:absolute;
-right:12px;
-top:50%;
-transform:translateY(-50%);
-background:none;
-border:none;
-color:#4aa8de;
-cursor:pointer;
+  position:absolute;
+  right:14px;
+  top:38px;
+  background:none;
+  border:none;
+  color:var(--ice-500);
+  cursor:pointer;
+  font-size:13px;
+  font-weight:600;
+  transition:color 0.2s;
 }
+.showBtn:hover{color:var(--ice-400);}
 
 .signupBtn{
-width:100%;
-padding:14px;
-border:none;
-border-radius:12px;
-background:#2284c5;
-color:white;
-margin-top:10px;
-cursor:pointer;
+  width:100%;
+  padding:15px;
+  border:none;
+  border-radius:14px;
+  background:linear-gradient(135deg,var(--ice-400),var(--ice-500));
+  color:white;
+  font-weight:700;
+  font-size:16px;
+  margin-top:8px;
+  cursor:pointer;
+  box-shadow:0 8px 20px rgba(43,124,214,0.3);
+  transition:all 0.25s ease;
 }
-
+.signupBtn:hover:not(:disabled){
+  transform:translateY(-2px);
+  box-shadow:0 12px 28px rgba(43,124,214,0.4);
+}
+.signupBtn:active:not(:disabled){
+  transform:translateY(0);
+}
 .signupBtn:disabled{
-opacity:0.6;
-cursor:not-allowed;
+  opacity:0.6;
+  cursor:not-allowed;
 }
 
 .loginLink{
-margin-top:16px;
-border:2px solid #2291c5;
-padding:14px;
-border-radius:12px;
-text-align:center;
+  margin-top:18px;
+  padding:14px;
+  border-radius:14px;
+  text-align:center;
+  border:1.5px solid rgba(77,166,255,0.3);
+  background:rgba(255,255,255,0.5);
+  transition:all 0.25s ease;
+}
+.loginLink:hover{
+  background:rgba(255,255,255,0.8);
+  border-color:var(--ice-400);
+}
+.loginLink a{
+  color:var(--ice-500);
+  text-decoration:none;
+  font-weight:600;
+  font-size:14px;
 }
 
-a{color:white;text-decoration:none;}
+.error{
+  color:#DC2626;
+  text-align:center;
+  margin-bottom:12px;
+  font-size:14px;
+  font-weight:500;
+  min-height:20px;
+}
 
-.error{color:#ff6b6b;text-align:center;margin-bottom:10px;font-size:14px;}
+.loader{
+  display:none;
+  justify-content:center;
+  align-items:center;
+  margin-top:12px;
+}
+.spinner{
+  width:24px;
+  height:24px;
+  border:3px solid rgba(77,166,255,0.2);
+  border-top:3px solid var(--ice-500);
+  border-radius:50%;
+  animation:spin 0.8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
 
+@media(max-width:480px){
+  .card{padding:28px 22px;}
+  .title{font-size:26px;}
+}
 </style>
 </head>
 
 <body>
+<div class="wrapper">
+  <img src="logo.png" class="logo" alt="Mayconnect Logo">
 
-<img src="images/logo.png" class="logo">
+  <div class="card">
+    <div class="title">Create Account</div>
+    <div class="subtitle">Join Mayconnect in seconds</div>
+    
+    <div id="error" class="error"></div>
 
-<div class="card">
+    <div class="inputBox">
+      <label>Username</label>
+      <input id="username" placeholder="Enter username">
+    </div>
 
-<div class="title">Create Account</div>
-<div id="error" class="error"></div>
+    <div class="inputBox">
+      <label>Email</label>
+      <input id="email" placeholder="you@example.com" type="email">
+    </div>
 
-<div class="inputBox"><input id="username" placeholder="Username"></div>
-<div class="inputBox"><input id="email" placeholder="Email" type="email"></div>
-<div class="inputBox"><input id="phone" placeholder="Phone e.g 08012345678" type="tel"></div>
+    <div class="inputBox">
+      <label>Phone Number</label>
+      <input id="phone" placeholder="08012345678" type="tel">
+    </div>
 
-<div class="inputBox">
-<input id="password" type="password" placeholder="Password">
-<button class="showBtn" onclick="toggleField('password',this)">Show</button>
-</div>
+    <div class="inputBox">
+      <label>Password</label>
+      <input id="password" type="password" placeholder="Create a strong password">
+      <button type="button" class="showBtn" onclick="toggleField('password',this)">Show</button>
+    </div>
 
-<div class="inputBox">
-<input id="pin" type="password" placeholder="PIN" maxlength="4" inputmode="numeric">
-<button class="showBtn" onclick="toggleField('pin',this)">Show</button>
-</div>
+    <div class="inputBox">
+      <label>Transaction PIN</label>
+      <input id="pin" type="password" placeholder="4-digit PIN" maxlength="4" inputmode="numeric">
+      <button type="button" class="showBtn" onclick="toggleField('pin',this)">Show</button>
+    </div>
 
-<button id="signupBtn" class="signupBtn">Create Account</button>
+    <button id="signupBtn" class="signupBtn">Create Account</button>
+    <div class="loader" id="loader"><div class="spinner"></div></div>
 
-<a href="login.html"><div class="loginLink">Already have account</div></a>
-
+    <div class="loginLink">
+      <a href="login.html">Already have an account? Sign in</a>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -141,11 +279,12 @@ document.getElementById("signupBtn").onclick = async () => {
   const pin = document.getElementById("pin").value;
   const errorDiv = document.getElementById("error");
   const btn = document.getElementById("signupBtn");
+  const loader = document.getElementById("loader");
 
   errorDiv.innerText = "";
 
   if (!username || !email || !phone || !password || !pin) {
-    errorDiv.innerText = "All fields required";
+    errorDiv.innerText = "Please fill all fields";
     return;
   }
   if (pin.length !== 4 || isNaN(pin)) {
@@ -154,7 +293,8 @@ document.getElementById("signupBtn").onclick = async () => {
   }
 
   btn.disabled = true;
-  btn.innerText = "Creating...";
+  btn.style.display="none";
+  loader.style.display="flex";
 
   try {
     const res = await fetch(API + "/api/signup", {
@@ -178,15 +318,16 @@ document.getElementById("signupBtn").onclick = async () => {
     } else {
       errorDiv.innerText = data.message || "Signup failed";
       btn.disabled = false;
-      btn.innerText = "Create Account";
+      btn.style.display="block";
+      loader.style.display="none";
     }
   } catch (e) {
     errorDiv.innerText = "Network error. Try again.";
     btn.disabled = false;
-    btn.innerText = "Create Account";
+    btn.style.display="block";
+    loader.style.display="none";
   }
 };
 </script>
-
 </body>
 </html>
