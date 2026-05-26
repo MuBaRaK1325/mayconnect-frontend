@@ -1385,7 +1385,7 @@ function logout() {
 }
 
 /* ================= START ================= */
-document.addEventListener("DOMContentLoaded", loadDashboard);const API = "https://mayconnect-backend-1.onrender.com"; // One backend for all companies
+document.addEventListener("DOMContentLoaded", loadDashboard);
 
 let cachedPlans = [];
 let cachedAdminPlans = [];
