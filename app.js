@@ -1387,18 +1387,7 @@ function logout() {
 /* ================= START ================= */
 document.addEventListener("DOMContentLoaded", loadDashboard);
 
-let cachedPlans = [];
-let cachedAdminPlans = [];
-let currentUser = null;
-let ws = null;
 
-let selectedNetwork = null;
-let selectedPlan = null;
-let airtimeNetwork = null;
-let actionType = null;
-let editingPlanId = null;
-let selectedPlanId = null;
-let selectedPhone = null;
 
 /* ================= HELPERS ================= */
 function getToken() { return localStorage.getItem("token"); }
