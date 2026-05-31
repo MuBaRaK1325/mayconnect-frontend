@@ -4,8 +4,8 @@
   "start_url": "/dashboard.html",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#E6F3FF",
-  "theme_color": "#4DA6FF",
+  "background_color": "#0F2027",
+  "theme_color": "#2C5364",
   "description": "Buy cheap data, airtime instantly",
   "icons": [
     {
