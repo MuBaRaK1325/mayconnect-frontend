@@ -889,27 +889,31 @@ async function confirmFund() {
   if (!amount || amount < 100) return showMsg("Minimum funding is ₦100", "error");
 
   pendingFundAmount = amount;
-
   showLoader("Checking account...");
+  
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    
     const res = await fetch(API + "/api/wallet/create-dva", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({})
+      body: JSON.stringify({}),
+      signal: controller.signal
     });
+    
+    clearTimeout(timeout);
     const data = await res.json();
     hideLoader();
 
     console.log('DVA Response:', data);
 
-    // FIXED: Check requireKyc explicitly first
     if (data.requireKyc === true) {
       closeModal('msgModal');
       openKycModal();
       return;
     }
 
-    // Account exists or was just created
     if (res.ok && data.success && (data.account_number || data.account?.account_number)) {
       const acc = data.account_number ? data : data.account;
       showPaymentPointDetails(acc, amount);
@@ -919,7 +923,11 @@ async function confirmFund() {
   } catch (err) {
     hideLoader();
     console.error("DVA Error:", err);
-    showMsg("Server error", "error");
+    if (err.name === 'AbortError') {
+      showMsg("Request timeout. Please try again.", "error");
+    } else {
+      showMsg(err.message || "Network error. Check your connection.", "error");
+    }
   }
 }
 
@@ -950,7 +958,6 @@ async function submitKycAndGenerate() {
 
     if (data.success && data.account_number) {
       closeKycModal();
-      // If funding flow, show payment details. If DVA generation flow, just refresh.
       if (pendingFundAmount > 0) {
         showPaymentPointDetails(data, pendingFundAmount);
         pendingFundAmount = 0;
@@ -959,7 +966,6 @@ async function submitKycAndGenerate() {
       }
       await loadAccount();
     } else if (data.requireKyc === true) {
-      // KYC still required - keep modal open
       idError.textContent = data.message || "Verification failed. Check your BVN/NIN";
       idError.style.display = 'block';
     } else {
@@ -968,7 +974,7 @@ async function submitKycAndGenerate() {
     }
   } catch (err) {
     hideLoader();
-    idError.textContent = 'Network error. Try again.';
+    idError.textContent = err.message || 'Network error. Try again.';
     idError.style.display = 'block';
   }
 }
@@ -997,7 +1003,7 @@ function showPaymentPointDetails(data, amount) {
         </div>
       </div>
 
-      <small style="color:#ffa000">Reference: ${data.reference || 'N/A'}</small>
+      <small style="color:#ffa000">Amount: ₦${formatNaira(amount)}</small>
       <br><br>
       <button onclick="closeModal('msgModal')" class="secondaryBtn">Done</button>
     </div>`;
@@ -1018,28 +1024,28 @@ async function generateDVA() {
 
     console.log('DVA Response:', data);
 
-    // Check requireKyc explicitly - this must come first
     if (data.requireKyc === true) {
       openKycModal();
       return;
     }
 
-    // Success case
     if (res.ok && data.success && data.account_number) {
       showMsg("Virtual account created successfully", "success");
       await loadAccount();
       return;
     }
 
-    // All other errors - show message, don't open modal
     showMsg(data.message || data.error || "Failed to create account", "error");
 
   } catch (err) {
     hideLoader();
     console.error("DVA Error:", err);
-    showMsg("Server error", "error");
+    showMsg(err.message || "Server error", "error");
   }
 }
+
+// Init on load
+document.addEventListener('DOMContentLoaded', initKycListeners);
 
 
 
