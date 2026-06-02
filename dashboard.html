@@ -659,8 +659,8 @@ th{
     <p id="bankName">Bank Name</p>
     <strong id="accountNumber">0000000000</strong>
     <p id="accountName">Account Name</p>
-    <button onclick="copyAccount()">Copy Account Number</button>
-    <button id="generateAccountBtn" onclick="openKycModal()" class="warningBtn" style="display:none">Generate Account Number</button>
+    <button onclick="copyAccount()" class="kyc-btn-secondary">Copy Account Number</button>
+    <button id="generateAccountBtn" onclick="openKycModal()" class="kyc-btn-primary" style="display:none;margin-top:10px;">Generate Account Number</button>
   </div>
 </section>
 
@@ -720,6 +720,29 @@ th{
   transform: scale(0.95);
 }
 
+/* ================= WALLET CARD ================= */
+.walletCard {
+  background: #0f172a;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid #1e293b;
+  text-align: center;
+}
+
+.walletCard p {
+  margin: 8px 0;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.walletCard strong {
+  display: block;
+  font-size: 24px;
+  color: #f1f5f9;
+  margin: 12px 0;
+  letter-spacing: 2px;
+}
+
 /* ================= KYC MODAL STYLES - ICE BLUE ================= */
 .kyc-modal-overlay {
   position: fixed;
@@ -732,7 +755,7 @@ th{
   backdrop-filter: blur(8px);
 }
 
-.kyc-modal-overlay[style*="display: flex"] {
+.kyc-modal-overlay.active {
   display: flex !important;
 }
 
@@ -822,6 +845,11 @@ th{
   transform: scale(0.98);
 }
 
+.kyc-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .kyc-btn-secondary {
   width: 100%;
   padding: 15px;
@@ -851,7 +879,7 @@ th{
   backdrop-filter: blur(8px);
 }
 
-.loader-overlay[style*="display: flex"] {
+.loader-overlay.active {
   display: flex !important;
 }
 
@@ -883,6 +911,155 @@ th{
   font-size: 15px;
   margin: 0;
 }
+</style>
+
+<script>
+// ================= CONFIG =================
+const API_BASE = 'https://mayconnect-backend-1.onrender.com';
+
+// ================= MODAL FUNCTIONS =================
+function openKycModal() {
+    document.getElementById('kycModal').classList.add('active');
+    document.getElementById('idError').style.display = 'none';
+    document.getElementById('idNumberInput').value = '';
+    document.getElementById('idTypeSelect').value = 'bvn';
+    document.getElementById('idNumberInput').placeholder = 'Enter 11-digit BVN';
+}
+
+function closeKycModal() {
+    document.getElementById('kycModal').classList.remove('active');
+}
+
+function showLoader(text = 'Processing...') {
+    document.getElementById('loaderText').textContent = text;
+    document.getElementById('loaderModal').classList.add('active');
+}
+
+function hideLoader() {
+    document.getElementById('loaderModal').classList.remove('active');
+}
+
+// ================= DYNAMIC PLACEHOLDER =================
+document.getElementById('idTypeSelect').addEventListener('change', function() {
+    const type = this.value;
+    const input = document.getElementById('idNumberInput');
+    input.placeholder = type === 'bvn' ? 'Enter 11-digit BVN' : 'Enter 11-digit NIN';
+    input.value = '';
+    document.getElementById('idError').style.display = 'none';
+});
+
+// ================= VERIFY & GENERATE ACCOUNT =================
+document.getElementById('submitKycBtn').addEventListener('click', async function() {
+    const idType = document.getElementById('idTypeSelect').value;
+    const idNumber = document.getElementById('idNumberInput').value.trim();
+    const errorEl = document.getElementById('idError');
+    const btn = this;
+    
+    // Validation
+    errorEl.style.display = 'none';
+    if (!idNumber || idNumber.length !== 11 || !/^\d+$/.test(idNumber)) {
+        errorEl.textContent = `Please enter a valid 11-digit ${idType.toUpperCase()}`;
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+        errorEl.textContent = 'Session expired. Please login again.';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    btn.disabled = true;
+    showLoader('Verifying your identity...');
+    
+    try {
+        const res = await fetch(`${API_BASE}/user/generate-account`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                id_type: idType,
+                id_number: idNumber
+            })
+        });
+
+        const data = await res.json();
+        hideLoader();
+        btn.disabled = false;
+
+        if (res.ok && data.account_number) {
+            // Success - update UI
+            document.getElementById('bankName').textContent = data.bank_name || 'Bank';
+            document.getElementById('accountNumber').textContent = data.account_number;
+            document.getElementById('accountName').textContent = data.account_name;
+            document.getElementById('generateAccountBtn').style.display = 'none';
+            
+            closeKycModal();
+            alert('Account generated successfully!');
+        } else {
+            errorEl.textContent = data.message || 'Verification failed. Check your details and try again.';
+            errorEl.style.display = 'block';
+        }
+    } catch (err) {
+        hideLoader();
+        btn.disabled = false;
+        errorEl.textContent = 'Network error. Check your connection and try again.';
+        errorEl.style.display = 'block';
+        console.error('KYC Error:', err);
+    }
+});
+
+// ================= COPY ACCOUNT =================
+function copyAccount() {
+    const accNum = document.getElementById('accountNumber').textContent;
+    if (accNum && accNum !== '0000000000') {
+        navigator.clipboard.writeText(accNum).then(() => {
+            alert('Account number copied!');
+        });
+    } else {
+        alert('No account number to copy');
+    }
+}
+
+// ================= CHECK IF USER HAS ACCOUNT ON LOAD =================
+async function checkVirtualAccount() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        document.getElementById('generateAccountBtn').style.display = 'block';
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/user/profile`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        
+        if (res.ok && data.account_number) {
+            document.getElementById('bankName').textContent = data.bank_name || 'Bank';
+            document.getElementById('accountNumber').textContent = data.account_number;
+            document.getElementById('accountName').textContent = data.account_name;
+            document.getElementById('generateAccountBtn').style.display = 'none';
+        } else {
+            document.getElementById('generateAccountBtn').style.display = 'block';
+        }
+    } catch (err) {
+        console.error('Failed to check account:', err);
+        document.getElementById('generateAccountBtn').style.display = 'block';
+    }
+}
+
+// ================= INIT =================
+document.addEventListener('DOMContentLoaded', checkVirtualAccount);
+
+// Close modal when clicking outside
+document.getElementById('kycModal').addEventListener('click', function(e) {
+    if (e.target === this) closeKycModal();
+});
+</script>
 </style>
 
 <!-- DATA -->
