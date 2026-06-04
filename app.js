@@ -904,11 +904,11 @@ async function confirmFund() {
     
     clearTimeout(timeout);
     const data = await res.json();
-    hideLoader();
 
     console.log('DVA Response:', data);
 
     if (data.requireKyc === true) {
+      hideLoader();
       closeModal('msgModal');
       openKycModal();
       return;
@@ -916,8 +916,10 @@ async function confirmFund() {
 
     if (res.ok && data.success && (data.account_number || data.account?.account_number)) {
       const acc = data.account_number ? data : data.account;
+      closeModal('msgModal');
       showPaymentPointDetails(acc, amount);
     } else {
+      hideLoader();
       showMsg(data.error || data.message || "Failed to generate account", "error");
     }
   } catch (err) {
@@ -954,7 +956,6 @@ async function submitKycAndGenerate() {
       body: JSON.stringify(body)
     });
     const data = await res.json();
-    hideLoader();
 
     if (data.success && data.account_number) {
       closeKycModal();
@@ -962,13 +963,16 @@ async function submitKycAndGenerate() {
         showPaymentPointDetails(data, pendingFundAmount);
         pendingFundAmount = 0;
       } else {
+        hideLoader();
         showMsg("Account generated successfully!", "success");
       }
       await loadAccount();
     } else if (data.requireKyc === true) {
+      hideLoader();
       idError.textContent = data.message || "Verification failed. Check your BVN/NIN";
       idError.style.display = 'block';
     } else {
+      hideLoader();
       idError.textContent = data.error || data.message || "Verification failed";
       idError.style.display = 'block';
     }
@@ -980,6 +984,7 @@ async function submitKycAndGenerate() {
 }
 
 function showPaymentPointDetails(data, amount) {
+  // Render first, then hide loader so user never sees blank modal
   el("msgBox").innerHTML = `
     <div style="text-align:center">
       <h3>Bank Transfer Details</h3>
@@ -1007,7 +1012,11 @@ function showPaymentPointDetails(data, amount) {
       <br><br>
       <button onclick="closeModal('msgModal')" class="secondaryBtn">Done</button>
     </div>`;
+  
   openModal("msgModal");
+  
+  // Hide loader only after modal content is set and opened
+  setTimeout(() => hideLoader(), 50);
 }
 
 /* ================= DVA GENERATION - CORRECTED ================= */
@@ -1020,21 +1029,23 @@ async function generateDVA() {
       body: JSON.stringify({})
     });
     const data = await res.json();
-    hideLoader();
 
     console.log('DVA Response:', data);
 
     if (data.requireKyc === true) {
+      hideLoader();
       openKycModal();
       return;
     }
 
     if (res.ok && data.success && data.account_number) {
+      hideLoader();
       showMsg("Virtual account created successfully", "success");
       await loadAccount();
       return;
     }
 
+    hideLoader();
     showMsg(data.message || data.error || "Failed to create account", "error");
 
   } catch (err) {
