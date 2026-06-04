@@ -837,8 +837,8 @@ function showLoader(text = "Processing...") {
   if (el("loaderText")) el("loaderText").innerText = text;
   openModal("loaderModal");
 }
-function hideLoader() { 
-  closeModal("loaderModal"); 
+function hideLoader() {
+  closeModal("loaderModal");
 }
 
 /* ================= KYC MODAL HANDLERS ================= */
@@ -857,7 +857,7 @@ function initKycListeners() {
 
   el('idTypeSelect').addEventListener('change', () => {
     const idType = el('idTypeSelect').value;
-    el('idNumberInput').placeholder = idType === 'bvn' ? 'Enter 11-digit BVN' : 'Enter 11-digit NIN';
+    el('idNumberInput').placeholder = idType === 'bvn'? 'Enter 11-digit BVN' : 'Enter 11-digit NIN';
     el('idNumberInput').value = '';
     el('idError').style.display = 'none';
   });
@@ -870,38 +870,21 @@ function initKycListeners() {
   el('submitKycBtn').addEventListener('click', submitKycAndGenerate);
 }
 
-/* ================= FUND WALLET WITH KYC ================= */
-let pendingFundAmount = 0;
-
-function openFundModal() {
-  el("msgBox").innerHTML = `
-    <div style="text-align:center">
-      <h3>Fund Wallet</h3>
-      <input id="fundAmount" type="number" placeholder="Minimum ₦100" style="width:100%;padding:10px;margin:12px 0" min="100" />
-      <p style="font-size:13px;opacity:0.7;margin-bottom:12px">Fund via PaymentPoint Bank Transfer</p>
-      <button onclick="confirmFund()" class="primaryBtn">Generate Account Details</button>
-    </div>`;
-  openModal("msgModal");
-}
-
-async function confirmFund() {
-  const amount = Number(el("fundAmount")?.value);
-  if (!amount || amount < 100) return showMsg("Minimum funding is ₦100", "error");
-
-  pendingFundAmount = amount;
+/* ================= DVA GENERATION - MATCHES YOUR HTML ================= */
+async function handleGenerateClick() {
   showLoader("Checking account...");
-  
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
-    
+
     const res = await fetch(API + "/api/wallet/create-dva", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
       body: JSON.stringify({}),
       signal: controller.signal
     });
-    
+
     clearTimeout(timeout);
     const data = await res.json();
 
@@ -909,15 +892,15 @@ async function confirmFund() {
 
     if (data.requireKyc === true) {
       hideLoader();
-      closeModal('msgModal');
       openKycModal();
       return;
     }
 
     if (res.ok && data.success && (data.account_number || data.account?.account_number)) {
-      const acc = data.account_number ? data : data.account;
-      closeModal('msgModal');
-      showPaymentPointDetails(acc, amount);
+      const acc = data.account_number? data : data.account;
+      updateWalletCard(acc);
+      hideLoader();
+      showMsg("Virtual account created successfully", "success");
     } else {
       hideLoader();
       showMsg(data.error || data.message || "Failed to generate account", "error");
@@ -939,7 +922,7 @@ async function submitKycAndGenerate() {
   const idNumber = el('idNumberInput').value;
   const idError = el('idError');
 
-  if (idNumber.length !== 11) {
+  if (idNumber.length!== 11) {
     idError.textContent = `${idType.toUpperCase()} must be exactly 11 digits`;
     idError.style.display = 'block';
     return;
@@ -948,7 +931,9 @@ async function submitKycAndGenerate() {
   const body = {};
   body[idType] = idNumber;
 
+  closeKycModal();
   showLoader("Verifying & generating account...");
+
   try {
     const res = await fetch(API + "/api/wallet/create-dva", {
       method: "POST",
@@ -958,100 +943,41 @@ async function submitKycAndGenerate() {
     const data = await res.json();
 
     if (data.success && data.account_number) {
-      closeKycModal();
-      if (pendingFundAmount > 0) {
-        showPaymentPointDetails(data, pendingFundAmount);
-        pendingFundAmount = 0;
-      } else {
-        hideLoader();
-        showMsg("Account generated successfully!", "success");
-      }
+      updateWalletCard(data);
+      hideLoader();
+      showMsg("Account generated successfully!", "success");
       await loadAccount();
     } else if (data.requireKyc === true) {
       hideLoader();
       idError.textContent = data.message || "Verification failed. Check your BVN/NIN";
       idError.style.display = 'block';
+      openKycModal();
     } else {
       hideLoader();
       idError.textContent = data.error || data.message || "Verification failed";
       idError.style.display = 'block';
+      openKycModal();
     }
   } catch (err) {
     hideLoader();
     idError.textContent = err.message || 'Network error. Try again.';
     idError.style.display = 'block';
+    openKycModal();
   }
 }
 
-function showPaymentPointDetails(data, amount) {
-  // Render first, then hide loader so user never sees blank modal
-  el("msgBox").innerHTML = `
-    <div style="text-align:center">
-      <h3>Bank Transfer Details</h3>
-      <p style="opacity:0.8;margin-bottom:15px">Transfer ₦${formatNaira(amount)} to the account below. Your wallet will be credited automatically within 1-2 minutes.</p>
-
-      <div style="background:var(--card-bg);padding:15px;border-radius:12px;margin:15px 0;text-align:left">
-        <div style="margin-bottom:10px">
-          <small style="opacity:0.6">Bank Name</small>
-          <h4 style="margin:5px 0">${data.bank_name}</h4>
-        </div>
-        <div style="margin-bottom:10px">
-          <small style="opacity:0.6">Account Number</small>
-          <h4 style="margin:5px 0;font-family:monospace;font-size:18px">
-            ${data.account_number}
-            <button onclick="copyToClipboard('${data.account_number}')" class="smallBtn" style="float:right">Copy</button>
-          </h4>
-        </div>
-        <div>
-          <small style="opacity:0.6">Account Name</small>
-          <h4 style="margin:5px 0">${data.account_name}</h4>
-        </div>
-      </div>
-
-      <small style="color:#ffa000">Amount: ₦${formatNaira(amount)}</small>
-      <br><br>
-      <button onclick="closeModal('msgModal')" class="secondaryBtn">Done</button>
-    </div>`;
-  
-  openModal("msgModal");
-  
-  // Hide loader only after modal content is set and opened
-  setTimeout(() => hideLoader(), 50);
+function updateWalletCard(data) {
+  el("bankName").innerText = data.bank_name || "Bank Name";
+  el("accountNumber").innerText = data.account_number || "0000000000";
+  el("accountName").innerText = data.account_name || "Account Name";
+  el("generateAccountBtn").style.display = "none";
 }
 
-/* ================= DVA GENERATION - CORRECTED ================= */
-async function generateDVA() {
-  showLoader("Creating your PaymentPoint account...");
-  try {
-    const res = await fetch(API + "/api/wallet/create-dva", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({})
-    });
-    const data = await res.json();
-
-    console.log('DVA Response:', data);
-
-    if (data.requireKyc === true) {
-      hideLoader();
-      openKycModal();
-      return;
-    }
-
-    if (res.ok && data.success && data.account_number) {
-      hideLoader();
-      showMsg("Virtual account created successfully", "success");
-      await loadAccount();
-      return;
-    }
-
-    hideLoader();
-    showMsg(data.message || data.error || "Failed to create account", "error");
-
-  } catch (err) {
-    hideLoader();
-    console.error("DVA Error:", err);
-    showMsg(err.message || "Server error", "error");
+function copyAccount() {
+  const accountNum = el("accountNumber").innerText;
+  if (accountNum && accountNum!== "0000000000") {
+    navigator.clipboard.writeText(accountNum);
+    showMsg("Account number copied", "success");
   }
 }
 
