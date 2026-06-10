@@ -79,10 +79,13 @@ function showInputModal(title, placeholder, callback) {
 
 /* ================= LOADER ================= */
 function showLoader(text = "Processing...") {
-  el("msgBox").innerHTML = `<p style="text-align:center">${text}</p>`;
-  openModal("msgModal");
+  if (el("loaderText")) el("loaderText").innerText = text;
+  openModal("loaderModal");
 }
-function hideLoader() { closeModal("msgModal"); }
+
+function hideLoader() { 
+  closeModal("loaderModal"); 
+}
 
 /* ================= AUTH ================= */
 function checkAuth() {
@@ -97,8 +100,9 @@ function checkAuth() {
 async function loadDashboard() {
   if (!checkAuth()) return;
 
-    initKycListeners(); // ADD THIS LINE RIGHT HERE
-    
+   initKycListeners(); // ADD THIS LINE RIGHT HERE
+
+
   try {
     const res = await fetch(API + "/api/me", { headers: { Authorization: "Bearer " + getToken() } });
     if (!res.ok) throw new Error("Failed to fetch user - " + res.status);
@@ -225,6 +229,13 @@ async function loadWallet() {
 function copyToClipboard(text) {
   navigator.clipboard.writeText(text);
   showMsg("Copied to clipboard!", "success");
+}
+
+/* ================= COPY ACCOUNT ================= */
+function copyAccount() {
+  const acc = el("accountNumber").innerText;
+  navigator.clipboard.writeText(acc);
+  showMsg("Account number copied!", "success");
 }
 
 /* ================= TRANSACTIONS ================= */
@@ -392,8 +403,6 @@ function renderPlans() {
   });
 }
 
-/* ================= BIOMETRIC - NEW VERSION ================= */
-// Saka wannan a saman app.js
 /* ================= BIOMETRIC STATUS ================= */
 async function checkBiometricStatus() {
   const elStatus = el("biometricStatus");
@@ -402,14 +411,16 @@ async function checkBiometricStatus() {
   if (!elStatus) return;
 
   if (!window.isSecureContext) {
-    elStatus.innerHTML = "Status: <span style='color:orange'>HTTPS required</span>";
+    elStatus.innerText = "Status: HTTPS required for biometric";
+    elStatus.style.color = "var(--warning)";
     if (enableBtn) enableBtn.style.display = "none";
     if (loginBtn) loginBtn.style.display = "none";
     return;
   }
 
   if (!window.PublicKeyCredential) {
-    elStatus.innerHTML = "Status: <span style='color:red'>Not supported</span>";
+    elStatus.innerText = "Status: Not supported on this device/browser";
+    elStatus.style.color = "var(--danger)";
     if (enableBtn) enableBtn.style.display = "none";
     if (loginBtn) loginBtn.style.display = "none";
     return;
@@ -418,40 +429,56 @@ async function checkBiometricStatus() {
   try {
     const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
     if (!available) {
-      elStatus.innerHTML = "Status: <span style='color:orange'>No fingerprint enrolled</span>";
+      elStatus.innerText = "Status: No fingerprint/passkey enrolled on device";
+      elStatus.style.color = "var(--warning)";
       if (enableBtn) enableBtn.style.display = "none";
       if (loginBtn) loginBtn.style.display = "none";
       return;
     }
 
+    // Safe fetch with content-type check
     const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
       headers: { 'Authorization': 'Bearer ' + getToken() }
     });
 
-    if (!res.ok) throw new Error("Server error " + res.status);
+    if (!res.ok) {
+      throw new Error("Server error " + res.status);
+    }
+
+    const contentType = res.headers.get("content-type");
+    if (!contentType ||!contentType.includes("application/json")) {
+      const text = await res.text();
+      console.error("Non-JSON response from check-enabled:", text);
+      throw new Error("Server returned HTML instead of JSON");
+    }
+
     const data = await res.json();
 
     if (data.enabled) {
-      elStatus.innerHTML = "Status: <span style='color:green'>Enabled ✓</span>";
+      elStatus.innerText = "Status: Enabled ✓";
+      elStatus.style.color = "var(--success)";
       if (enableBtn) enableBtn.style.display = "none";
       if (loginBtn) loginBtn.style.display = "inline-block";
     } else {
-      elStatus.innerHTML = "Status: <span style='color:orange'>Available - click to enable</span>";
-      if (enableBtn) enableBtn.style.display = "inline-block";
+      elStatus.innerText = "Status: Available - click to enable";
+      elStatus.style.color = "var(--warning)";
+      if (enableBtn) enableBtn.style.display = "block";
       if (loginBtn) loginBtn.style.display = "none";
     }
   } catch (e) {
-    elStatus.innerHTML = "Status: <span style='color:red'>Check failed</span>";
+    elStatus.innerText = "Status: Check failed - " + e.message;
+    elStatus.style.color = "var(--danger)";
     console.error("Biometric check error:", e);
     if (enableBtn) enableBtn.style.display = "none";
     if (loginBtn) loginBtn.style.display = "none";
   }
 }
 
-/* ================= ENABLE BIOMETRIC ================= */
-window.enableBiometric = async function() {
-  const btn = el("enableBiometricBtn");
-  if (btn) { btn.disabled = true; btn.textContent = 'Setting up...'; }
+/* ================= WEBAUTHN ================= */
+async function enableBiometric() {
+  if (!window.PublicKeyCredential) {
+    return showMsg('Biometric not supported on this device/browser', 'error');
+  }
 
   try {
     const startRes = await fetch(API + '/api/auth/webauthn/register-start', {
@@ -459,141 +486,253 @@ window.enableBiometric = async function() {
       headers: { 'Authorization': 'Bearer ' + getToken() }
     });
 
-    if (!startRes.ok) throw new Error("Failed to start - " + startRes.status);
-    const options = await startRes.json();
-    if (options.error) throw new Error(options.error);
+    if (!startRes.ok) throw new Error("Failed to start registration - " + startRes.status);
+    const start = await startRes.json();
+    if (start.error) throw new Error(start.error);
 
-    // LIBRARY ZAI YI DUK ENCODING - NAN FINGERPRINT ZAI NUNA SUNAN COMPANY + LOGO
-    const regResp = await startRegistration(options);
+    const options = {
+   ...start,
+      challenge: bufferDecode(start.challenge),
+      user: {...start.user, id: bufferDecode(start.user.id) }
+    };
+
+    if (options.excludeCredentials && options.excludeCredentials.length > 0) {
+      options.excludeCredentials = options.excludeCredentials.map(cred => ({
+    ...cred,
+        id: bufferDecode(cred.id)
+      }));
+    } else {
+      delete options.excludeCredentials;
+    }
+
+    const cred = await navigator.credentials.create({
+      publicKey: options,
+      signal: AbortSignal.timeout(60000)
+    });
 
     showLoader('Saving credential...');
+
+    const credential = {
+      id: cred.id,
+      rawId: bufferEncode(cred.rawId),
+      response: {
+        attestationObject: bufferEncode(cred.response.attestationObject),
+        clientDataJSON: bufferEncode(cred.response.clientDataJSON)
+      },
+      type: cred.type,
+      clientExtensionResults: cred.getClientExtensionResults()
+    };
+
     const finishRes = await fetch(API + '/api/auth/webauthn/register-finish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
-      body: JSON.stringify(regResp)
+      body: JSON.stringify(credential)
     });
 
-    hideLoader();
-    const result = await finishRes.json();
+    if (!finishRes.ok) throw new Error("Failed to finish registration - " + finishRes.status);
+    const finish = await finishRes.json();
 
-    if (finishRes.ok && result.verified) {
-      showMsg('Fingerprint enabled! Next login will show ' + window.location.hostname, 'success');
+    hideLoader();
+    if (finish.verified) {
+      showMsg('Fingerprint enabled successfully!', 'success');
       checkBiometricStatus();
     } else {
-      throw new Error(result.error || 'Verification failed');
+      showMsg('Failed: ' + (finish.error || 'Unknown'), 'error');
     }
-
   } catch (e) {
     hideLoader();
     if (e.name === 'NotAllowedError') {
-      showMsg('Cancelled or timed out', 'error');
+      showMsg('Biometric cancelled or timed out', 'error');
     } else if (e.name === 'InvalidStateError') {
-      showMsg('Already enabled. Clear site data first.', 'error');
+      showMsg('Biometric already enabled. Clear site data first.', 'error');
     } else {
       showMsg('Error: ' + e.message, 'error');
     }
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🫆 Enable Fingerprint'; }
   }
 }
 
-/* ================= LOGIN WITH BIOMETRIC - BABU EMAIL ================= */
-window.loginWithBiometric = async function() {
-  const btn = el("biometricLoginBtn");
-  if (btn) { btn.disabled = true; btn.textContent = 'Waiting...'; }
+async function loginWithBiometric() {
+  showInputModal('Biometric Login', 'Enter your email', async (email) => {
+    try {
+      showLoader('Starting biometric login...');
+      const startRes = await fetch(API + '/api/auth/webauthn/login-start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+
+      if (!startRes.ok) throw new Error("Failed to start login - " + startRes.status);
+      const start = await startRes.json();
+      if (start.error) throw new Error(start.error);
+
+      hideLoader();
+      showLoader('Touch fingerprint sensor...');
+
+      const options = {
+    ...start,
+        challenge: bufferDecode(start.challenge),
+        allowCredentials: start.allowCredentials.map(cred => ({
+      ...cred,
+          id: bufferDecode(cred.id)
+        }))
+      };
+
+      const assertion = await navigator.credentials.get({
+        publicKey: options,
+        signal: AbortSignal.timeout(60000)
+      });
+
+      showLoader('Verifying...');
+
+      const credential = {
+        id: assertion.id,
+        rawId: bufferEncode(assertion.rawId),
+        response: {
+          authenticatorData: bufferEncode(assertion.response.authenticatorData),
+          clientDataJSON: bufferEncode(assertion.response.clientDataJSON),
+          signature: bufferEncode(assertion.response.signature),
+          userHandle: assertion.response.userHandle? bufferEncode(assertion.response.userHandle) : null
+        },
+        type: assertion.type,
+        clientExtensionResults: assertion.getClientExtensionResults()
+      };
+
+      const finishRes = await fetch(API + '/api/auth/webauthn/login-finish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({...credential, email })
+      });
+
+      if (!finishRes.ok) throw new Error("Failed to finish login - " + finishRes.status);
+      const finish = await finishRes.json();
+
+      hideLoader();
+      if (finish.token) {
+        localStorage.setItem('token', finish.token);
+        location.reload();
+      } else {
+        showMsg('Biometric login failed: ' + (finish.error || 'Unknown'), 'error');
+      }
+    } catch (e) {
+      hideLoader();
+      if (e.name === 'NotAllowedError') {
+        showMsg('Biometric cancelled or timed out', 'error');
+      } else {
+        showMsg('Biometric error: ' + e.message, 'error');
+      }
+    }
+  });
+}
+/* ================= PURCHASE MODAL ================= */
+async function openPurchaseModal(planId, planName, planPrice) {
+  selectedPlanId = planId;
+  selectedPhone = el('dataPhone')?.value;
+
+  if (!selectedPhone) return showMsg('Enter phone number first', 'error');
+
+  actionType = "DATA";
+  const pinInput = el('pinInput');
+  const pinTitle = el('pinModalTitle');
+  const pinDetails = el('pinModalDetails');
+  const bioBtn = el('biometricPurchaseBtn');
+
+  if (pinInput) pinInput.value = '';
+  if (pinTitle) pinTitle.innerText = 'Confirm Purchase';
+  if (pinDetails) pinDetails.innerHTML = `<strong>${planName}</strong><br>${formatNaira(planPrice)}<br>To: ${selectedPhone}`;
 
   try {
-    showLoader('Starting...');
-    const startRes = await fetch(API + '/api/auth/webauthn/login-start', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-      // BABU EMAIL - BUTTON DAYA KAWAI
+    const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
+      headers: { 'Authorization': 'Bearer ' + getToken() }
     });
-
-    if (!startRes.ok) throw new Error("Failed to start - " + startRes.status);
-    const options = await startRes.json();
-    if (options.error) throw new Error(options.error);
-
-    hideLoader();
-    showLoader('Touch fingerprint...');
-
-    // LIBRARY ZAI YI DUK - FINGERPRINT INSTANT
-    const authResp = await startAuthentication(options);
-
-    showLoader('Verifying...');
-    const finishRes = await fetch(API + '/api/auth/webauthn/login-finish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(authResp) // BABU EMAIL
-    });
-
-    hideLoader();
-    const result = await finishRes.json();
-
-    if (finishRes.ok && result.token) {
-      localStorage.setItem('token', result.token);
-      location.reload();
-    } else {
-      throw new Error(result.error || 'Login failed');
-    }
-
+    const data = await res.json();
+    if (bioBtn) bioBtn.style.display = data.enabled? 'inline-block' : 'none';
   } catch (e) {
-    hideLoader();
-    if (e.name === 'NotAllowedError') {
-      showMsg('Cancelled or timed out', 'error');
-    } else {
-      showMsg('Biometric error: ' + e.message, 'error');
-    }
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🫆 Login with Fingerprint'; }
+    console.log('Biometric check failed:', e);
   }
+
+  openModal('pinModal');
+  setTimeout(() => el('pinInput')?.focus(), 100);
 }
 
-// Call on page load
-document.addEventListener('DOMContentLoaded', checkBiometricStatus);
-/* ================= PURCHASE WITH BIOMETRIC - NEW VERSION ================= */
+function openAirtimePin() {
+  const phone = el("airtimePhone").value;
+  const amount = el("airtimeAmount").value;
+  if (!phone ||!amount ||!airtimeNetwork) return showMsg("Fill all fields", "error");
+
+  selectedPhone = phone;
+  actionType = "AIRTIME";
+  const pinInput = el('pinInput');
+  const pinTitle = el('pinModalTitle');
+  const pinDetails = el('pinModalDetails');
+
+  if (pinInput) pinInput.value = '';
+  if (pinTitle) pinTitle.innerText = 'Confirm Airtime';
+  if (pinDetails) pinDetails.innerHTML = `<strong>${airtimeNetwork.toUpperCase()} Airtime</strong><br>${formatNaira(amount)}<br>To: ${phone}`;
+
+  fetch(API + '/api/auth/webauthn/check-enabled', {
+    headers: { 'Authorization': 'Bearer ' + getToken() }
+  }).then(r => r.json()).then(data => {
+    const bioBtn = el('biometricPurchaseBtn');
+    if (bioBtn) bioBtn.style.display = data.enabled? 'inline-block' : 'none';
+  }).catch(() => {});
+
+  openModal('pinModal');
+  setTimeout(() => el('pinInput')?.focus(), 100);
+}
+
+function confirmPurchase() {
+  const pin = el('pinInput')?.value;
+  if (!pin) return showMsg('Enter PIN', 'error');
+  closeModal('pinModal');
+
+  if (actionType === "DATA") buyData(pin);
+  if (actionType === "AIRTIME") buyAirtime(pin);
+}
+
 async function purchaseWithBiometric() {
   if (!selectedPhone) return showMsg('Enter phone number first', 'error');
 
   try {
     closeModal('pinModal');
-    showLoader('Touch fingerprint...');
+    showLoader('Verify fingerprint...');
 
-    // 1. START - Yi amfani da login-start maimakon verify-purchase
-    // Saboda backend din da na turo maka yana da login-start/login-finish kawai
-    const startRes = await fetch(API + '/api/auth/webauthn/login-start', {
+    const start = await fetch(API + '/api/auth/webauthn/verify-purchase', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    if (!startRes.ok) throw new Error('Failed to start biometric');
-    const options = await startRes.json();
-    if (options.error) throw new Error(options.error);
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    }).then(r => r.json());
 
     hideLoader();
-    
-    // 2. LIBRARY ZAI YI DUK - BABU MANUAL ENCODING
-    const { startAuthentication } = await import('https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.js');
-    const authResp = await startAuthentication(options);
 
-    // 3. FINISH - Verify
+    start.challenge = bufferDecode(start.challenge);
+    start.allowCredentials = start.allowCredentials.map(cred => ({
+    ...cred,
+      id: bufferDecode(cred.id)
+    }));
+
+    const assertion = await navigator.credentials.get({ publicKey: start });
+
+    const credential = {
+      id: assertion.id,
+      rawId: bufferEncode(assertion.rawId),
+      response: {
+        authenticatorData: bufferEncode(assertion.response.authenticatorData),
+        clientDataJSON: bufferEncode(assertion.response.clientDataJSON),
+        signature: bufferEncode(assertion.response.signature),
+        userHandle: assertion.response.userHandle? bufferEncode(assertion.response.userHandle) : null
+      },
+      type: assertion.type
+    };
+
     showLoader('Verifying...');
-    const verifyRes = await fetch(API + '/api/auth/webauthn/login-finish', {
+    const verify = await fetch(API + '/api/auth/webauthn/verify-purchase-finish', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(authResp)
-    });
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+      body: JSON.stringify(credential)
+    }).then(r => r.json());
 
     hideLoader();
-    const result = await verifyRes.json();
+    if (!verify.verified) return showMsg('Fingerprint verification failed', 'error');
 
-    if (!verifyRes.ok || !result.token) {
-      throw new Error(result.error || 'Verification failed');
-    }
-
-    // 4. Idan biometric ya yi success, yi purchase da PIN 'biometric_verified'
-    showMsg('Fingerprint verified ✓', 'success');
-    
     if (actionType === "DATA") buyData('biometric_verified');
     if (actionType === "AIRTIME") buyAirtime('biometric_verified');
 
@@ -604,8 +743,6 @@ async function purchaseWithBiometric() {
     } else {
       showMsg('Error: ' + e.message, 'error');
     }
-    // Bude pin modal din baya idan biometric ya fadi
-    openModal('pinModal');
   }
 }
 
@@ -699,6 +836,14 @@ async function buyAirtime(pin) {
   }
 }
 
+/* ================= LOADER - FIXED TO NOT CONFLICT ================= */
+function showLoader(text = "Processing...") {
+  if (el("loaderText")) el("loaderText").innerText = text;
+  openModal("loaderModal");
+}
+function hideLoader() { 
+  closeModal("loaderModal"); 
+}
 
 /* ================= KYC MODAL HANDLERS ================= */
 function openKycModal() {
@@ -716,7 +861,7 @@ function initKycListeners() {
 
   el('idTypeSelect').addEventListener('change', () => {
     const idType = el('idTypeSelect').value;
-    el('idNumberInput').placeholder = idType === 'bvn'? 'Enter 11-digit BVN' : 'Enter 11-digit NIN';
+    el('idNumberInput').placeholder = idType === 'bvn' ? 'Enter 11-digit BVN' : 'Enter 11-digit NIN';
     el('idNumberInput').value = '';
     el('idError').style.display = 'none';
   });
@@ -729,49 +874,56 @@ function initKycListeners() {
   el('submitKycBtn').addEventListener('click', submitKycAndGenerate);
 }
 
-/* ================= DVA GENERATION - MATCHES YOUR HTML ================= */
-async function handleGenerateClick() {
+/* ================= FUND WALLET WITH KYC ================= */
+let pendingFundAmount = 0;
+
+function openFundModal() {
+  el("msgBox").innerHTML = `
+    <div style="text-align:center">
+      <h3>Fund Wallet</h3>
+      <input id="fundAmount" type="number" placeholder="Minimum ₦100" style="width:100%;padding:10px;margin:12px 0" min="100" />
+      <p style="font-size:13px;opacity:0.7;margin-bottom:12px">Fund via PaymentPoint Bank Transfer</p>
+      <button onclick="confirmFund()" class="primaryBtn">Generate Account Details</button>
+    </div>`;
+  openModal("msgModal");
+}
+
+async function confirmFund() {
+  const amount = Number(el("fundAmount")?.value);
+  if (!amount || amount < 100) return showMsg("Minimum funding is ₦100", "error");
+
+  pendingFundAmount = amount;
+
   showLoader("Checking account...");
-
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
-
     const res = await fetch(API + "/api/wallet/create-dva", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({}),
-      signal: controller.signal
+      body: JSON.stringify({})
     });
-
-    clearTimeout(timeout);
     const data = await res.json();
+    hideLoader();
 
     console.log('DVA Response:', data);
 
+    // FIXED: Check requireKyc explicitly first
     if (data.requireKyc === true) {
-      hideLoader();
+      closeModal('msgModal');
       openKycModal();
       return;
     }
 
+    // Account exists or was just created
     if (res.ok && data.success && (data.account_number || data.account?.account_number)) {
-      const acc = data.account_number? data : data.account;
-      updateWalletCard(acc);
-      hideLoader();
-      showMsg("Virtual account created successfully", "success");
+      const acc = data.account_number ? data : data.account;
+      showPaymentPointDetails(acc, amount);
     } else {
-      hideLoader();
       showMsg(data.error || data.message || "Failed to generate account", "error");
     }
   } catch (err) {
     hideLoader();
     console.error("DVA Error:", err);
-    if (err.name === 'AbortError') {
-      showMsg("Request timeout. Please try again.", "error");
-    } else {
-      showMsg(err.message || "Network error. Check your connection.", "error");
-    }
+    showMsg("Server error", "error");
   }
 }
 
@@ -781,7 +933,7 @@ async function submitKycAndGenerate() {
   const idNumber = el('idNumberInput').value;
   const idError = el('idError');
 
-  if (idNumber.length!== 11) {
+  if (idNumber.length !== 11) {
     idError.textContent = `${idType.toUpperCase()} must be exactly 11 digits`;
     idError.style.display = 'block';
     return;
@@ -790,9 +942,7 @@ async function submitKycAndGenerate() {
   const body = {};
   body[idType] = idNumber;
 
-  closeKycModal();
   showLoader("Verifying & generating account...");
-
   try {
     const res = await fetch(API + "/api/wallet/create-dva", {
       method: "POST",
@@ -800,43 +950,100 @@ async function submitKycAndGenerate() {
       body: JSON.stringify(body)
     });
     const data = await res.json();
+    hideLoader();
 
     if (data.success && data.account_number) {
-      updateWalletCard(data);
-      hideLoader();
-      showMsg("Account generated successfully!", "success");
+      closeKycModal();
+      // If funding flow, show payment details. If DVA generation flow, just refresh.
+      if (pendingFundAmount > 0) {
+        showPaymentPointDetails(data, pendingFundAmount);
+        pendingFundAmount = 0;
+      } else {
+        showMsg("Account generated successfully!", "success");
+      }
       await loadAccount();
     } else if (data.requireKyc === true) {
-      hideLoader();
+      // KYC still required - keep modal open
       idError.textContent = data.message || "Verification failed. Check your BVN/NIN";
       idError.style.display = 'block';
-      openKycModal();
     } else {
-      hideLoader();
       idError.textContent = data.error || data.message || "Verification failed";
       idError.style.display = 'block';
-      openKycModal();
     }
   } catch (err) {
     hideLoader();
-    idError.textContent = err.message || 'Network error. Try again.';
+    idError.textContent = 'Network error. Try again.';
     idError.style.display = 'block';
-    openKycModal();
   }
 }
 
-function updateWalletCard(data) {
-  el("bankName").innerText = data.bank_name || "Bank Name";
-  el("accountNumber").innerText = data.account_number || "0000000000";
-  el("accountName").innerText = data.account_name || "Account Name";
-  el("generateAccountBtn").style.display = "none";
+function showPaymentPointDetails(data, amount) {
+  el("msgBox").innerHTML = `
+    <div style="text-align:center">
+      <h3>Bank Transfer Details</h3>
+      <p style="opacity:0.8;margin-bottom:15px">Transfer ₦${formatNaira(amount)} to the account below. Your wallet will be credited automatically within 1-2 minutes.</p>
+
+      <div style="background:var(--card-bg);padding:15px;border-radius:12px;margin:15px 0;text-align:left">
+        <div style="margin-bottom:10px">
+          <small style="opacity:0.6">Bank Name</small>
+          <h4 style="margin:5px 0">${data.bank_name}</h4>
+        </div>
+        <div style="margin-bottom:10px">
+          <small style="opacity:0.6">Account Number</small>
+          <h4 style="margin:5px 0;font-family:monospace;font-size:18px">
+            ${data.account_number}
+            <button onclick="copyToClipboard('${data.account_number}')" class="smallBtn" style="float:right">Copy</button>
+          </h4>
+        </div>
+        <div>
+          <small style="opacity:0.6">Account Name</small>
+          <h4 style="margin:5px 0">${data.account_name}</h4>
+        </div>
+      </div>
+
+      <small style="color:#ffa000">Reference: ${data.reference || 'N/A'}</small>
+      <br><br>
+      <button onclick="closeModal('msgModal')" class="secondaryBtn">Done</button>
+    </div>`;
+  openModal("msgModal");
 }
 
+/* ================= DVA GENERATION - CORRECTED ================= */
+async function generateDVA() {
+  showLoader("Creating your PaymentPoint account...");
+  try {
+    const res = await fetch(API + "/api/wallet/create-dva", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    hideLoader();
 
+    console.log('DVA Response:', data);
 
+    // Check requireKyc explicitly - this must come first
+    if (data.requireKyc === true) {
+      openKycModal();
+      return;
+    }
 
-// Init on load
-document.addEventListener('DOMContentLoaded', initKycListeners);
+    // Success case
+    if (res.ok && data.success && data.account_number) {
+      showMsg("Virtual account created successfully", "success");
+      await loadAccount();
+      return;
+    }
+
+    // All other errors - show message, don't open modal
+    showMsg(data.message || data.error || "Failed to create account", "error");
+
+  } catch (err) {
+    hideLoader();
+    console.error("DVA Error:", err);
+    showMsg("Server error", "error");
+  }
+}
 
 
 
@@ -1212,7 +1419,44 @@ async function savePlanEdit() {
 }
 
 
+/* ================= ACCOUNT ================= */
+async function loadAccount() {
+  const res = await fetch(API + "/api/me", { headers: { Authorization: "Bearer " + getToken() } });
+  const user = await res.json();
 
+  if (el("bankName")) el("bankName").innerText = user.bank_name || "N/A";
+  if (el("accountNumber")) el("accountNumber").innerText = user.account_number || "N/A";
+  if (el("accountName")) el("accountName").innerText = user.account_name || "N/A";
+
+  if (!user.account_number && el("generateAccountBtn")) {
+    el("generateAccountBtn").style.display = "block";
+  }
+
+  updateWallet(user.wallet_balance);
+}
+
+async function generateAccount() {
+  showLoader("Creating your PaymentPoint account...");
+  try {
+    const res = await fetch(API + "/api/wallet/create-dva", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + getToken() }
+    });
+    const data = await res.json();
+    hideLoader();
+    
+    if (res.ok && (data.success || data.account_number)) {
+      showMsg("Virtual account created successfully", "success");
+      if (el("generateAccountBtn")) el("generateAccountBtn").style.display = "none";
+      await loadAccount();
+    } else {
+      showMsg(data.message || data.error || "Failed to create account", "error");
+    }
+  } catch {
+    hideLoader();
+    showMsg("Server error", "error");
+  }
+}
 
 /* ================= BROADCAST ================= */
 function broadcastTopUserUpdate(company) {
@@ -1263,8 +1507,9 @@ function loadAdminData() {
   loadAdminUsers();
 }
 
-
-
+/* ================= MODAL ================= */
+function openModal(id) { el(id).style.display = "flex"; }
+function closeModal(id) { el(id).style.display = "none"; }
 
 /* ================= WS ================= */
 function connectWebSocket() {
@@ -1287,6 +1532,3 @@ function logout() {
 
 /* ================= START ================= */
 document.addEventListener("DOMContentLoaded", loadDashboard);
-
-
-
