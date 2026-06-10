@@ -753,19 +753,19 @@ async function checkBiometricStatus() {
   }
 }
 /* ================= PURCHASE MODAL ================= */
-let selectedPlanId = null;
-let selectedPhone = null;
-let actionType = null; // "DATA" or "AIRTIME"
+// KADA KA MAIMATA DECLARATION - Yi amfani da variables din da suka wanzu
+// Idan sun wanzu a sama, kada ka sake `let` anan
+// Idan basu wanzu ba, to ka saka `let` sau daya kawai a farkon app.js
 
 // Open Purchase Modal for Data
 async function openPurchaseModal(planId, planName, planPrice) {
-  selectedPlanId = planId;
-  selectedPhone = el('dataPhone')?.value;
+  window.selectedPlanId = planId; // Yi amfani da window. don gujewa duplicate
+  window.selectedPhone = el('dataPhone')?.value;
 
-  if (!selectedPhone) return showMsg('Enter phone number first', 'error');
-  if (!/^\d{10,15}$/.test(selectedPhone)) return showMsg('Invalid phone number', 'error');
+  if (!window.selectedPhone) return showMsg('Enter phone number first', 'error');
+  if (!/^\d{10,15}$/.test(window.selectedPhone)) return showMsg('Invalid phone number', 'error');
 
-  actionType = "DATA";
+  window.actionType = "DATA";
   const pinInput = el('pinInput');
   const pinTitle = el('pinModalTitle');
   const pinDetails = el('pinModalDetails');
@@ -774,9 +774,9 @@ async function openPurchaseModal(planId, planName, planPrice) {
 
   if (pinInput) pinInput.value = '';
   if (pinTitle) pinTitle.innerText = 'Confirm Purchase';
-  if (pinDetails) pinDetails.innerHTML = `<strong>${planName}</strong><br>${formatNaira(planPrice)}<br>To: ${selectedPhone}`;
+  if (pinDetails) pinDetails.innerHTML = `<strong>${planName}</strong><br>${formatNaira(planPrice)}<br>To: ${window.selectedPhone}`;
 
-  // Check biometric availability - fast check, no loader
+  // Check biometric availability
   try {
     const available = await isBiometricAvailable();
     if (available && bioBtn) {
@@ -806,7 +806,7 @@ async function openAirtimePin() {
   const phone = el("airtimePhone")?.value;
   const amount = el("airtimeAmount")?.value;
   
-  if (!phone || !amount || !airtimeNetwork) return showMsg("Fill all fields", "error");
+  if (!phone || !amount || !window.airtimeNetwork) return showMsg("Fill all fields", "error");
   if (!/^\d{10,15}$/.test(phone)) return showMsg("Invalid phone number", "error");
   
   const amt = Number(amount);
@@ -814,8 +814,8 @@ async function openAirtimePin() {
     return showMsg("Amount must be between ₦50 and ₦5,000", "error");
   }
 
-  selectedPhone = phone;
-  actionType = "AIRTIME";
+  window.selectedPhone = phone;
+  window.actionType = "AIRTIME";
   const pinInput = el('pinInput');
   const pinTitle = el('pinModalTitle');
   const pinDetails = el('pinModalDetails');
@@ -824,7 +824,7 @@ async function openAirtimePin() {
 
   if (pinInput) pinInput.value = '';
   if (pinTitle) pinTitle.innerText = 'Confirm Airtime';
-  if (pinDetails) pinDetails.innerHTML = `<strong>${airtimeNetwork.toUpperCase()} Airtime</strong><br>${formatNaira(amount)}<br>To: ${phone}`;
+  if (pinDetails) pinDetails.innerHTML = `<strong>${window.airtimeNetwork.toUpperCase()} Airtime</strong><br>${formatNaira(amount)}<br>To: ${phone}`;
 
   // Check biometric availability
   try {
@@ -859,26 +859,26 @@ function confirmPurchase() {
   
   closeModal('pinModal');
 
-  if (actionType === "DATA") buyData(pin);
-  if (actionType === "AIRTIME") buyAirtime(pin);
+  if (window.actionType === "DATA") buyData(pin);
+  if (window.actionType === "AIRTIME") buyAirtime(pin);
 }
 
 // Purchase with Biometric - INSTANT POPUP VERSION
 async function purchaseWithBiometric() {
-  if (!selectedPhone) return showMsg('Phone number missing', 'error');
+  if (!window.selectedPhone) return showMsg('Phone number missing', 'error');
 
   try {
     closeModal('pinModal');
     
     // CRITICAL: Call biometric IMMEDIATELY - no fetch, no loader before this
-    const pin = await verifyBiometricForTransaction(); // Returns 'biometric_verified' instantly
+    const pin = await verifyBiometricForTransaction();
     
     // Only NOW show loader and process
     showLoader('Processing purchase...');
     
-    if (actionType === "DATA") {
+    if (window.actionType === "DATA") {
       await buyData(pin);
-    } else if (actionType === "AIRTIME") {
+    } else if (window.actionType === "AIRTIME") {
       await buyAirtime(pin);
     }
     
@@ -887,7 +887,7 @@ async function purchaseWithBiometric() {
     console.error('Biometric purchase error:', e);
     if (e.name === 'NotAllowedError' || e.message === 'Biometric cancelled') {
       showMsg('Biometric cancelled', 'error');
-      openModal('pinModal'); // Reopen modal for PIN entry
+      openModal('pinModal');
     } else if (e.message === 'Biometric timed out') {
       showMsg('Biometric timed out', 'error');
       openModal('pinModal');
