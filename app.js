@@ -399,6 +399,10 @@ function renderPlans() {
   });
 }
 
+/* ================= BIOMETRIC - NEW VERSION ================= */
+// Saka wannan a saman app.js
+import { startRegistration, startAuthentication } from 'https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.js';
+
 /* ================= BIOMETRIC STATUS ================= */
 async function checkBiometricStatus() {
   const elStatus = el("biometricStatus");
@@ -407,16 +411,14 @@ async function checkBiometricStatus() {
   if (!elStatus) return;
 
   if (!window.isSecureContext) {
-    elStatus.innerText = "Status: HTTPS required for biometric";
-    elStatus.style.color = "var(--warning)";
+    elStatus.innerHTML = "Status: <span style='color:orange'>HTTPS required</span>";
     if (enableBtn) enableBtn.style.display = "none";
     if (loginBtn) loginBtn.style.display = "none";
     return;
   }
 
   if (!window.PublicKeyCredential) {
-    elStatus.innerText = "Status: Not supported on this device/browser";
-    elStatus.style.color = "var(--danger)";
+    elStatus.innerHTML = "Status: <span style='color:red'>Not supported</span>";
     if (enableBtn) enableBtn.style.display = "none";
     if (loginBtn) loginBtn.style.display = "none";
     return;
@@ -425,56 +427,40 @@ async function checkBiometricStatus() {
   try {
     const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
     if (!available) {
-      elStatus.innerText = "Status: No fingerprint/passkey enrolled on device";
-      elStatus.style.color = "var(--warning)";
+      elStatus.innerHTML = "Status: <span style='color:orange'>No fingerprint enrolled</span>";
       if (enableBtn) enableBtn.style.display = "none";
       if (loginBtn) loginBtn.style.display = "none";
       return;
     }
 
-    // Safe fetch with content-type check
     const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
       headers: { 'Authorization': 'Bearer ' + getToken() }
     });
 
-    if (!res.ok) {
-      throw new Error("Server error " + res.status);
-    }
-
-    const contentType = res.headers.get("content-type");
-    if (!contentType ||!contentType.includes("application/json")) {
-      const text = await res.text();
-      console.error("Non-JSON response from check-enabled:", text);
-      throw new Error("Server returned HTML instead of JSON");
-    }
-
+    if (!res.ok) throw new Error("Server error " + res.status);
     const data = await res.json();
 
     if (data.enabled) {
-      elStatus.innerText = "Status: Enabled ✓";
-      elStatus.style.color = "var(--success)";
+      elStatus.innerHTML = "Status: <span style='color:green'>Enabled ✓</span>";
       if (enableBtn) enableBtn.style.display = "none";
       if (loginBtn) loginBtn.style.display = "inline-block";
     } else {
-      elStatus.innerText = "Status: Available - click to enable";
-      elStatus.style.color = "var(--warning)";
-      if (enableBtn) enableBtn.style.display = "block";
+      elStatus.innerHTML = "Status: <span style='color:orange'>Available - click to enable</span>";
+      if (enableBtn) enableBtn.style.display = "inline-block";
       if (loginBtn) loginBtn.style.display = "none";
     }
   } catch (e) {
-    elStatus.innerText = "Status: Check failed - " + e.message;
-    elStatus.style.color = "var(--danger)";
+    elStatus.innerHTML = "Status: <span style='color:red'>Check failed</span>";
     console.error("Biometric check error:", e);
     if (enableBtn) enableBtn.style.display = "none";
     if (loginBtn) loginBtn.style.display = "none";
   }
 }
 
-/* ================= WEBAUTHN ================= */
-async function enableBiometric() {
-  if (!window.PublicKeyCredential) {
-    return showMsg('Biometric not supported on this device/browser', 'error');
-  }
+/* ================= ENABLE BIOMETRIC ================= */
+window.enableBiometric = async function() {
+  const btn = el("enableBiometricBtn");
+  if (btn) { btn.disabled = true; btn.textContent = 'Setting up...'; }
 
   try {
     const startRes = await fetch(API + '/api/auth/webauthn/register-start', {
@@ -482,253 +468,141 @@ async function enableBiometric() {
       headers: { 'Authorization': 'Bearer ' + getToken() }
     });
 
-    if (!startRes.ok) throw new Error("Failed to start registration - " + startRes.status);
-    const start = await startRes.json();
-    if (start.error) throw new Error(start.error);
+    if (!startRes.ok) throw new Error("Failed to start - " + startRes.status);
+    const options = await startRes.json();
+    if (options.error) throw new Error(options.error);
 
-    const options = {
-   ...start,
-      challenge: bufferDecode(start.challenge),
-      user: {...start.user, id: bufferDecode(start.user.id) }
-    };
-
-    if (options.excludeCredentials && options.excludeCredentials.length > 0) {
-      options.excludeCredentials = options.excludeCredentials.map(cred => ({
-    ...cred,
-        id: bufferDecode(cred.id)
-      }));
-    } else {
-      delete options.excludeCredentials;
-    }
-
-    const cred = await navigator.credentials.create({
-      publicKey: options,
-      signal: AbortSignal.timeout(60000)
-    });
+    // LIBRARY ZAI YI DUK ENCODING - NAN FINGERPRINT ZAI NUNA SUNAN COMPANY + LOGO
+    const regResp = await startRegistration(options);
 
     showLoader('Saving credential...');
-
-    const credential = {
-      id: cred.id,
-      rawId: bufferEncode(cred.rawId),
-      response: {
-        attestationObject: bufferEncode(cred.response.attestationObject),
-        clientDataJSON: bufferEncode(cred.response.clientDataJSON)
-      },
-      type: cred.type,
-      clientExtensionResults: cred.getClientExtensionResults()
-    };
-
     const finishRes = await fetch(API + '/api/auth/webauthn/register-finish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
-      body: JSON.stringify(credential)
+      body: JSON.stringify(regResp)
     });
 
-    if (!finishRes.ok) throw new Error("Failed to finish registration - " + finishRes.status);
-    const finish = await finishRes.json();
-
     hideLoader();
-    if (finish.verified) {
-      showMsg('Fingerprint enabled successfully!', 'success');
+    const result = await finishRes.json();
+
+    if (finishRes.ok && result.verified) {
+      showMsg('Fingerprint enabled! Next login will show ' + window.location.hostname, 'success');
       checkBiometricStatus();
     } else {
-      showMsg('Failed: ' + (finish.error || 'Unknown'), 'error');
+      throw new Error(result.error || 'Verification failed');
     }
+
   } catch (e) {
     hideLoader();
     if (e.name === 'NotAllowedError') {
-      showMsg('Biometric cancelled or timed out', 'error');
+      showMsg('Cancelled or timed out', 'error');
     } else if (e.name === 'InvalidStateError') {
-      showMsg('Biometric already enabled. Clear site data first.', 'error');
+      showMsg('Already enabled. Clear site data first.', 'error');
     } else {
       showMsg('Error: ' + e.message, 'error');
     }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🫆 Enable Fingerprint'; }
   }
 }
 
-async function loginWithBiometric() {
-  showInputModal('Biometric Login', 'Enter your email', async (email) => {
-    try {
-      showLoader('Starting biometric login...');
-      const startRes = await fetch(API + '/api/auth/webauthn/login-start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-
-      if (!startRes.ok) throw new Error("Failed to start login - " + startRes.status);
-      const start = await startRes.json();
-      if (start.error) throw new Error(start.error);
-
-      hideLoader();
-      showLoader('Touch fingerprint sensor...');
-
-      const options = {
-    ...start,
-        challenge: bufferDecode(start.challenge),
-        allowCredentials: start.allowCredentials.map(cred => ({
-      ...cred,
-          id: bufferDecode(cred.id)
-        }))
-      };
-
-      const assertion = await navigator.credentials.get({
-        publicKey: options,
-        signal: AbortSignal.timeout(60000)
-      });
-
-      showLoader('Verifying...');
-
-      const credential = {
-        id: assertion.id,
-        rawId: bufferEncode(assertion.rawId),
-        response: {
-          authenticatorData: bufferEncode(assertion.response.authenticatorData),
-          clientDataJSON: bufferEncode(assertion.response.clientDataJSON),
-          signature: bufferEncode(assertion.response.signature),
-          userHandle: assertion.response.userHandle? bufferEncode(assertion.response.userHandle) : null
-        },
-        type: assertion.type,
-        clientExtensionResults: assertion.getClientExtensionResults()
-      };
-
-      const finishRes = await fetch(API + '/api/auth/webauthn/login-finish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({...credential, email })
-      });
-
-      if (!finishRes.ok) throw new Error("Failed to finish login - " + finishRes.status);
-      const finish = await finishRes.json();
-
-      hideLoader();
-      if (finish.token) {
-        localStorage.setItem('token', finish.token);
-        location.reload();
-      } else {
-        showMsg('Biometric login failed: ' + (finish.error || 'Unknown'), 'error');
-      }
-    } catch (e) {
-      hideLoader();
-      if (e.name === 'NotAllowedError') {
-        showMsg('Biometric cancelled or timed out', 'error');
-      } else {
-        showMsg('Biometric error: ' + e.message, 'error');
-      }
-    }
-  });
-}
-/* ================= PURCHASE MODAL ================= */
-async function openPurchaseModal(planId, planName, planPrice) {
-  selectedPlanId = planId;
-  selectedPhone = el('dataPhone')?.value;
-
-  if (!selectedPhone) return showMsg('Enter phone number first', 'error');
-
-  actionType = "DATA";
-  const pinInput = el('pinInput');
-  const pinTitle = el('pinModalTitle');
-  const pinDetails = el('pinModalDetails');
-  const bioBtn = el('biometricPurchaseBtn');
-
-  if (pinInput) pinInput.value = '';
-  if (pinTitle) pinTitle.innerText = 'Confirm Purchase';
-  if (pinDetails) pinDetails.innerHTML = `<strong>${planName}</strong><br>${formatNaira(planPrice)}<br>To: ${selectedPhone}`;
+/* ================= LOGIN WITH BIOMETRIC - BABU EMAIL ================= */
+window.loginWithBiometric = async function() {
+  const btn = el("biometricLoginBtn");
+  if (btn) { btn.disabled = true; btn.textContent = 'Waiting...'; }
 
   try {
-    const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
-      headers: { 'Authorization': 'Bearer ' + getToken() }
+    showLoader('Starting...');
+    const startRes = await fetch(API + '/api/auth/webauthn/login-start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+      // BABU EMAIL - BUTTON DAYA KAWAI
     });
-    const data = await res.json();
-    if (bioBtn) bioBtn.style.display = data.enabled? 'inline-block' : 'none';
+
+    if (!startRes.ok) throw new Error("Failed to start - " + startRes.status);
+    const options = await startRes.json();
+    if (options.error) throw new Error(options.error);
+
+    hideLoader();
+    showLoader('Touch fingerprint...');
+
+    // LIBRARY ZAI YI DUK - FINGERPRINT INSTANT
+    const authResp = await startAuthentication(options);
+
+    showLoader('Verifying...');
+    const finishRes = await fetch(API + '/api/auth/webauthn/login-finish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(authResp) // BABU EMAIL
+    });
+
+    hideLoader();
+    const result = await finishRes.json();
+
+    if (finishRes.ok && result.token) {
+      localStorage.setItem('token', result.token);
+      location.reload();
+    } else {
+      throw new Error(result.error || 'Login failed');
+    }
+
   } catch (e) {
-    console.log('Biometric check failed:', e);
+    hideLoader();
+    if (e.name === 'NotAllowedError') {
+      showMsg('Cancelled or timed out', 'error');
+    } else {
+      showMsg('Biometric error: ' + e.message, 'error');
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🫆 Login with Fingerprint'; }
   }
-
-  openModal('pinModal');
-  setTimeout(() => el('pinInput')?.focus(), 100);
 }
 
-function openAirtimePin() {
-  const phone = el("airtimePhone").value;
-  const amount = el("airtimeAmount").value;
-  if (!phone ||!amount ||!airtimeNetwork) return showMsg("Fill all fields", "error");
-
-  selectedPhone = phone;
-  actionType = "AIRTIME";
-  const pinInput = el('pinInput');
-  const pinTitle = el('pinModalTitle');
-  const pinDetails = el('pinModalDetails');
-
-  if (pinInput) pinInput.value = '';
-  if (pinTitle) pinTitle.innerText = 'Confirm Airtime';
-  if (pinDetails) pinDetails.innerHTML = `<strong>${airtimeNetwork.toUpperCase()} Airtime</strong><br>${formatNaira(amount)}<br>To: ${phone}`;
-
-  fetch(API + '/api/auth/webauthn/check-enabled', {
-    headers: { 'Authorization': 'Bearer ' + getToken() }
-  }).then(r => r.json()).then(data => {
-    const bioBtn = el('biometricPurchaseBtn');
-    if (bioBtn) bioBtn.style.display = data.enabled? 'inline-block' : 'none';
-  }).catch(() => {});
-
-  openModal('pinModal');
-  setTimeout(() => el('pinInput')?.focus(), 100);
-}
-
-function confirmPurchase() {
-  const pin = el('pinInput')?.value;
-  if (!pin) return showMsg('Enter PIN', 'error');
-  closeModal('pinModal');
-
-  if (actionType === "DATA") buyData(pin);
-  if (actionType === "AIRTIME") buyAirtime(pin);
-}
-
+// Call on page load
+document.addEventListener('DOMContentLoaded', checkBiometricStatus);
+/* ================= PURCHASE WITH BIOMETRIC - NEW VERSION ================= */
 async function purchaseWithBiometric() {
   if (!selectedPhone) return showMsg('Enter phone number first', 'error');
 
   try {
     closeModal('pinModal');
-    showLoader('Verify fingerprint...');
+    showLoader('Touch fingerprint...');
 
-    const start = await fetch(API + '/api/auth/webauthn/verify-purchase', {
+    // 1. START - Yi amfani da login-start maimakon verify-purchase
+    // Saboda backend din da na turo maka yana da login-start/login-finish kawai
+    const startRes = await fetch(API + '/api/auth/webauthn/login-start', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + getToken() }
-    }).then(r => r.json());
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!startRes.ok) throw new Error('Failed to start biometric');
+    const options = await startRes.json();
+    if (options.error) throw new Error(options.error);
 
     hideLoader();
+    
+    // 2. LIBRARY ZAI YI DUK - BABU MANUAL ENCODING
+    const { startAuthentication } = await import('https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.js');
+    const authResp = await startAuthentication(options);
 
-    start.challenge = bufferDecode(start.challenge);
-    start.allowCredentials = start.allowCredentials.map(cred => ({
-    ...cred,
-      id: bufferDecode(cred.id)
-    }));
-
-    const assertion = await navigator.credentials.get({ publicKey: start });
-
-    const credential = {
-      id: assertion.id,
-      rawId: bufferEncode(assertion.rawId),
-      response: {
-        authenticatorData: bufferEncode(assertion.response.authenticatorData),
-        clientDataJSON: bufferEncode(assertion.response.clientDataJSON),
-        signature: bufferEncode(assertion.response.signature),
-        userHandle: assertion.response.userHandle? bufferEncode(assertion.response.userHandle) : null
-      },
-      type: assertion.type
-    };
-
+    // 3. FINISH - Verify
     showLoader('Verifying...');
-    const verify = await fetch(API + '/api/auth/webauthn/verify-purchase-finish', {
+    const verifyRes = await fetch(API + '/api/auth/webauthn/login-finish', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
-      body: JSON.stringify(credential)
-    }).then(r => r.json());
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(authResp)
+    });
 
     hideLoader();
-    if (!verify.verified) return showMsg('Fingerprint verification failed', 'error');
+    const result = await verifyRes.json();
 
+    if (!verifyRes.ok || !result.token) {
+      throw new Error(result.error || 'Verification failed');
+    }
+
+    // 4. Idan biometric ya yi success, yi purchase da PIN 'biometric_verified'
+    showMsg('Fingerprint verified ✓', 'success');
+    
     if (actionType === "DATA") buyData('biometric_verified');
     if (actionType === "AIRTIME") buyAirtime('biometric_verified');
 
@@ -739,6 +613,8 @@ async function purchaseWithBiometric() {
     } else {
       showMsg('Error: ' + e.message, 'error');
     }
+    // Bude pin modal din baya idan biometric ya fadi
+    openModal('pinModal');
   }
 }
 
@@ -1482,28 +1358,7 @@ function formatDate(date) { return new Date(date).toLocaleDateString('en-GB'); }
 function openModal(id) { const m = el(id); if (m) m.style.display = "flex"; }
 function closeModal(id) { const m = el(id); if (m) m.style.display = "none"; }
 
-/* ================= WEBAUTHN HELPERS ================= */
-function bufferEncode(value) {
-  if (!value) return null;
-  const uint8Array = new Uint8Array(value);
-  let binary = '';
-  for (let i = 0; i < uint8Array.byteLength; i++) {
-    binary += String.fromCharCode(uint8Array[i]);
-  }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
 
-function bufferDecode(value) {
-  if (!value) return null;
-  const padding = '='.repeat((4 - value.length % 4) % 4);
-  const base64 = (value + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray.buffer;
-}
 
 /* ================= MESSAGE MODAL ================= */
 function showMsg(msg, type = "info") {
@@ -2840,12 +2695,3 @@ function connectWebSocket() {
   ws.onclose = () => setTimeout(connectWebSocket, 5000);
 }
 
-/* ================= LOGOUT ================= */
-function logout() {
-  if (ws) ws.close();
-  localStorage.clear();
-  window.location.href = "login.html";
-}
-
-/* ================= START ================= */
-document.addEventListener("DOMContentLoaded", loadDashboard);
