@@ -1263,9 +1263,8 @@ function loadAdminData() {
   loadAdminUsers();
 }
 
-/* ================= MODAL ================= */
-function openModal(id) { el(id).style.display = "flex"; }
-function closeModal(id) { el(id).style.display = "none"; }
+
+
 
 /* ================= WS ================= */
 function connectWebSocket() {
