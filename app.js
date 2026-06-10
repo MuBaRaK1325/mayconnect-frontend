@@ -706,14 +706,6 @@ async function buyAirtime(pin) {
   }
 }
 
-/* ================= LOADER - FIXED TO NOT CONFLICT ================= */
-function showLoader(text = "Processing...") {
-  if (el("loaderText")) el("loaderText").innerText = text;
-  openModal("loaderModal");
-}
-function hideLoader() {
-  closeModal("loaderModal");
-}
 
 /* ================= KYC MODAL HANDLERS ================= */
 function openKycModal() {
