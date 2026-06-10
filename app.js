@@ -401,8 +401,6 @@ function renderPlans() {
 
 /* ================= BIOMETRIC - NEW VERSION ================= */
 // Saka wannan a saman app.js
-import { startRegistration, startAuthentication } from 'https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.js';
-
 /* ================= BIOMETRIC STATUS ================= */
 async function checkBiometricStatus() {
   const elStatus = el("biometricStatus");
