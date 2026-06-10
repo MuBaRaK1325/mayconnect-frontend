@@ -1189,36 +1189,9 @@ function copyAccount() {
     }
 }
 
-// ================= CHECK IF USER HAS ACCOUNT ON LOAD =================
-async function checkVirtualAccount() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        document.getElementById('generateAccountBtn').style.display = 'block';
-        return;
-    }
 
-    try {
-        const res = await fetch(`${API_BASE}/user/profile`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        
-        if (res.ok && data.account_number) {
-            document.getElementById('bankName').textContent = data.bank_name || 'Bank';
-            document.getElementById('accountNumber').textContent = data.account_number;
-            document.getElementById('accountName').textContent = data.account_name;
-            document.getElementById('generateAccountBtn').style.display = 'none';
-        } else {
-            document.getElementById('generateAccountBtn').style.display = 'block';
-        }
-    } catch (err) {
-        console.error('Failed to check account:', err);
-        document.getElementById('generateAccountBtn').style.display = 'block';
-    }
-}
 
-// ================= INIT =================
-document.addEventListener('DOMContentLoaded', checkVirtualAccount);
+
 
 // Close modal when clicking outside
 document.getElementById('kycModal').addEventListener('click', function(e) {
