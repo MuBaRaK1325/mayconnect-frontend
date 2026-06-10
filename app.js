@@ -1224,44 +1224,7 @@ async function savePlanEdit() {
 }
 
 
-/* ================= ACCOUNT ================= */
-async function loadAccount() {
-  const res = await fetch(API + "/api/me", { headers: { Authorization: "Bearer " + getToken() } });
-  const user = await res.json();
 
-  if (el("bankName")) el("bankName").innerText = user.bank_name || "N/A";
-  if (el("accountNumber")) el("accountNumber").innerText = user.account_number || "N/A";
-  if (el("accountName")) el("accountName").innerText = user.account_name || "N/A";
-
-  if (!user.account_number && el("generateAccountBtn")) {
-    el("generateAccountBtn").style.display = "block";
-  }
-
-  updateWallet(user.wallet_balance);
-}
-
-async function generateAccount() {
-  showLoader("Creating your PaymentPoint account...");
-  try {
-    const res = await fetch(API + "/api/wallet/create-dva", {
-      method: "POST",
-      headers: { Authorization: "Bearer " + getToken() }
-    });
-    const data = await res.json();
-    hideLoader();
-    
-    if (res.ok && (data.success || data.account_number)) {
-      showMsg("Virtual account created successfully", "success");
-      if (el("generateAccountBtn")) el("generateAccountBtn").style.display = "none";
-      await loadAccount();
-    } else {
-      showMsg(data.message || data.error || "Failed to create account", "error");
-    }
-  } catch {
-    hideLoader();
-    showMsg("Server error", "error");
-  }
-}
 
 /* ================= BROADCAST ================= */
 function broadcastTopUserUpdate(company) {
