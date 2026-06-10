@@ -839,13 +839,8 @@ function updateWalletCard(data) {
   el("generateAccountBtn").style.display = "none";
 }
 
-function copyAccount() {
-  const accountNum = el("accountNumber").innerText;
-  if (accountNum && accountNum!== "0000000000") {
-    navigator.clipboard.writeText(accountNum);
-    showMsg("Account number copied", "success");
-  }
-}
+
+
 
 // Init on load
 document.addEventListener('DOMContentLoaded', initKycListeners);
