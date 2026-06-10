@@ -474,42 +474,78 @@ async function checkBiometricStatus() {
   }
 }
 
-/* ================= WEBAUTHN ================= */
+/* ================= WEBAUTHN - BIOMETRIC AUTH - INSTANT POPUP ================= */
+
+// Helper functions
+function bufferDecode(value) {
+  return Uint8Array.from(atob(value.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+}
+
+function bufferEncode(value) {
+  return btoa(String.fromCharCode(...new Uint8Array(value)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+// Check if biometric is available
+async function isBiometricAvailable() {
+  if (!window.PublicKeyCredential) return false;
+  return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+}
+
+// Enable Biometric for current user
 async function enableBiometric() {
   if (!window.PublicKeyCredential) {
     return showMsg('Biometric not supported on this device/browser', 'error');
   }
 
+  const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  if (!available) {
+    return showMsg('No fingerprint/face sensor detected on this device', 'error');
+  }
+
+  let start = null;
   try {
+    // 1. Fetch challenge first - BEFORE showing any loader
     const startRes = await fetch(API + '/api/auth/webauthn/register-start', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + getToken() }
     });
 
-    if (!startRes.ok) throw new Error("Failed to start registration - " + startRes.status);
-    const start = await startRes.json();
+    if (!startRes.ok) {
+      const err = await startRes.json().catch(() => ({ error: `HTTP ${startRes.status}` }));
+      throw new Error(err.error || err.message || "Failed to start registration");
+    }
+    
+    start = await startRes.json();
     if (start.error) throw new Error(start.error);
 
+    // 2. CRITICAL: Call biometric IMMEDIATELY - no await between user click and this
     const options = {
-   ...start,
+      ...start,
       challenge: bufferDecode(start.challenge),
-      user: {...start.user, id: bufferDecode(start.user.id) }
+      user: { ...start.user, id: bufferDecode(start.user.id) }
     };
 
     if (options.excludeCredentials && options.excludeCredentials.length > 0) {
       options.excludeCredentials = options.excludeCredentials.map(cred => ({
-    ...cred,
+        ...cred,
         id: bufferDecode(cred.id)
       }));
     } else {
       delete options.excludeCredentials;
     }
 
+    // THIS MUST RUN IMMEDIATELY AFTER USER CLICK - NO LOADER BEFORE IT
     const cred = await navigator.credentials.create({
       publicKey: options,
       signal: AbortSignal.timeout(60000)
     });
 
+    if (!cred) throw new Error('Biometric creation cancelled');
+
+    // 3. Only NOW show loader - after biometric prompt is done
     showLoader('Saving credential...');
 
     const credential = {
@@ -529,50 +565,65 @@ async function enableBiometric() {
       body: JSON.stringify(credential)
     });
 
-    if (!finishRes.ok) throw new Error("Failed to finish registration - " + finishRes.status);
+    if (!finishRes.ok) {
+      const err = await finishRes.json().catch(() => ({ error: `HTTP ${finishRes.status}` }));
+      throw new Error(err.error || err.message || "Failed to finish registration");
+    }
+    
     const finish = await finishRes.json();
 
     hideLoader();
     if (finish.verified) {
       showMsg('Fingerprint enabled successfully!', 'success');
-      checkBiometricStatus();
+      if (typeof checkBiometricStatus === 'function') checkBiometricStatus();
     } else {
-      showMsg('Failed: ' + (finish.error || 'Unknown'), 'error');
+      showMsg('Failed: ' + (finish.error || 'Verification failed'), 'error');
     }
   } catch (e) {
     hideLoader();
+    console.error('Biometric enable error:', e);
     if (e.name === 'NotAllowedError') {
       showMsg('Biometric cancelled or timed out', 'error');
     } else if (e.name === 'InvalidStateError') {
-      showMsg('Biometric already enabled. Clear site data first.', 'error');
+      showMsg('Biometric already enabled for this account', 'error');
+    } else if (e.name === 'AbortError') {
+      showMsg('Biometric request timed out', 'error');
     } else {
       showMsg('Error: ' + e.message, 'error');
     }
   }
 }
 
+// Login with Biometric
 async function loginWithBiometric() {
   showInputModal('Biometric Login', 'Enter your email', async (email) => {
+    if (!email || !email.includes('@')) {
+      return showMsg('Please enter a valid email', 'error');
+    }
+
+    let start = null;
     try {
-      showLoader('Starting biometric login...');
+      // 1. Fetch challenge first
       const startRes = await fetch(API + '/api/auth/webauthn/login-start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       });
 
-      if (!startRes.ok) throw new Error("Failed to start login - " + startRes.status);
-      const start = await startRes.json();
+      if (!startRes.ok) {
+        const err = await startRes.json().catch(() => ({ error: `HTTP ${startRes.status}` }));
+        throw new Error(err.error || err.message || "Failed to start login");
+      }
+      
+      start = await startRes.json();
       if (start.error) throw new Error(start.error);
 
-      hideLoader();
-      showLoader('Touch fingerprint sensor...');
-
+      // 2. CRITICAL: Call biometric IMMEDIATELY - no loader before this
       const options = {
-    ...start,
+        ...start,
         challenge: bufferDecode(start.challenge),
         allowCredentials: start.allowCredentials.map(cred => ({
-      ...cred,
+          ...cred,
           id: bufferDecode(cred.id)
         }))
       };
@@ -582,6 +633,9 @@ async function loginWithBiometric() {
         signal: AbortSignal.timeout(60000)
       });
 
+      if (!assertion) throw new Error('Biometric authentication cancelled');
+
+      // 3. Only NOW show loader
       showLoader('Verifying...');
 
       const credential = {
@@ -591,7 +645,7 @@ async function loginWithBiometric() {
           authenticatorData: bufferEncode(assertion.response.authenticatorData),
           clientDataJSON: bufferEncode(assertion.response.clientDataJSON),
           signature: bufferEncode(assertion.response.signature),
-          userHandle: assertion.response.userHandle? bufferEncode(assertion.response.userHandle) : null
+          userHandle: assertion.response.userHandle ? bufferEncode(assertion.response.userHandle) : null
         },
         type: assertion.type,
         clientExtensionResults: assertion.getClientExtensionResults()
@@ -600,146 +654,243 @@ async function loginWithBiometric() {
       const finishRes = await fetch(API + '/api/auth/webauthn/login-finish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({...credential, email })
+        body: JSON.stringify({ ...credential, email })
       });
 
-      if (!finishRes.ok) throw new Error("Failed to finish login - " + finishRes.status);
+      if (!finishRes.ok) {
+        const err = await finishRes.json().catch(() => ({ error: `HTTP ${finishRes.status}` }));
+        throw new Error(err.error || err.message || "Failed to finish login");
+      }
+      
       const finish = await finishRes.json();
 
       hideLoader();
       if (finish.token) {
         localStorage.setItem('token', finish.token);
-        location.reload();
+        showMsg('Login successful!', 'success');
+        setTimeout(() => location.reload(), 800);
       } else {
         showMsg('Biometric login failed: ' + (finish.error || 'Unknown'), 'error');
       }
     } catch (e) {
       hideLoader();
+      console.error('Biometric login error:', e);
       if (e.name === 'NotAllowedError') {
         showMsg('Biometric cancelled or timed out', 'error');
+      } else if (e.name === 'AbortError') {
+        showMsg('Biometric request timed out', 'error');
       } else {
         showMsg('Biometric error: ' + e.message, 'error');
       }
     }
   });
 }
+
+// Verify Biometric for Transactions - INSTANT POPUP
+async function verifyBiometricForTransaction() {
+  if (!window.PublicKeyCredential) {
+    throw new Error('Biometric not supported on this device');
+  }
+
+  const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  if (!available) {
+    throw new Error('No fingerprint/face sensor detected');
+  }
+
+  try {
+    // CRITICAL: Call biometric IMMEDIATELY - no loader, no fetch before this
+    const challenge = new Uint8Array(32);
+    crypto.getRandomValues(challenge);
+    
+    const options = {
+      challenge: challenge,
+      timeout: 60000,
+      userVerification: 'required'
+    };
+
+    // THIS MUST RUN IMMEDIATELY AFTER USER CLICK
+    const assertion = await navigator.credentials.get({
+      publicKey: options,
+      signal: AbortSignal.timeout(60000)
+    });
+
+    if (!assertion) throw new Error('Biometric verification cancelled');
+    
+    // Return special flag for backend
+    return 'biometric_verified';
+  } catch (e) {
+    console.error('Transaction biometric error:', e);
+    if (e.name === 'NotAllowedError') {
+      throw new Error('Biometric cancelled');
+    } else if (e.name === 'AbortError') {
+      throw new Error('Biometric timed out');
+    } else {
+      throw new Error('Biometric verification failed: ' + e.message);
+    }
+  }
+}
+
+// Check biometric status for current user
+async function checkBiometricStatus() {
+  try {
+    const res = await fetch(API + '/api/auth/webauthn/status', {
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    });
+    
+    if (!res.ok) return false;
+    const data = await res.json();
+    
+    const statusEl = document.getElementById('biometricStatus');
+    if (statusEl) {
+      statusEl.textContent = data.enabled ? 'Enabled ✓' : 'Not Enabled';
+      statusEl.style.color = data.enabled ? '#00c853' : '#ff4d4d';
+    }
+    
+    return data.enabled || false;
+  } catch (e) {
+    console.error('Biometric status check error:', e);
+    return false;
+  }
+}
 /* ================= PURCHASE MODAL ================= */
+let selectedPlanId = null;
+let selectedPhone = null;
+let actionType = null; // "DATA" or "AIRTIME"
+
+// Open Purchase Modal for Data
 async function openPurchaseModal(planId, planName, planPrice) {
   selectedPlanId = planId;
   selectedPhone = el('dataPhone')?.value;
 
   if (!selectedPhone) return showMsg('Enter phone number first', 'error');
+  if (!/^\d{10,15}$/.test(selectedPhone)) return showMsg('Invalid phone number', 'error');
 
   actionType = "DATA";
   const pinInput = el('pinInput');
   const pinTitle = el('pinModalTitle');
   const pinDetails = el('pinModalDetails');
   const bioBtn = el('biometricPurchaseBtn');
+  const pinGroup = el('pinInputGroup');
 
   if (pinInput) pinInput.value = '';
   if (pinTitle) pinTitle.innerText = 'Confirm Purchase';
   if (pinDetails) pinDetails.innerHTML = `<strong>${planName}</strong><br>${formatNaira(planPrice)}<br>To: ${selectedPhone}`;
 
+  // Check biometric availability - fast check, no loader
   try {
-    const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
-      headers: { 'Authorization': 'Bearer ' + getToken() }
-    });
-    const data = await res.json();
-    if (bioBtn) bioBtn.style.display = data.enabled? 'inline-block' : 'none';
+    const available = await isBiometricAvailable();
+    if (available && bioBtn) {
+      const res = await fetch(API + '/api/auth/webauthn/status', {
+        headers: { 'Authorization': 'Bearer ' + getToken() }
+      });
+      const data = await res.json();
+      bioBtn.style.display = data.enabled ? 'inline-block' : 'none';
+      if (pinGroup) pinGroup.style.display = data.enabled ? 'none' : 'block';
+    } else {
+      if (bioBtn) bioBtn.style.display = 'none';
+      if (pinGroup) pinGroup.style.display = 'block';
+    }
   } catch (e) {
     console.log('Biometric check failed:', e);
+    if (bioBtn) bioBtn.style.display = 'none';
   }
 
   openModal('pinModal');
-  setTimeout(() => el('pinInput')?.focus(), 100);
+  setTimeout(() => {
+    if (pinGroup?.style.display !== 'none') el('pinInput')?.focus();
+  }, 100);
 }
 
-function openAirtimePin() {
-  const phone = el("airtimePhone").value;
-  const amount = el("airtimeAmount").value;
-  if (!phone ||!amount ||!airtimeNetwork) return showMsg("Fill all fields", "error");
+// Open Purchase Modal for Airtime
+async function openAirtimePin() {
+  const phone = el("airtimePhone")?.value;
+  const amount = el("airtimeAmount")?.value;
+  
+  if (!phone || !amount || !airtimeNetwork) return showMsg("Fill all fields", "error");
+  if (!/^\d{10,15}$/.test(phone)) return showMsg("Invalid phone number", "error");
+  
+  const amt = Number(amount);
+  if (isNaN(amt) || amt < 50 || amt > 5000) {
+    return showMsg("Amount must be between ₦50 and ₦5,000", "error");
+  }
 
   selectedPhone = phone;
   actionType = "AIRTIME";
   const pinInput = el('pinInput');
   const pinTitle = el('pinModalTitle');
   const pinDetails = el('pinModalDetails');
+  const bioBtn = el('biometricPurchaseBtn');
+  const pinGroup = el('pinInputGroup');
 
   if (pinInput) pinInput.value = '';
   if (pinTitle) pinTitle.innerText = 'Confirm Airtime';
   if (pinDetails) pinDetails.innerHTML = `<strong>${airtimeNetwork.toUpperCase()} Airtime</strong><br>${formatNaira(amount)}<br>To: ${phone}`;
 
-  fetch(API + '/api/auth/webauthn/check-enabled', {
-    headers: { 'Authorization': 'Bearer ' + getToken() }
-  }).then(r => r.json()).then(data => {
-    const bioBtn = el('biometricPurchaseBtn');
-    if (bioBtn) bioBtn.style.display = data.enabled? 'inline-block' : 'none';
-  }).catch(() => {});
+  // Check biometric availability
+  try {
+    const available = await isBiometricAvailable();
+    if (available && bioBtn) {
+      const res = await fetch(API + '/api/auth/webauthn/status', {
+        headers: { 'Authorization': 'Bearer ' + getToken() }
+      });
+      const data = await res.json();
+      bioBtn.style.display = data.enabled ? 'inline-block' : 'none';
+      if (pinGroup) pinGroup.style.display = data.enabled ? 'none' : 'block';
+    } else {
+      if (bioBtn) bioBtn.style.display = 'none';
+      if (pinGroup) pinGroup.style.display = 'block';
+    }
+  } catch (e) {
+    console.log('Biometric check failed:', e);
+    if (bioBtn) bioBtn.style.display = 'none';
+  }
 
   openModal('pinModal');
-  setTimeout(() => el('pinInput')?.focus(), 100);
+  setTimeout(() => {
+    if (pinGroup?.style.display !== 'none') el('pinInput')?.focus();
+  }, 100);
 }
 
+// Confirm Purchase with PIN
 function confirmPurchase() {
   const pin = el('pinInput')?.value;
   if (!pin) return showMsg('Enter PIN', 'error');
+  if (!/^\d{4}$/.test(pin)) return showMsg('PIN must be 4 digits', 'error');
+  
   closeModal('pinModal');
 
   if (actionType === "DATA") buyData(pin);
   if (actionType === "AIRTIME") buyAirtime(pin);
 }
 
+// Purchase with Biometric - INSTANT POPUP VERSION
 async function purchaseWithBiometric() {
-  if (!selectedPhone) return showMsg('Enter phone number first', 'error');
+  if (!selectedPhone) return showMsg('Phone number missing', 'error');
 
   try {
     closeModal('pinModal');
-    showLoader('Verify fingerprint...');
-
-    const start = await fetch(API + '/api/auth/webauthn/verify-purchase', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + getToken() }
-    }).then(r => r.json());
-
-    hideLoader();
-
-    start.challenge = bufferDecode(start.challenge);
-    start.allowCredentials = start.allowCredentials.map(cred => ({
-    ...cred,
-      id: bufferDecode(cred.id)
-    }));
-
-    const assertion = await navigator.credentials.get({ publicKey: start });
-
-    const credential = {
-      id: assertion.id,
-      rawId: bufferEncode(assertion.rawId),
-      response: {
-        authenticatorData: bufferEncode(assertion.response.authenticatorData),
-        clientDataJSON: bufferEncode(assertion.response.clientDataJSON),
-        signature: bufferEncode(assertion.response.signature),
-        userHandle: assertion.response.userHandle? bufferEncode(assertion.response.userHandle) : null
-      },
-      type: assertion.type
-    };
-
-    showLoader('Verifying...');
-    const verify = await fetch(API + '/api/auth/webauthn/verify-purchase-finish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
-      body: JSON.stringify(credential)
-    }).then(r => r.json());
-
-    hideLoader();
-    if (!verify.verified) return showMsg('Fingerprint verification failed', 'error');
-
-    if (actionType === "DATA") buyData('biometric_verified');
-    if (actionType === "AIRTIME") buyAirtime('biometric_verified');
-
+    
+    // CRITICAL: Call biometric IMMEDIATELY - no fetch, no loader before this
+    const pin = await verifyBiometricForTransaction(); // Returns 'biometric_verified' instantly
+    
+    // Only NOW show loader and process
+    showLoader('Processing purchase...');
+    
+    if (actionType === "DATA") {
+      await buyData(pin);
+    } else if (actionType === "AIRTIME") {
+      await buyAirtime(pin);
+    }
+    
   } catch (e) {
     hideLoader();
-    if (e.name === 'NotAllowedError') {
-      showMsg('Fingerprint cancelled', 'error');
+    console.error('Biometric purchase error:', e);
+    if (e.name === 'NotAllowedError' || e.message === 'Biometric cancelled') {
+      showMsg('Biometric cancelled', 'error');
+      openModal('pinModal'); // Reopen modal for PIN entry
+    } else if (e.message === 'Biometric timed out') {
+      showMsg('Biometric timed out', 'error');
+      openModal('pinModal');
     } else {
       showMsg('Error: ' + e.message, 'error');
     }
@@ -1065,7 +1216,6 @@ async function loadAdminTransactions() {
       return;
     }
 
-    // Removed provider param - backend doesn't use it
     const url = `${API}/admin/wallet/transactions?status=${encodeURIComponent(status)}&search=${encodeURIComponent(search)}&t=${Date.now()}`;
     console.log("[ADMIN TX] Fetching:", url);
     
@@ -1091,48 +1241,87 @@ async function loadAdminTransactions() {
     }
 
     transactions.forEach(tx => {
-      const isManual = tx.metadata?.manual_deducted;
-      const isReversed = tx.metadata?.reversed;
+      const isManual = tx.metadata?.manual_approved || tx.metadata?.manual_deducted;
+      const isReversed = tx.status === 'REVERSED' || tx.metadata?.reversed;
+      const isFailed = tx.status === 'FAILED';
+      const isPending = tx.status === 'PENDING';
+      const isSuccess = tx.status === 'SUCCESS';
       
-      // Determine display status from type and metadata
-      let displayStatus = tx.type === 'credit' ? 'CREDIT' : 'DEBIT';
-      let statusColor = tx.type === 'credit' ? "#00c853" : "#ff4d4d";
+      // Status color da label
+      let statusColor = "#ff4d4d";
+      let statusLabel = tx.status;
+      
+      if (isSuccess) {
+        statusColor = "#00c853";
+      } else if (isFailed) {
+        statusColor = "#ff6b00";
+        statusLabel = "FAILED";
+      } else if (isPending) {
+        statusColor = "#ffa000";
+        statusLabel = "PENDING";
+      } else if (isReversed) {
+        statusColor = "#ff4d4d";
+        statusLabel = "REVERSED";
+      }
       
       if (isManual) {
-        displayStatus = "MANUAL DEDUCT";
-        statusColor = "#ffa000";
-      }
-      if (isReversed) {
-        displayStatus = "REVERSED";
-        statusColor = "#ff4d4d";
+        statusColor = "#2196f3";
+        statusLabel = "MANUAL APPROVED";
       }
 
-      const wasManual = isManual ? '<span class="badge badgeWarning">MANUAL</span>' : '';
+      // Type display
+      const displayType = tx.display_type || (tx.type === 'WALLET_FUND' || tx.type === 'REFUND' ? 'CREDIT' : 'DEBIT');
+      const typeColor = tx.display_color || (displayType === 'CREDIT' ? "#00c853" : "#ff4d4d");
+
+      const wasManual = isManual ? '<span class="badge badgeInfo">MANUAL</span>' : '';
       const wasReversed = isReversed ? '<span class="badge badgeDanger">REVERSED</span>' : '';
+      const isFailBadge = isFailed ? '<span class="badge badgeWarning">FAILED</span>' : '';
+      const isPendingBadge = isPending ? '<span class="badge badgeWarning">PENDING</span>' : '';
+
+      // Response message display
+      const responseMsgHtml = tx.response_msg ? 
+        `<div style="margin-top:8px;padding:8px;background:#f5f5f5;border-radius:4px;font-size:12px">
+          <strong>Provider Response:</strong> ${tx.response_msg}
+        </div>` : '';
+
+      // API response preview - don debug
+      const apiResponseHtml = tx.api_response && isFailed ? 
+        `<details style="margin-top:8px;font-size:11px">
+          <summary style="cursor:pointer;opacity:0.7">View API Response</summary>
+          <pre style="background:#f5f5f5;padding:8px;border-radius:4px;overflow-x:auto;margin-top:4px">${JSON.stringify(tx.api_response, null, 2)}</pre>
+        </details>` : '';
 
       list.innerHTML += `
         <div class="transactionCard">
           <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
-            <div>
-              <strong>${tx.type || 'Transaction'}</strong> ${wasManual} ${wasReversed}<br>
+            <div style="flex:1">
+              <strong>${tx.type || 'Transaction'} - ${tx.plan_name || tx.network || ''}</strong> 
+              ${wasManual} ${wasReversed} ${isFailBadge} ${isPendingBadge}<br>
               <small style="opacity:0.7">${tx.username || 'N/A'} - ${tx.email || 'N/A'}</small><br>
-              <small style="font-family:monospace">${tx.reference || 'N/A'}</small>
+              <small style="font-family:monospace">${tx.reference || 'N/A'}</small><br>
+              ${tx.phone ? `<small style="opacity:0.7">Phone: ${tx.phone}</small><br>` : ''}
+              ${tx.provider ? `<small style="opacity:0.7">Provider: ${tx.provider}</small>` : ''}
             </div>
             <div style="text-align:right">
-              <strong style="font-size:18px">${formatNaira(tx.amount || 0)}</strong><br>
-              <span style="color:${statusColor};font-weight:600">${displayStatus}</span><br>
-              <small style="opacity:0.6">${tx.admin_email || 'System'}</small>
+              <strong style="font-size:18px;color:${typeColor}">${displayType === 'CREDIT' ? '+' : '-'}${formatNaira(tx.amount || 0)}</strong><br>
+              <span style="color:${statusColor};font-weight:600">${statusLabel}</span><br>
+              <small style="opacity:0.6">${formatDate(tx.created_at)}</small>
+              ${tx.updated_at !== tx.created_at ? `<br><small style="opacity:0.5">Updated: ${formatDate(tx.updated_at)}</small>` : ''}
             </div>
           </div>
 
-          <small style="opacity:0.5">${formatDate(tx.created_at)}</small>
+          ${responseMsgHtml}
+          ${apiResponseHtml}
 
           <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-            ${tx.type === 'debit' && !isManual && !isReversed ?
-              `<button onclick="forceDeductTransaction('${tx.reference}', ${tx.amount})" class="warningBtn">Force Deduct</button>` : ''}
+            ${isFailed && !isManual ?
+              `<button onclick="forceDeductTransaction('${tx.reference}', ${tx.amount}, '${tx.username}')" class="warningBtn">Confirm Delivered</button>` : ''}
 
-            ${tx.type === 'credit' && !isReversed ?
-              `<button onclick="reverseTransaction('${tx.reference}')" class="dangerBtn">Reverse</button>` : ''}
+            ${isSuccess && !isReversed ?
+              `<button onclick="reverseTransaction('${tx.reference}')" class="dangerBtn">Reverse/Refund</button>` : ''}
+
+            ${isPending ?
+              `<button onclick="checkTransactionStatus('${tx.reference}')" class="infoBtn">Check Status</button>` : ''}
           </div>
         </div>`;
     });
@@ -1143,13 +1332,13 @@ async function loadAdminTransactions() {
   }
 }
 
-async function forceDeductTransaction(reference, amount) {
-  const reason = prompt(`Deduct ₦${formatNaira(amount)} from user wallet?\n\nEnter reason:`, "Admin manual deduction");
+async function forceDeductTransaction(reference, amount, username) {
+  const reason = prompt(`Confirm delivery for ${username}?\n\nAmount: ₦${formatNaira(amount)}\nReference: ${reference}\n\nEnter reason for manual approval:`, "Confirmed from provider - delivered");
   if (!reason) return;
 
-  if (!confirm(`Confirm deduction of ₦${formatNaira(amount)} from user wallet? This cannot be undone.`)) return;
+  if (!confirm(`Confirm: Mark this transaction as SUCCESS and re-deduct ₦${formatNaira(amount)} from user wallet?\n\nThis means the service was actually delivered despite provider saying failed.`)) return;
 
-  showLoader("Processing deduction...");
+  showLoader("Processing manual approval...");
   try {
     const res = await fetch(API + "/admin/wallet/force-deduct", {
       method: "POST",
@@ -1171,7 +1360,7 @@ async function forceDeductTransaction(reference, amount) {
 }
 
 async function reverseTransaction(reference) {
-  const reason = prompt("Enter reason for reversal:", "Admin reversal");
+  const reason = prompt("Enter reason for reversal:", "Customer complaint - service not received");
   if (!reason) return;
 
   if (!confirm(`Confirm reversal of transaction ${reference}? User wallet will be refunded.`)) return;
@@ -1195,6 +1384,12 @@ async function reverseTransaction(reference) {
     console.error("Reverse transaction error:", e);
     showMsg("Server error", "error");
   }
+}
+
+async function checkTransactionStatus(reference) {
+  showMsg("Checking with provider...", "info");
+  // Zaka iya saka endpoint na checking anan daga baya
+  showMsg("Please check provider dashboard manually for now", "info");
 }
 
 /* ================= ADMIN: USERS MANAGER ================= */
