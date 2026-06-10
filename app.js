@@ -408,70 +408,126 @@ async function checkBiometricStatus() {
   const elStatus = el("biometricStatus");
   const enableBtn = el("enableBiometricBtn");
   const loginBtn = el("biometricLoginBtn");
+  const bioSettingsCard = el("biometricSettingsCard"); // Optional wrapper
+
   if (!elStatus) return;
 
+  // 1. HTTPS check
   if (!window.isSecureContext) {
     elStatus.innerText = "Status: HTTPS required for biometric";
     elStatus.style.color = "var(--warning)";
     if (enableBtn) enableBtn.style.display = "none";
     if (loginBtn) loginBtn.style.display = "none";
+    if (bioSettingsCard) bioSettingsCard.style.display = "none";
     return;
   }
 
+  // 2. WebAuthn support check
   if (!window.PublicKeyCredential) {
-    elStatus.innerText = "Status: Not supported on this device/browser";
+    elStatus.innerText = "Status: Not supported on this browser";
     elStatus.style.color = "var(--danger)";
     if (enableBtn) enableBtn.style.display = "none";
     if (loginBtn) loginBtn.style.display = "none";
+    if (bioSettingsCard) bioSettingsCard.style.display = "none";
     return;
   }
 
   try {
+    // 3. Platform authenticator check - fast, no network
     const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
     if (!available) {
-      elStatus.innerText = "Status: No fingerprint/passkey enrolled on device";
+      elStatus.innerText = "Status: No fingerprint/face ID enrolled on device";
       elStatus.style.color = "var(--warning)";
       if (enableBtn) enableBtn.style.display = "none";
       if (loginBtn) loginBtn.style.display = "none";
       return;
     }
 
-    // Safe fetch with content-type check
-    const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
-      headers: { 'Authorization': 'Bearer ' + getToken() }
-    });
-
-    if (!res.ok) {
-      throw new Error("Server error " + res.status);
+    // 4. Check if user is logged in
+    const token = getToken();
+    if (!token) {
+      elStatus.innerText = "Status: Login to enable biometric";
+      elStatus.style.color = "var(--info)";
+      if (enableBtn) enableBtn.style.display = "none";
+      if (loginBtn) loginBtn.style.display = "inline-block"; // Show for login page
+      return;
     }
 
+    // 5. Show loading state
+    elStatus.innerText = "Status: Checking...";
+    elStatus.style.color = "var(--muted)";
+
+    // 6. Fetch from backend with 3s timeout - won't hang
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+    const res = await fetch(API + '/api/auth/webauthn/status', {
+      method: 'GET',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Accept': 'application/json'
+      },
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      throw new Error(`Server error ${res.status}`);
+    }
+
+    // 7. Validate JSON response
     const contentType = res.headers.get("content-type");
     if (!contentType ||!contentType.includes("application/json")) {
       const text = await res.text();
-      console.error("Non-JSON response from check-enabled:", text);
-      throw new Error("Server returned HTML instead of JSON");
+      console.error("Non-JSON response from /status:", text.substring(0, 200));
+      throw new Error("Invalid server response");
     }
 
     const data = await res.json();
 
-    if (data.enabled) {
+    // 8. Update UI based on status
+    if (data.enabled === true) {
       elStatus.innerText = "Status: Enabled ✓";
       elStatus.style.color = "var(--success)";
       if (enableBtn) enableBtn.style.display = "none";
-      if (loginBtn) loginBtn.style.display = "inline-block";
+      if (loginBtn) loginBtn.style.display = "none"; // Hide login if already enabled
     } else {
       elStatus.innerText = "Status: Available - click to enable";
       elStatus.style.color = "var(--warning)";
-      if (enableBtn) enableBtn.style.display = "block";
+      if (enableBtn) enableBtn.style.display = "inline-block";
       if (loginBtn) loginBtn.style.display = "none";
     }
+
+    return data.enabled || false;
+
   } catch (e) {
-    elStatus.innerText = "Status: Check failed - " + e.message;
-    elStatus.style.color = "var(--danger)";
-    console.error("Biometric check error:", e);
+    // 9. Silent fail - don't scare user with errors
+    console.error("Biometric status check failed:", e.name, e.message);
+
+    if (e.name === 'AbortError') {
+      elStatus.innerText = "Status: Check timed out";
+    } else if (e.message.includes('Failed to fetch')) {
+      elStatus.innerText = "Status: Network error";
+    } else {
+      elStatus.innerText = "Status: Unavailable";
+    }
+
+    elStatus.style.color = "var(--muted)";
     if (enableBtn) enableBtn.style.display = "none";
-    if (loginBtn) loginBtn.style.display = "none";
+    if (loginBtn) loginBtn.style.display = "inline-block"; // Show login button as fallback
+    if (bioSettingsCard) bioSettingsCard.style.display = "block"; // Keep card visible
+
+    return false;
   }
+}
+
+// Helper: Call this on page load or when settings tab opens
+function initBiometricStatus() {
+  // Run check but don't block page load
+  checkBiometricStatus().catch(err => {
+    console.log('Biometric init failed:', err);
+  });
 }
 
 /* ================= WEBAUTHN - BIOMETRIC AUTH - INSTANT POPUP ================= */
