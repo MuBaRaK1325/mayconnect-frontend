@@ -227,13 +227,6 @@ function copyToClipboard(text) {
   showMsg("Copied to clipboard!", "success");
 }
 
-/* ================= COPY ACCOUNT ================= */
-function copyAccount() {
-  const acc = el("accountNumber").innerText;
-  navigator.clipboard.writeText(acc);
-  showMsg("Account number copied!", "success");
-}
-
 /* ================= TRANSACTIONS ================= */
 async function fetchTransactions() {
   try {
