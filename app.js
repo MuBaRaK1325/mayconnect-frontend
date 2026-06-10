@@ -753,13 +753,9 @@ async function checkBiometricStatus() {
   }
 }
 /* ================= PURCHASE MODAL ================= */
-// KADA KA MAIMATA DECLARATION - Yi amfani da variables din da suka wanzu
-// Idan sun wanzu a sama, kada ka sake `let` anan
-// Idan basu wanzu ba, to ka saka `let` sau daya kawai a farkon app.js
-
 // Open Purchase Modal for Data
 async function openPurchaseModal(planId, planName, planPrice) {
-  window.selectedPlanId = planId; // Yi amfani da window. don gujewa duplicate
+  window.selectedPlanId = planId;  // BABU let, BABU const, BABU var
   window.selectedPhone = el('dataPhone')?.value;
 
   if (!window.selectedPhone) return showMsg('Enter phone number first', 'error');
@@ -776,7 +772,6 @@ async function openPurchaseModal(planId, planName, planPrice) {
   if (pinTitle) pinTitle.innerText = 'Confirm Purchase';
   if (pinDetails) pinDetails.innerHTML = `<strong>${planName}</strong><br>${formatNaira(planPrice)}<br>To: ${window.selectedPhone}`;
 
-  // Check biometric availability
   try {
     const available = await isBiometricAvailable();
     if (available && bioBtn) {
@@ -826,7 +821,6 @@ async function openAirtimePin() {
   if (pinTitle) pinTitle.innerText = 'Confirm Airtime';
   if (pinDetails) pinDetails.innerHTML = `<strong>${window.airtimeNetwork.toUpperCase()} Airtime</strong><br>${formatNaira(amount)}<br>To: ${phone}`;
 
-  // Check biometric availability
   try {
     const available = await isBiometricAvailable();
     if (available && bioBtn) {
@@ -870,10 +864,8 @@ async function purchaseWithBiometric() {
   try {
     closeModal('pinModal');
     
-    // CRITICAL: Call biometric IMMEDIATELY - no fetch, no loader before this
     const pin = await verifyBiometricForTransaction();
     
-    // Only NOW show loader and process
     showLoader('Processing purchase...');
     
     if (window.actionType === "DATA") {
