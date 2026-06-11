@@ -528,7 +528,7 @@ function initBiometricStatus() {
   checkBiometricStatus().catch(err => {
     console.log('Biometric init failed:', err);
   });
-}
+} 
 
 /* ================= WEBAUTHN - BIOMETRIC AUTH - INSTANT POPUP ================= */
 
@@ -809,136 +809,122 @@ async function checkBiometricStatus() {
   }
 }
 /* ================= PURCHASE MODAL ================= */
-// Open Purchase Modal for Data
 async function openPurchaseModal(planId, planName, planPrice) {
-  window.selectedPlanId = planId;  // BABU let, BABU const, BABU var
-  window.selectedPhone = el('dataPhone')?.value;
+  selectedPlanId = planId;
+  selectedPhone = el('dataPhone')?.value;
 
-  if (!window.selectedPhone) return showMsg('Enter phone number first', 'error');
-  if (!/^\d{10,15}$/.test(window.selectedPhone)) return showMsg('Invalid phone number', 'error');
+  if (!selectedPhone) return showMsg('Enter phone number first', 'error');
 
-  window.actionType = "DATA";
+  actionType = "DATA";
   const pinInput = el('pinInput');
   const pinTitle = el('pinModalTitle');
   const pinDetails = el('pinModalDetails');
   const bioBtn = el('biometricPurchaseBtn');
-  const pinGroup = el('pinInputGroup');
 
   if (pinInput) pinInput.value = '';
   if (pinTitle) pinTitle.innerText = 'Confirm Purchase';
-  if (pinDetails) pinDetails.innerHTML = `<strong>${planName}</strong><br>${formatNaira(planPrice)}<br>To: ${window.selectedPhone}`;
+  if (pinDetails) pinDetails.innerHTML = `<strong>${planName}</strong><br>${formatNaira(planPrice)}<br>To: ${selectedPhone}`;
 
   try {
-    const available = await isBiometricAvailable();
-    if (available && bioBtn) {
-      const res = await fetch(API + '/api/auth/webauthn/status', {
-        headers: { 'Authorization': 'Bearer ' + getToken() }
-      });
-      const data = await res.json();
-      bioBtn.style.display = data.enabled ? 'inline-block' : 'none';
-      if (pinGroup) pinGroup.style.display = data.enabled ? 'none' : 'block';
-    } else {
-      if (bioBtn) bioBtn.style.display = 'none';
-      if (pinGroup) pinGroup.style.display = 'block';
-    }
+    const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    });
+    const data = await res.json();
+    if (bioBtn) bioBtn.style.display = data.enabled? 'inline-block' : 'none';
   } catch (e) {
     console.log('Biometric check failed:', e);
-    if (bioBtn) bioBtn.style.display = 'none';
   }
 
   openModal('pinModal');
-  setTimeout(() => {
-    if (pinGroup?.style.display !== 'none') el('pinInput')?.focus();
-  }, 100);
+  setTimeout(() => el('pinInput')?.focus(), 100);
 }
 
-// Open Purchase Modal for Airtime
-async function openAirtimePin() {
-  const phone = el("airtimePhone")?.value;
-  const amount = el("airtimeAmount")?.value;
-  
-  if (!phone || !amount || !window.airtimeNetwork) return showMsg("Fill all fields", "error");
-  if (!/^\d{10,15}$/.test(phone)) return showMsg("Invalid phone number", "error");
-  
-  const amt = Number(amount);
-  if (isNaN(amt) || amt < 50 || amt > 5000) {
-    return showMsg("Amount must be between ₦50 and ₦5,000", "error");
-  }
+function openAirtimePin() {
+  const phone = el("airtimePhone").value;
+  const amount = el("airtimeAmount").value;
+  if (!phone ||!amount ||!airtimeNetwork) return showMsg("Fill all fields", "error");
 
-  window.selectedPhone = phone;
-  window.actionType = "AIRTIME";
+  selectedPhone = phone;
+  actionType = "AIRTIME";
   const pinInput = el('pinInput');
   const pinTitle = el('pinModalTitle');
   const pinDetails = el('pinModalDetails');
-  const bioBtn = el('biometricPurchaseBtn');
-  const pinGroup = el('pinInputGroup');
 
   if (pinInput) pinInput.value = '';
   if (pinTitle) pinTitle.innerText = 'Confirm Airtime';
-  if (pinDetails) pinDetails.innerHTML = `<strong>${window.airtimeNetwork.toUpperCase()} Airtime</strong><br>${formatNaira(amount)}<br>To: ${phone}`;
+  if (pinDetails) pinDetails.innerHTML = `<strong>${airtimeNetwork.toUpperCase()} Airtime</strong><br>${formatNaira(amount)}<br>To: ${phone}`;
 
-  try {
-    const available = await isBiometricAvailable();
-    if (available && bioBtn) {
-      const res = await fetch(API + '/api/auth/webauthn/status', {
-        headers: { 'Authorization': 'Bearer ' + getToken() }
-      });
-      const data = await res.json();
-      bioBtn.style.display = data.enabled ? 'inline-block' : 'none';
-      if (pinGroup) pinGroup.style.display = data.enabled ? 'none' : 'block';
-    } else {
-      if (bioBtn) bioBtn.style.display = 'none';
-      if (pinGroup) pinGroup.style.display = 'block';
-    }
-  } catch (e) {
-    console.log('Biometric check failed:', e);
-    if (bioBtn) bioBtn.style.display = 'none';
-  }
+  fetch(API + '/api/auth/webauthn/check-enabled', {
+    headers: { 'Authorization': 'Bearer ' + getToken() }
+  }).then(r => r.json()).then(data => {
+    const bioBtn = el('biometricPurchaseBtn');
+    if (bioBtn) bioBtn.style.display = data.enabled? 'inline-block' : 'none';
+  }).catch(() => {});
 
   openModal('pinModal');
-  setTimeout(() => {
-    if (pinGroup?.style.display !== 'none') el('pinInput')?.focus();
-  }, 100);
+  setTimeout(() => el('pinInput')?.focus(), 100);
 }
 
-// Confirm Purchase with PIN
 function confirmPurchase() {
   const pin = el('pinInput')?.value;
   if (!pin) return showMsg('Enter PIN', 'error');
-  if (!/^\d{4}$/.test(pin)) return showMsg('PIN must be 4 digits', 'error');
-  
   closeModal('pinModal');
 
-  if (window.actionType === "DATA") buyData(pin);
-  if (window.actionType === "AIRTIME") buyAirtime(pin);
+  if (actionType === "DATA") buyData(pin);
+  if (actionType === "AIRTIME") buyAirtime(pin);
 }
 
-// Purchase with Biometric - INSTANT POPUP VERSION
 async function purchaseWithBiometric() {
-  if (!window.selectedPhone) return showMsg('Phone number missing', 'error');
+  if (!selectedPhone) return showMsg('Enter phone number first', 'error');
 
   try {
     closeModal('pinModal');
-    
-    const pin = await verifyBiometricForTransaction();
-    
-    showLoader('Processing purchase...');
-    
-    if (window.actionType === "DATA") {
-      await buyData(pin);
-    } else if (window.actionType === "AIRTIME") {
-      await buyAirtime(pin);
-    }
-    
+    showLoader('Verify fingerprint...');
+
+    const start = await fetch(API + '/api/auth/webauthn/verify-purchase', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    }).then(r => r.json());
+
+    hideLoader();
+
+    start.challenge = bufferDecode(start.challenge);
+    start.allowCredentials = start.allowCredentials.map(cred => ({
+    ...cred,
+      id: bufferDecode(cred.id)
+    }));
+
+    const assertion = await navigator.credentials.get({ publicKey: start });
+
+    const credential = {
+      id: assertion.id,
+      rawId: bufferEncode(assertion.rawId),
+      response: {
+        authenticatorData: bufferEncode(assertion.response.authenticatorData),
+        clientDataJSON: bufferEncode(assertion.response.clientDataJSON),
+        signature: bufferEncode(assertion.response.signature),
+        userHandle: assertion.response.userHandle? bufferEncode(assertion.response.userHandle) : null
+      },
+      type: assertion.type
+    };
+
+    showLoader('Verifying...');
+    const verify = await fetch(API + '/api/auth/webauthn/verify-purchase-finish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+      body: JSON.stringify(credential)
+    }).then(r => r.json());
+
+    hideLoader();
+    if (!verify.verified) return showMsg('Fingerprint verification failed', 'error');
+
+    if (actionType === "DATA") buyData('biometric_verified');
+    if (actionType === "AIRTIME") buyAirtime('biometric_verified');
+
   } catch (e) {
     hideLoader();
-    console.error('Biometric purchase error:', e);
-    if (e.name === 'NotAllowedError' || e.message === 'Biometric cancelled') {
-      showMsg('Biometric cancelled', 'error');
-      openModal('pinModal');
-    } else if (e.message === 'Biometric timed out') {
-      showMsg('Biometric timed out', 'error');
-      openModal('pinModal');
+    if (e.name === 'NotAllowedError') {
+      showMsg('Fingerprint cancelled', 'error');
     } else {
       showMsg('Error: ' + e.message, 'error');
     }
