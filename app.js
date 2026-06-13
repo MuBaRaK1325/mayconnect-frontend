@@ -554,10 +554,9 @@ function showDebug(msg, isError = false) {
         <img src="${APP_LOGO}" style="width:24px;height:24px;border-radius:4px;" onerror="this.style.display='none'">
         <strong style="font-size:14px;">${APP_NAME}</strong>
       </div>
-      <div style="color:${isError ? '#ff4d4d' : '#00c853'};font-size:12px;line-height:1.4;">${msg}</div>
+      <div style="color:${isError ? '#ff4d4d' : '#00c853'};font-size:12px;line-height:1.4;white-space:pre-line;">${msg}</div>
     `;
   }
-  console.log(isError ? '[ERROR]' : '', msg);
 }
 
 function bufferDecode(value) {
@@ -589,19 +588,16 @@ async function checkBiometricStatus() {
   if (!statusEl || !enableBtn) return;
 
   enableBtn.disabled = true;
-  enableBtn.innerHTML = `
-    <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;vertical-align:middle;">
-    Checking...
-  `;
+  enableBtn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;vertical-align:middle;">Checking...`;
   enableBtn.style.display = 'flex';
   enableBtn.style.alignItems = 'center';
   enableBtn.style.justifyContent = 'center';
   enableBtn.style.fontWeight = '600';
-  showDebug('Checking biometric support...');
+  showDebug('Step 1: Checking biometric support...');
 
   try {
     if (!window.isSecureContext) {
-      throw new Error('HTTPS required for biometric');
+      throw new Error('HTTPS required for biometric. Current: ' + location.protocol);
     }
 
     if (!window.PublicKeyCredential) {
@@ -609,6 +605,8 @@ async function checkBiometricStatus() {
     }
 
     const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    showDebug('Step 2: Platform authenticator available = ' + available);
+    
     if (!available) {
       throw new Error('No fingerprint or face ID enrolled. Add one in Settings > Security');
     }
@@ -616,15 +614,13 @@ async function checkBiometricStatus() {
     const token = getToken();
     if (!token) {
       enableBtn.disabled = false;
-      enableBtn.innerHTML = `
-        <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
-        Login with Fingerprint
-      `;
+      enableBtn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Login with Fingerprint`;
       enableBtn.onclick = loginWithBiometric;
-      showDebug('Login to enable biometric');
+      showDebug('Step 3: No token. Login first to enable biometric');
       return false;
     }
 
+    showDebug('Step 3: Checking backend status...');
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -643,9 +639,9 @@ async function checkBiometricStatus() {
     
     if (res.ok) {
       data = await res.json();
+      showDebug('Step 4: Backend response OK. Enabled = ' + data.enabled);
     } else if (res.status === 404) {
-      console.warn('check-enabled endpoint not found. Assuming not enabled.');
-      showDebug('Backend endpoint not ready. Use Enable to setup', true);
+      showDebug('Step 4: Backend endpoint not found. Assuming not enabled', true);
     } else {
       throw new Error(`Server error ${res.status}`);
     }
@@ -653,44 +649,29 @@ async function checkBiometricStatus() {
     enableBtn.disabled = false;
     
     if (data.enabled === true) {
-      enableBtn.innerHTML = `
-        <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
-        Login with Fingerprint
-      `;
+      enableBtn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Login with Fingerprint`;
       enableBtn.onclick = loginWithBiometric;
       enableBtn.style.background = '#2196F3';
-      showDebug('Passkey enabled. Tap to verify your identity');
+      showDebug('Step 5: Passkey enabled. Tap to verify');
     } else {
-      enableBtn.innerHTML = `
-        <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
-        Enable Fingerprint/Face ID
-      `;
+      enableBtn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Enable Fingerprint/Face ID`;
       enableBtn.onclick = enableBiometric;
       enableBtn.style.background = '#2196F3';
-      showDebug('Secure your account with biometric authentication');
+      showDebug('Step 5: Ready to enable biometric');
     }
 
     return data.enabled || false;
 
   } catch (e) {
-    console.error('Biometric check failed:', e.name, e.message);
+    let errorMsg = e.name + ': ' + e.message;
+    if (e.name === 'AbortError') errorMsg = 'Check timed out. Try again';
+    if (e.message.includes('Failed to fetch')) errorMsg = 'Network error. Check connection';
+    if (e.name === 'SecurityError') errorMsg = 'HTTPS required. Use https://';
     
-    let errorMsg = e.message;
-    if (e.name === 'AbortError') {
-      errorMsg = 'Check timed out. Try again';
-    } else if (e.message.includes('Failed to fetch')) {
-      errorMsg = 'Network error. Check connection';
-    } else if (e.name === 'SecurityError') {
-      errorMsg = 'HTTPS required. Use https://';
-    }
-    
-    showDebug(errorMsg, true);
+    showDebug('Step X ERROR: ' + errorMsg, true);
     
     enableBtn.disabled = false;
-    enableBtn.innerHTML = `
-      <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
-      Enable Fingerprint/Face ID
-    `;
+    enableBtn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Enable Fingerprint/Face ID`;
     enableBtn.onclick = enableBiometric;
     enableBtn.style.background = '#2196F3';
     enableBtn.style.display = 'flex';
@@ -703,22 +684,16 @@ function enableBiometric() {
 
   if (!biometricReady) {
     btn.disabled = true;
-    btn.innerHTML = `
-      <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
-      Checking device...
-    `;
-    showDebug('Checking fingerprint support...');
+    btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Checking device...`;
+    showDebug('Step 1: Checking fingerprint support...');
 
     PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
     .then(available => {
-      if (!available) {
-        throw new Error('No fingerprint enrolled. Add one in Settings > Security');
-      }
-      showDebug('Getting registration options...');
-      btn.innerHTML = `
-        <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
-        Preparing...
-      `;
+      showDebug('Step 2: Available = ' + available);
+      if (!available) throw new Error('No fingerprint enrolled. Add one in Settings > Security');
+      
+      showDebug('Step 3: Fetching /register-start...');
+      btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Preparing...`;
 
       return fetch(API + '/api/auth/webauthn/register-start', {
         method: 'POST',
@@ -726,29 +701,25 @@ function enableBiometric() {
       });
     })
     .then(res => {
+      showDebug('Step 4: Server status = ' + res.status);
       if (!res.ok) throw new Error('Server error: ' + res.status);
       return res.json();
     })
     .then(data => {
       if (data.error) throw new Error(data.error);
       
+      showDebug('Step 5: Got options\nRP ID: ' + data.rp.id + '\nChallenge: ' + data.challenge.substring(0,20) + '...');
       cachedRegOptions = data;
       biometricReady = true;
       btn.disabled = false;
-      btn.innerHTML = `
-        <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
-        Touch Sensor Now
-      `;
+      btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Touch Sensor Now`;
       btn.style.background = '#00c853';
-      showDebug('Ready! Tap again to verify your identity');
+      showDebug('Step 6: Ready! Tap again to verify');
     })
     .catch(e => {
-      showDebug('Error: ' + e.message, true);
+      showDebug('Step X ERROR: ' + e.name + ' - ' + e.message, true);
       btn.disabled = false;
-      btn.innerHTML = `
-        <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
-        Enable Fingerprint/Face ID
-      `;
+      btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Enable Fingerprint/Face ID`;
       btn.style.background = '#2196F3';
       biometricReady = false;
     });
@@ -757,11 +728,8 @@ function enableBiometric() {
 
   if (biometricReady && cachedRegOptions) {
     btn.disabled = true;
-    btn.innerHTML = `
-      <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
-      Touch sensor...
-    `;
-    showDebug('Verify your identity with fingerprint');
+    btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Touch sensor...`;
+    showDebug('Step 7: Building publicKey options...');
 
     try {
       const data = cachedRegOptions;
@@ -770,7 +738,7 @@ function enableBiometric() {
         ...data,
         challenge: bufferDecode(data.challenge),
         user: { ...data.user, id: bufferDecode(data.user.id) },
-        timeout: 120000 // GYARA: 2 minti maimakon 60s
+        timeout: 120000
       };
 
       if (publicKey.excludeCredentials && publicKey.excludeCredentials.length > 0) {
@@ -779,33 +747,31 @@ function enableBiometric() {
           type: 'public-key',
           transports: c.transports || ['internal']
         }));
+        showDebug('Step 8: excludeCredentials count = ' + publicKey.excludeCredentials.length);
       } else {
         delete publicKey.excludeCredentials;
+        showDebug('Step 8: No excludeCredentials');
       }
 
-      // GYARA: Cire 5s timeout. Bar browser ya kula da timeout
+      showDebug('Step 9: Calling navigator.credentials.create...\nRP ID: ' + publicKey.rp.id + '\nTimeout: 120000ms');
+
       let timeoutId;
       timeoutId = setTimeout(() => {
-        showDebug('Timeout: Fingerprint did not respond. Check Settings > Security', true);
+        showDebug('Step 10 TIMEOUT: Fingerprint did not respond. Take finger off and try again', true);
         btn.disabled = false;
-        btn.innerHTML = `
-          <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
-          Enable Fingerprint/Face ID
-        `;
+        btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Enable Fingerprint/Face ID`;
         btn.style.background = '#2196F3';
         biometricReady = false;
-      }, 120000); // 2 minti
+      }, 120000);
 
       navigator.credentials.create({ publicKey })
       .then(cred => {
         clearTimeout(timeoutId);
         if (!cred) throw new Error('User cancelled');
         
-        showDebug('Saving passkey...');
-        btn.innerHTML = `
-          <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
-          Saving...
-        `;
+        showDebug('Step 10: Success! Credential ID: ' + cred.id.substring(0,15) + '...');
+        btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Saving...`;
+        showDebug('Step 11: Saving to backend...');
 
         const credential = {
           id: cred.id,
@@ -827,7 +793,7 @@ function enableBiometric() {
       .then(res => res.json())
       .then(result => {
         if (result.verified) {
-          showDebug('Success! Biometric enabled ✓');
+          showDebug('Step 12: Success! Biometric enabled ✓');
           setTimeout(() => checkBiometricStatus(), 1500);
         } else {
           throw new Error(result.error || 'Verification failed');
@@ -835,33 +801,23 @@ function enableBiometric() {
       })
       .catch(err => {
         clearTimeout(timeoutId);
-        console.error(err);
-        if (err.name === 'NotAllowedError') {
-          showDebug('Cancelled or No Fingerprint Set', true);
-        } else if (err.name === 'InvalidStateError') {
-          showDebug('Already enabled for this account', true);
-        } else if (err.name === 'TimeoutError') {
-          showDebug('Timeout: Take your finger off and try again', true);
-        } else {
-          showDebug('Error: ' + err.message, true);
-        }
+        let msg = 'Step 10 ERROR: ' + err.name + ' - ' + err.message;
+        if (err.name === 'NotAllowedError') msg = 'Step 10 ERROR: Cancelled or No Fingerprint Set';
+        if (err.name === 'InvalidStateError') msg = 'Step 10 ERROR: Already registered on this device';
+        if (err.name === 'TimeoutError') msg = 'Step 10 ERROR: Timeout. Remove finger and try again';
+        
+        showDebug(msg, true);
         btn.disabled = false;
-        btn.innerHTML = `
-          <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
-          Enable Fingerprint/Face ID
-        `;
+        btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Enable Fingerprint/Face ID`;
         btn.style.background = '#2196F3';
         biometricReady = false;
         cachedRegOptions = null;
       });
 
     } catch (e) {
-      showDebug('Setup error: ' + e.message, true);
+      showDebug('Step 7 ERROR: ' + e.name + ' - ' + e.message, true);
       btn.disabled = false;
-      btn.innerHTML = `
-        <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
-        Enable Fingerprint/Face ID
-      `;
+      btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Enable Fingerprint/Face ID`;
       btn.style.background = '#2196F3';
       biometricReady = false;
     }
@@ -871,24 +827,25 @@ function enableBiometric() {
 function loginWithBiometric() {
   const btn = document.getElementById('enableBiometricBtn');
   btn.disabled = true;
-  btn.innerHTML = `
-    <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
-    Touch sensor...
-  `;
-  showDebug('Verify your identity');
+  btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Touch sensor...`;
+  showDebug('Step 1: Fetching /login-start...');
 
   fetch(API + '/api/auth/webauthn/login-start', { method: 'POST' })
-  .then(res => res.json())
+  .then(res => {
+    showDebug('Step 2: Login options status = ' + res.status);
+    return res.json();
+  })
   .then(options => {
+    showDebug('Step 3: Calling navigator.credentials.get...\nRP ID: ' + options.rpId);
     const publicKey = {
       ...options,
       challenge: bufferDecode(options.challenge),
-      timeout: 120000 // GYARA: 2 minti
+      timeout: 120000
     };
     return navigator.credentials.get({ publicKey });
   })
   .then(cred => {
-    showDebug('Verifying...');
+    showDebug('Step 4: Got credential. Verifying...');
     return fetch(API + '/api/auth/webauthn/login-finish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -909,19 +866,16 @@ function loginWithBiometric() {
   .then(result => {
     if (result.token) {
       localStorage.setItem('token', result.token);
-      showDebug('Login successful! ✓');
+      showDebug('Step 5: Login successful! ✓');
       setTimeout(() => window.location.reload(), 1000);
     } else {
       throw new Error(result.error || 'Login failed');
     }
   })
   .catch(err => {
-    showDebug('Login error: ' + err.message, true);
+    showDebug('Login ERROR: ' + err.name + ' - ' + err.message, true);
     btn.disabled = false;
-    btn.innerHTML = `
-      <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
-      Login with Fingerprint
-    `;
+    btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Login with Fingerprint`;
     btn.style.background = '#2196F3';
   });
 }
