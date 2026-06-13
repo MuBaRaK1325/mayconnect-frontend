@@ -543,16 +543,15 @@ function initBiometricProfile() {
   });
 }
 
-/* ================= WEBAUTHN - BIOMETRIC AUTH - FINAL VERSION ================= */
+/* ================= WEBAUTHN - BIOMETRIC AUTH - FINAL ================= */
+const APP_NAME = 'MAYCONNECT DATA PLUG';
+const APP_LOGO = '/images/logo.png';
 let cachedRegOptions = null;
 let biometricReady = false;
-const APP_NAME = 'MAYCONNECT DATA PLUG';
-const APP_LOGO = '/images/logo.png'; // Tabbatar logo.png yana nan
 
 function showDebug(msg, isError = false) {
   const statusEl = document.getElementById('biometricStatus');
   if (statusEl) {
-    // Gyara: Babu "Status:" manual - kawai logo + app name + message
     statusEl.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <img src="${APP_LOGO}" style="width:24px;height:24px;border-radius:4px;" onerror="this.style.display='none'">
@@ -561,7 +560,6 @@ function showDebug(msg, isError = false) {
       <div style="color:${isError ? '#ff4d4d' : '#00c853'};font-size:12px;line-height:1.4;">${msg}</div>
     `;
   }
-  // Optional: console.log for debugging
   console.log(isError ? '[ERROR]' : '[INFO]', msg);
 }
 
@@ -614,7 +612,6 @@ function updateBiometricUI() {
     return;
   }
 
-  // Check if passkey enabled for this user + domain
   fetch(API + '/api/auth/webauthn/check-enabled', {
     headers: { 'Authorization': 'Bearer ' + getToken() }
   })
@@ -626,7 +623,6 @@ function updateBiometricUI() {
     btn.disabled = false;
     
     if (data.enabled === true) {
-      // Kana da passkey - nuna Login
       btn.innerHTML = `
         <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
         Login with Fingerprint
@@ -635,7 +631,6 @@ function updateBiometricUI() {
       btn.style.background = '#2196F3';
       showDebug('Passkey enabled. Tap to verify your identity');
     } else {
-      // Ba ka da passkey - nuna Enable
       btn.innerHTML = `
         <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
         Enable Fingerprint/Face ID
@@ -654,11 +649,9 @@ function updateBiometricUI() {
   });
 }
 
-// ENABLE / REGISTER PASSKEY
 function enableBiometric() {
   const btn = document.getElementById('enableBiometricBtn');
 
-  // STEP 1: Get challenge
   if (!biometricReady) {
     btn.disabled = true;
     btn.innerHTML = `
@@ -713,7 +706,6 @@ function enableBiometric() {
     return;
   }
 
-  // STEP 2: Create credential
   if (biometricReady && cachedRegOptions) {
     btn.disabled = true;
     btn.innerHTML = `
@@ -823,7 +815,6 @@ function enableBiometric() {
   }
 }
 
-// LOGIN WITH PASSKEY
 function loginWithBiometric() {
   const btn = document.getElementById('enableBiometricBtn');
   btn.disabled = true;
@@ -884,9 +875,6 @@ function loginWithBiometric() {
 function initBiometricProfile() {
   updateBiometricUI();
 }
-
-// Kira wannan lokacin page ya load
-// document.addEventListener('DOMContentLoaded', initBiometricProfile);
 /* ================= PURCHASE MODAL ================= */
 async function openPurchaseModal(planId, planName, planPrice) {
   selectedPlanId = planId;
