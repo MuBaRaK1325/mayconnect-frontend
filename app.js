@@ -404,9 +404,6 @@ function renderPlans() {
 }
 
 /* ================= BIOMETRIC STATUS - FIXED ================= */
-
-const APP_LOGO = '/images/logo.png';
-
 function showDebug(msg, isError = false) {
   const statusEl = el("biometricStatus");
   if (statusEl) {
