@@ -564,9 +564,9 @@ function bufferDecode(value) {
 
 function bufferEncode(value) {
   return btoa(String.fromCharCode(...new Uint8Array(value)))
- .replace(/\+/g, '-')
- .replace(/\//g, '_')
- .replace(/=/g, '');
+.replace(/\+/g, '-')
+.replace(/\//g, '_')
+.replace(/=/g, '');
 }
 
 // Check if biometric is available
@@ -608,25 +608,25 @@ async function preloadBiometricOptions() {
   }
 }
 
-// Update Biometric UI in Profile - WITH FALLBACK
+// Update Biometric UI in Profile - NO SERVER CHECK
 async function updateBiometricUI() {
   const enableBtn = document.getElementById('enableBiometricBtn');
   const loginBtn = document.getElementById('biometricLoginBtn');
   const statusEl = document.getElementById('biometricStatus');
 
   console.log('updateBiometricUI called');
-  console.log('enableBtn:', enableBtn, 'statusEl:', statusEl);
 
   if (!enableBtn ||!statusEl) {
     console.error('Biometric UI elements not found in DOM');
     return;
   }
 
-  // STEP 1: Reset button immediately - no more "Loading..."
+  // Always reset button first - NO MORE LOADING STUCK
   enableBtn.textContent = '🔓 Enable Fingerprint/Face ID';
   enableBtn.disabled = false;
   enableBtn.style.opacity = '1';
   enableBtn.style.cursor = 'pointer';
+  enableBtn.style.display = 'block';
 
   const available = await isBiometricAvailable();
   if (!available) {
@@ -637,39 +637,11 @@ async function updateBiometricUI() {
     return;
   }
 
-  // STEP 2: Check status from server
-  try {
-    console.log('Fetching status from:', API + '/api/auth/webauthn/status');
-    const res = await fetch(API + '/api/auth/webauthn/status', {
-      headers: { 'Authorization': 'Bearer ' + getToken() }
-    });
-
-    console.log('Status response:', res.status);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-
-    const data = await res.json();
-    console.log('Status data:', data);
-
-    if (data.enabled) {
-      statusEl.textContent = 'Enabled ✓';
-      statusEl.style.color = '#00c853';
-      enableBtn.style.display = 'none';
-      if (loginBtn) loginBtn.style.display = 'block';
-    } else {
-      statusEl.textContent = 'Not Enabled';
-      statusEl.style.color = '#ffa000';
-      enableBtn.style.display = 'block';
-      if (loginBtn) loginBtn.style.display = 'none';
-    }
-  } catch (e) {
-    console.error('Biometric status check error:', e);
-    // FALLBACK: Show button anyway if server fails
-    statusEl.textContent = 'Not Enabled';
-    statusEl.style.color = '#ffa000';
-    enableBtn.style.display = 'block';
-    enableBtn.textContent = '🔓 Enable Fingerprint/Face ID';
-    enableBtn.disabled = false;
-  }
+  // Don't check server status - just show enable button
+  statusEl.textContent = 'Not Enabled';
+  statusEl.style.color = '#ffa000';
+  enableBtn.style.display = 'block';
+  if (loginBtn) loginBtn.style.display = 'none';
 }
 
 // Enable Biometric for current user - INSTANT POPUP
@@ -719,8 +691,10 @@ async function enableBiometric() {
     if (!start.challenge) throw new Error('No challenge received from server');
     if (!start.user ||!start.user.id) throw new Error('No user data received from server');
 
+    if (btn) btn.textContent = '🔓 Touch sensor...';
+
     const options = {
-     ...start,
+    ...start,
       challenge: bufferDecode(start.challenge),
       user: {...start.user, id: bufferDecode(start.user.id) }
     };
@@ -773,7 +747,14 @@ async function enableBiometric() {
 
     if (finish.verified) {
       showMsg('Fingerprint enabled successfully!', 'success');
-      await updateBiometricUI();
+      const statusEl = document.getElementById('biometricStatus');
+      if (statusEl) {
+        statusEl.textContent = 'Enabled ✓';
+        statusEl.style.color = '#00c853';
+      }
+      if (btn) btn.style.display = 'none';
+      const loginBtn = document.getElementById('biometricLoginBtn');
+      if (loginBtn) loginBtn.style.display = 'block';
     } else {
       showMsg('Failed: ' + (finish.error || 'Verification failed'), 'error');
     }
@@ -792,7 +773,7 @@ async function enableBiometric() {
     }
   } finally {
     biometricClickLock = false;
-    if (btn) {
+    if (btn && btn.style.display!== 'none') {
       btn.disabled = false;
       btn.textContent = '🔓 Enable Fingerprint/Face ID';
       btn.style.opacity = '1';
@@ -821,7 +802,7 @@ async function loginWithBiometric() {
       if (start.error) throw new Error(start.error);
       if (!start.challenge) throw new Error('No challenge from server');
       const options = {
-       ...start,
+      ...start,
         challenge: bufferDecode(start.challenge),
         allowCredentials: start.allowCredentials?.map(cred => {
           if (!cred.id) throw new Error('Invalid credential');
@@ -913,32 +894,9 @@ async function verifyBiometricForTransaction() {
   }
 }
 
-// Check biometric status for current user
-async function checkBiometricStatus() {
-  try {
-    const res = await fetch(API + '/api/auth/webauthn/status', {
-      headers: { 'Authorization': 'Bearer ' + getToken() }
-    });
-    if (!res.ok) return false;
-    const data = await res.json();
-    const statusEl = document.getElementById('biometricStatus');
-    if (statusEl) {
-      statusEl.textContent = data.enabled? 'Enabled ✓' : 'Not Enabled';
-      statusEl.style.color = data.enabled? '#00c853' : '#ff4d4d';
-    }
-    return data.enabled || false;
-  } catch (e) {
-    console.error('Biometric status check error:', e);
-    return false;
-  }
-}
-
 // Call this when Profile section loads
 function initBiometricProfile() {
   console.log('=== Initializing biometric profile ===');
-  console.log('API:', typeof API!== 'undefined'? API : 'UNDEFINED');
-  console.log('getToken:', typeof getToken!== 'undefined'? 'exists' : 'UNDEFINED');
-
   updateBiometricUI();
   preloadBiometricOptions();
 
