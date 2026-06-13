@@ -403,65 +403,83 @@ function renderPlans() {
   });
 }
 
-/* ================= BIOMETRIC STATUS ================= */
-async function checkBiometricStatus() {
-  const elStatus = el("biometricStatus");
-  const enableBtn = el("enableBiometricBtn");
-  const loginBtn = el("biometricLoginBtn");
-  const bioSettingsCard = el("biometricSettingsCard"); // Optional wrapper
+/* ================= BIOMETRIC STATUS - FIXED ================= */
+const APP_NAME = 'MAYCONNECT DATA PLUG';
+const APP_LOGO = '/images/logo.png';
 
-  if (!elStatus) return;
+function showDebug(msg, isError = false) {
+  const statusEl = el("biometricStatus");
+  if (statusEl) {
+    statusEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <img src="${APP_LOGO}" style="width:24px;height:24px;border-radius:4px;" onerror="this.style.display='none'">
+        <strong style="font-size:14px;">${APP_NAME}</strong>
+      </div>
+      <div style="color:${isError ? '#ff4d4d' : '#00c853'};font-size:12px;line-height:1.4;">${msg}</div>
+    `;
+  }
+}
+
+async function checkBiometricStatus() {
+  const enableBtn = el("enableBiometricBtn");
+  const statusEl = el("biometricStatus");
+
+  if (!statusEl || !enableBtn) return;
 
   // 1. HTTPS check
   if (!window.isSecureContext) {
-    elStatus.innerText = "Status: HTTPS required for biometric";
-    elStatus.style.color = "var(--warning)";
-    if (enableBtn) enableBtn.style.display = "none";
-    if (loginBtn) loginBtn.style.display = "none";
-    if (bioSettingsCard) bioSettingsCard.style.display = "none";
-    return;
+    showDebug("HTTPS required for biometric", true);
+    enableBtn.style.display = "none";
+    return false;
   }
 
   // 2. WebAuthn support check
   if (!window.PublicKeyCredential) {
-    elStatus.innerText = "Status: Not supported on this browser";
-    elStatus.style.color = "var(--danger)";
-    if (enableBtn) enableBtn.style.display = "none";
-    if (loginBtn) loginBtn.style.display = "none";
-    if (bioSettingsCard) bioSettingsCard.style.display = "none";
-    return;
+    showDebug("Browser not supported. Use Chrome or Edge", true);
+    enableBtn.style.display = "none";
+    return false;
   }
 
+  // 3. Show loading
+  enableBtn.disabled = true;
+  enableBtn.innerHTML = `
+    <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;vertical-align:middle;">
+    Checking...
+  `;
+  enableBtn.style.display = "flex";
+  enableBtn.style.alignItems = "center";
+  enableBtn.style.justifyContent = "center";
+  enableBtn.style.fontWeight = "600";
+  showDebug("Checking biometric support...");
+
   try {
-    // 3. Platform authenticator check - fast, no network
+    // 4. Platform authenticator check
     const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
     if (!available) {
-      elStatus.innerText = "Status: No fingerprint/face ID enrolled on device";
-      elStatus.style.color = "var(--warning)";
-      if (enableBtn) enableBtn.style.display = "none";
-      if (loginBtn) loginBtn.style.display = "none";
-      return;
+      showDebug("No fingerprint or face ID enrolled on device", true);
+      enableBtn.style.display = "none";
+      return false;
     }
 
-    // 4. Check if user is logged in
+    // 5. Check if user is logged in
     const token = getToken();
     if (!token) {
-      elStatus.innerText = "Status: Login to enable biometric";
-      elStatus.style.color = "var(--info)";
-      if (enableBtn) enableBtn.style.display = "none";
-      if (loginBtn) loginBtn.style.display = "inline-block"; // Show for login page
-      return;
+      showDebug("Login to enable biometric");
+      enableBtn.innerHTML = `
+        <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
+        Login with Fingerprint
+      `;
+      enableBtn.onclick = loginWithBiometric;
+      enableBtn.disabled = false;
+      enableBtn.style.display = "flex";
+      return false;
     }
 
-    // 5. Show loading state
-    elStatus.innerText = "Status: Checking...";
-    elStatus.style.color = "var(--muted)";
-
-    // 6. Fetch from backend with 3s timeout - won't hang
+    // 6. Fetch from backend - GYARA: /check-enabled ba /status ba
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-    const res = await fetch(API + '/api/auth/webauthn/status', {
+    const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
       method: 'GET',
       headers: {
         'Authorization': 'Bearer ' + token,
@@ -472,63 +490,58 @@ async function checkBiometricStatus() {
 
     clearTimeout(timeoutId);
 
-    if (!res.ok) {
-      throw new Error(`Server error ${res.status}`);
-    }
-
-    // 7. Validate JSON response
-    const contentType = res.headers.get("content-type");
-    if (!contentType ||!contentType.includes("application/json")) {
-      const text = await res.text();
-      console.error("Non-JSON response from /status:", text.substring(0, 200));
-      throw new Error("Invalid server response");
-    }
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
 
     const data = await res.json();
 
-    // 8. Update UI based on status
+    // 7. Update UI based on status
+    enableBtn.disabled = false;
+    
     if (data.enabled === true) {
-      elStatus.innerText = "Status: Enabled ✓";
-      elStatus.style.color = "var(--success)";
-      if (enableBtn) enableBtn.style.display = "none";
-      if (loginBtn) loginBtn.style.display = "none"; // Hide login if already enabled
+      enableBtn.innerHTML = `
+        <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
+        Login with Fingerprint
+      `;
+      enableBtn.onclick = loginWithBiometric;
+      enableBtn.style.background = '#2196F3';
+      enableBtn.style.display = "flex";
+      showDebug('Passkey enabled. Tap to verify your identity');
     } else {
-      elStatus.innerText = "Status: Available - click to enable";
-      elStatus.style.color = "var(--warning)";
-      if (enableBtn) enableBtn.style.display = "inline-block";
-      if (loginBtn) loginBtn.style.display = "none";
+      enableBtn.innerHTML = `
+        <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
+        Enable Fingerprint/Face ID
+      `;
+      enableBtn.onclick = enableBiometric;
+      enableBtn.style.background = '#2196F3';
+      enableBtn.style.display = "flex";
+      showDebug('Secure your account with biometric authentication');
     }
 
     return data.enabled || false;
 
   } catch (e) {
-    // 9. Silent fail - don't scare user with errors
     console.error("Biometric status check failed:", e.name, e.message);
-
+    
+    // GYARA: Ba za a sake rubuta "Status:" ba
     if (e.name === 'AbortError') {
-      elStatus.innerText = "Status: Check timed out";
+      showDebug("Check timed out. Try again", true);
     } else if (e.message.includes('Failed to fetch')) {
-      elStatus.innerText = "Status: Network error";
+      showDebug("Network error. Check connection", true);
     } else {
-      elStatus.innerText = "Status: Unavailable";
+      showDebug("Biometric unavailable on this device", true);
     }
 
-    elStatus.style.color = "var(--muted)";
-    if (enableBtn) enableBtn.style.display = "none";
-    if (loginBtn) loginBtn.style.display = "inline-block"; // Show login button as fallback
-    if (bioSettingsCard) bioSettingsCard.style.display = "block"; // Keep card visible
-
+    enableBtn.style.display = "none";
     return false;
   }
 }
 
 // Helper: Call this on page load or when settings tab opens
-function initBiometricStatus() {
-  // Run check but don't block page load
+function initBiometricProfile() {
   checkBiometricStatus().catch(err => {
     console.log('Biometric init failed:', err);
   });
-} 
+}
 
 /* ================= WEBAUTHN - BIOMETRIC AUTH - FINAL VERSION ================= */
 let cachedRegOptions = null;

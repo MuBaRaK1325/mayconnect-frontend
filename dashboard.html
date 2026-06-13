@@ -1501,57 +1501,51 @@ details pre {
 </style>
 <!-- PROFILE -->
 <section id="profile" class="section">
-<button onclick="showSection('home')" class="backBtn">⬅ Back</button>
+  <button onclick="showSection('home')" class="backBtn">⬅ Back</button>
 
-<div class="adminSection" style="background:var(--card);">
-  <h3>Security</h3>
-  <div id="biometricSection">
-    <!-- GYARA: Cire <p>Status: ...</p> gaba daya -->
-    <div id="biometricStatus" style="margin:10px 0;min-height:70px;padding:12px;background:#1a1a1a;border-radius:8px;border:1px solid #333;">
-      Checking...
+  <div class="adminSection" style="background:var(--card);">
+    <h3>Security</h3>
+    <div id="biometricSection">
+      <div id="biometricStatus" style="margin:10px 0;min-height:70px;padding:12px;background:#1a1a1a;border-radius:8px;border:1px solid #333;">
+        Loading...
+      </div>
+      
+      <button id="enableBiometricBtn" 
+              style="display:none;width:100%;margin:8px 0;background:#2196F3;color:white;font-weight:600;padding:14px;border-radius:10px;border:none;cursor:pointer;font-size:15px;">
+      </button>
+    </div>
+  </div>
+
+  <button onclick="openModal('passwordModal')">Change Password</button>
+  <button onclick="openModal('pinModalBox')">Change PIN</button>
+  <button onclick="logout()">Logout</button>
+
+  <!-- ADMIN PANEL -->
+  <div class="adminOnly">
+    <h3>Admin Tools</h3>
+    <button onclick="showSection('plansManager')">📱 Plans Manager</button>
+    <button onclick="showSection('usersManager')">👥 Users Manager</button>
+    <button onclick="showSection('transactionsManager'); loadAdminTransactions();" class="adminNavBtn">🧾 Transactions</button>
+    <hr>
+
+    <h3>Transaction Reversal</h3>
+    <input id="reverseRef" placeholder="Transaction Reference">
+    <button onclick="reverseTransaction()" class="dangerBtn">Reverse Transaction</button>
+  </div>
+
+  <div class="footer">
+    <p>Need Help?</p>
+    <a href="https://wa.me/2348117988561" target="_blank">📞 Support (08117988561)</a>
+    <a href="https://wa.me/2348117988561" target="_blank">👨‍💻 Developer (08117988561)</a>
+    
+    <div class="channelLink">
+      <a href="https://chat.whatsapp.com/E2plw1NrM2fFhd4t6dQMMZ" target="_blank">
+        📢 Join MAYCONNECT WhatsApp Channel
+      </a>
     </div>
     
-    <!-- GYARA: Button daya kawai - JS zai canza text da onclick -->
-    <button id="enableBiometricBtn" 
-            style="display:none;width:100%;margin:8px 0;background:#2196F3;color:white;font-weight:600;padding:14px;border-radius:10px;border:none;cursor:pointer;font-size:15px;">
-      Checking...
-    </button>
-    
-    <!-- Cire biometricLoginBtn gaba daya -->
+    <p>© MAYCONNECT TECHNOLOGIES NIG LTD 2026</p>
   </div>
-</div>
-
-<button onclick="openModal('passwordModal')">Change Password</button>
-<button onclick="openModal('pinModalBox')">Change PIN</button>
-<button onclick="logout()">Logout</button>
-
-<!-- ADMIN PANEL -->
-<div class="adminOnly">
-<h3>Admin Tools</h3>
-<button onclick="showSection('plansManager')">📱 Plans Manager</button>
-<button onclick="showSection('usersManager')">👥 Users Manager</button>
-<button onclick="showSection('transactionsManager'); loadAdminTransactions();" class="adminNavBtn">🧾 Transactions</button>
-<hr>
-
-<h3>Transaction Reversal</h3>
-<input id="reverseRef" placeholder="Transaction Reference">
-<button onclick="reverseTransaction()" class="dangerBtn">Reverse Transaction</button>
-</div>
-
-<div class="footer">
-  <p>Need Help?</p>
-  <a href="https://wa.me/2348117988561" target="_blank">📞 Support (0811798851)</a>
-  <a href="https://wa.me/2348117988561" target="_blank">👨‍💻 Developer (08117988561)</a>
-  
-  <div class="channelLink">
-    <a href="https://chat.whatsapp.com/E2plw1NrM2fFhd4t6dQMMZ" target="_blank">
-      📢 Join MAYCONNECT WhatsApp Channel
-    </a>
-  </div>
-  
-  <p>© MAYCONNECT TECHNOLOGIES NIG LTD 2026</p>
-</div>
-
 </section>
 
 <!-- PIN MODAL -->
