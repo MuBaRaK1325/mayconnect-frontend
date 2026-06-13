@@ -534,6 +534,7 @@ function initBiometricStatus() {
 // Cache for instant popup
 let cachedRegOptions = null;
 let isPreloading = false;
+let biometricClickLock = false;
 
 // Helper functions - ROBUST VERSION
 function bufferDecode(value) {
@@ -572,15 +573,20 @@ function bufferDecode(value) {
 
 function bufferEncode(value) {
   return btoa(String.fromCharCode(...new Uint8Array(value)))
-   .replace(/\+/g, '-')
-   .replace(/\//g, '_')
-   .replace(/=/g, '');
+  .replace(/\+/g, '-')
+  .replace(/\//g, '_')
+  .replace(/=/g, '');
 }
 
 // Check if biometric is available
 async function isBiometricAvailable() {
   if (!window.PublicKeyCredential) return false;
-  return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  try {
+    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  } catch (e) {
+    console.error('Biometric check failed:', e);
+    return false;
+  }
 }
 
 // Preload registration options for instant popup
@@ -589,6 +595,7 @@ async function preloadBiometricOptions() {
 
   try {
     isPreloading = true;
+    console.log('Preloading biometric options...');
     const res = await fetch(API + '/api/auth/webauthn/register-start', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + getToken() }
@@ -597,9 +604,11 @@ async function preloadBiometricOptions() {
     if (res.ok) {
       cachedRegOptions = await res.json();
       console.log('Biometric options preloaded');
+    } else {
+      console.warn('Preload failed:', res.status);
     }
   } catch (e) {
-    console.error('Preload failed:', e);
+    console.error('Preload error:', e);
   } finally {
     isPreloading = false;
   }
@@ -611,7 +620,10 @@ async function updateBiometricUI() {
   const loginBtn = document.getElementById('biometricLoginBtn');
   const statusEl = document.getElementById('biometricStatus');
 
-  if (!enableBtn ||!statusEl) return;
+  if (!enableBtn ||!statusEl) {
+    console.warn('Biometric UI elements not found');
+    return;
+  }
 
   const available = await isBiometricAvailable();
   if (!available) {
@@ -639,6 +651,10 @@ async function updateBiometricUI() {
       statusEl.textContent = 'Not Enabled';
       statusEl.style.color = '#ffa000';
       enableBtn.style.display = 'block';
+      enableBtn.textContent = '🔓 Enable Fingerprint/Face ID';
+      enableBtn.disabled = false;
+      enableBtn.style.opacity = '1';
+      enableBtn.style.cursor = 'pointer';
       if (loginBtn) loginBtn.style.display = 'none';
     }
   } catch (e) {
@@ -646,23 +662,34 @@ async function updateBiometricUI() {
     statusEl.textContent = 'Error';
     statusEl.style.color = '#ff4d4d';
     enableBtn.style.display = 'block';
+    enableBtn.textContent = '🔓 Enable Fingerprint/Face ID';
+    enableBtn.disabled = false;
+    enableBtn.style.opacity = '1';
+    enableBtn.style.cursor = 'pointer';
   }
 }
 
 // Enable Biometric for current user - INSTANT POPUP
 async function enableBiometric() {
+  if (biometricClickLock) {
+    console.log('Biometric request already in progress');
+    return;
+  }
+
   const btn = document.getElementById('enableBiometricBtn');
+  biometricClickLock = true;
 
   if (!window.PublicKeyCredential) {
+    biometricClickLock = false;
     return showMsg('Biometric not supported on this device/browser', 'error');
   }
 
   const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
   if (!available) {
+    biometricClickLock = false;
     return showMsg('No fingerprint/face sensor detected on this device', 'error');
   }
 
-  // Disable button immediately
   if (btn) {
     btn.disabled = true;
     btn.textContent = '🔓 Touch sensor...';
@@ -671,9 +698,9 @@ async function enableBiometric() {
   }
 
   try {
-    // Use cached options - NO FETCH = INSTANT POPUP
     if (!cachedRegOptions) {
       if (btn) btn.textContent = '🔓 Loading...';
+      console.log('No cache, fetching options...');
       const startRes = await fetch(API + '/api/auth/webauthn/register-start', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + getToken() }
@@ -689,7 +716,7 @@ async function enableBiometric() {
     if (!start.user ||!start.user.id) throw new Error('No user data received from server');
 
     const options = {
-     ...start,
+    ...start,
       challenge: bufferDecode(start.challenge),
       user: {...start.user, id: bufferDecode(start.user.id) }
     };
@@ -703,7 +730,7 @@ async function enableBiometric() {
       delete options.excludeCredentials;
     }
 
-    // THIS RUNS INSTANTLY NOW
+    console.log('Calling navigator.credentials.create...');
     const cred = await navigator.credentials.create({
       publicKey: options,
       signal: AbortSignal.timeout(60000)
@@ -743,7 +770,7 @@ async function enableBiometric() {
 
     if (finish.verified) {
       showMsg('Fingerprint enabled successfully!', 'success');
-      updateBiometricUI();
+      await updateBiometricUI();
     } else {
       showMsg('Failed: ' + (finish.error || 'Verification failed'), 'error');
     }
@@ -761,6 +788,7 @@ async function enableBiometric() {
       showMsg('Error: ' + e.message, 'error');
     }
   } finally {
+    biometricClickLock = false;
     if (btn) {
       btn.disabled = false;
       btn.textContent = '🔓 Enable Fingerprint/Face ID';
@@ -794,7 +822,7 @@ async function loginWithBiometric() {
       if (!start.challenge) throw new Error('No challenge from server');
 
       const options = {
-       ...start,
+      ...start,
         challenge: bufferDecode(start.challenge),
         allowCredentials: start.allowCredentials?.map(cred => {
           if (!cred.id) throw new Error('Invalid credential');
@@ -925,8 +953,24 @@ async function checkBiometricStatus() {
 
 // Call this when Profile section loads
 function initBiometricProfile() {
+  console.log('Initializing biometric profile...');
   updateBiometricUI();
-  preloadBiometricOptions(); // Preload for instant popup
+  preloadBiometricOptions();
+
+  // CRITICAL: Bind button click events
+  const enableBtn = document.getElementById('enableBiometricBtn');
+  if (enableBtn) {
+    enableBtn.onclick = enableBiometric;
+    console.log('Enable biometric button bound');
+  } else {
+    console.error('enableBiometricBtn not found in DOM');
+  }
+
+  const loginBtn = document.getElementById('biometricLoginBtn');
+  if (loginBtn) {
+    loginBtn.onclick = loginWithBiometric;
+    console.log('Login biometric button bound');
+  }
 }
 /* ================= PURCHASE MODAL ================= */
 async function openPurchaseModal(planId, planName, planPrice) {
