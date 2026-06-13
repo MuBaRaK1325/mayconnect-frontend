@@ -605,7 +605,7 @@ async function checkBiometricStatus() {
 
     const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
     showDebug('Step 2: Platform authenticator = ' + available);
-    if (!available) throw new Error('No fingerprint/face ID enrolled');
+    if (!available) throw new Error('No fingerprint/face ID enrolled. Add in Settings > Security');
 
     const token = getToken();
     if (!token) {
@@ -686,12 +686,13 @@ function enableBiometric() {
     .then(data => {
       if (data.error) throw new Error(data.error);
       
-      // CRITICAL FIX: Force rp.id to match current domain
+      // CRITICAL FIX: Force rp.id to match current domain including www
+      const currentDomain = window.location.hostname;
       if (data.rp) {
-        data.rp.id = window.location.hostname;
+        data.rp.id = currentDomain;
         showDebug('Step 5: Got options\nRP ID FORCED: ' + data.rp.id + '\nChallenge: ' + data.challenge.substring(0,20) + '...');
       } else {
-        data.rp = { id: window.location.hostname, name: APP_NAME };
+        data.rp = { id: currentDomain, name: APP_NAME };
         showDebug('Step 5: Created rp\nRP ID: ' + data.rp.id);
       }
       
@@ -720,13 +721,14 @@ function enableBiometric() {
 
     try {
       const data = cachedRegOptions;
+      const currentDomain = window.location.hostname;
       
       // CRITICAL: Rebuild publicKey with forced rp.id
       const publicKey = {
         challenge: bufferDecode(data.challenge),
         rp: {
           name: data.rp.name || APP_NAME,
-          id: window.location.hostname // FORCE CORRECT DOMAIN
+          id: currentDomain // FORCE: www.mayconnectdataplug.com.ng
         },
         user: {
           id: bufferDecode(data.user.id),
