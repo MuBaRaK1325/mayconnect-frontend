@@ -531,9 +531,10 @@ function initBiometricStatus() {
 } 
 
 /* ================= WEBAUTHN - BIOMETRIC AUTH - INSTANT POPUP ================= */
-
-// Helper functions
+// Helper functions - FIXED
 function bufferDecode(value) {
+  if (value === null || value === undefined) throw new Error('Invalid value: got empty');
+  if (typeof value !== 'string') value = String(value);
   return Uint8Array.from(atob(value.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
 }
 
@@ -594,7 +595,7 @@ async function updateBiometricUI() {
   }
 }
 
-// Enable Biometric for current user
+// Enable Biometric for current user - FIXED
 async function enableBiometric() {
   if (!window.PublicKeyCredential) {
     return showMsg('Biometric not supported on this device/browser', 'error');
@@ -605,9 +606,7 @@ async function enableBiometric() {
     return showMsg('No fingerprint/face sensor detected on this device', 'error');
   }
 
-  let start = null;
   try {
-    // 1. Fetch challenge first - BEFORE showing any loader
     const startRes = await fetch(API + '/api/auth/webauthn/register-start', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + getToken() }
@@ -618,10 +617,13 @@ async function enableBiometric() {
       throw new Error(err.error || err.message || "Failed to start registration");
     }
     
-    start = await startRes.json();
+    const start = await startRes.json();
     if (start.error) throw new Error(start.error);
 
-    // 2. CRITICAL: Call biometric IMMEDIATELY - no await between user click and this
+    // FIX: Validate server response
+    if (!start.challenge) throw new Error('No challenge received from server');
+    if (!start.user || !start.user.id) throw new Error('No user data received from server');
+
     const options = {
       ...start,
       challenge: bufferDecode(start.challenge),
@@ -629,15 +631,14 @@ async function enableBiometric() {
     };
 
     if (options.excludeCredentials && options.excludeCredentials.length > 0) {
-      options.excludeCredentials = options.excludeCredentials.map(cred => ({
-        ...cred,
-        id: bufferDecode(cred.id)
-      }));
+      options.excludeCredentials = options.excludeCredentials.map(cred => {
+        if (!cred.id) throw new Error('Invalid credential from server');
+        return { ...cred, id: bufferDecode(cred.id) };
+      });
     } else {
       delete options.excludeCredentials;
     }
 
-    // THIS MUST RUN IMMEDIATELY AFTER USER CLICK - NO LOADER BEFORE IT
     const cred = await navigator.credentials.create({
       publicKey: options,
       signal: AbortSignal.timeout(60000)
@@ -645,7 +646,6 @@ async function enableBiometric() {
 
     if (!cred) throw new Error('Biometric creation cancelled');
 
-    // 3. Only NOW show loader - after biometric prompt is done
     showLoader('Saving credential...');
 
     const credential = {
@@ -675,7 +675,7 @@ async function enableBiometric() {
     hideLoader();
     if (finish.verified) {
       showMsg('Fingerprint enabled successfully!', 'success');
-      updateBiometricUI(); // Update UI immediately
+      updateBiometricUI();
     } else {
       showMsg('Failed: ' + (finish.error || 'Verification failed'), 'error');
     }
@@ -694,16 +694,14 @@ async function enableBiometric() {
   }
 }
 
-// Login with Biometric
+// Login with Biometric - FIXED
 async function loginWithBiometric() {
   showInputModal('Biometric Login', 'Enter your email', async (email) => {
     if (!email || !email.includes('@')) {
       return showMsg('Please enter a valid email', 'error');
     }
 
-    let start = null;
     try {
-      // 1. Fetch challenge first
       const startRes = await fetch(API + '/api/auth/webauthn/login-start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -715,17 +713,17 @@ async function loginWithBiometric() {
         throw new Error(err.error || err.message || "Failed to start login");
       }
       
-      start = await startRes.json();
+      const start = await startRes.json();
       if (start.error) throw new Error(start.error);
+      if (!start.challenge) throw new Error('No challenge from server');
 
-      // 2. CRITICAL: Call biometric IMMEDIATELY - no loader before this
       const options = {
         ...start,
         challenge: bufferDecode(start.challenge),
-        allowCredentials: start.allowCredentials.map(cred => ({
-          ...cred,
-          id: bufferDecode(cred.id)
-        }))
+        allowCredentials: start.allowCredentials?.map(cred => {
+          if (!cred.id) throw new Error('Invalid credential');
+          return { ...cred, id: bufferDecode(cred.id) };
+        }) || []
       };
 
       const assertion = await navigator.credentials.get({
@@ -735,7 +733,6 @@ async function loginWithBiometric() {
 
       if (!assertion) throw new Error('Biometric authentication cancelled');
 
-      // 3. Only NOW show loader
       showLoader('Verifying...');
 
       const credential = {
@@ -786,7 +783,7 @@ async function loginWithBiometric() {
   });
 }
 
-// Verify Biometric for Transactions - INSTANT POPUP
+// Verify Biometric for Transactions
 async function verifyBiometricForTransaction() {
   if (!window.PublicKeyCredential) {
     throw new Error('Biometric not supported on this device');
@@ -798,7 +795,6 @@ async function verifyBiometricForTransaction() {
   }
 
   try {
-    // CRITICAL: Call biometric IMMEDIATELY - no loader, no fetch before this
     const challenge = new Uint8Array(32);
     crypto.getRandomValues(challenge);
     
@@ -808,7 +804,6 @@ async function verifyBiometricForTransaction() {
       userVerification: 'required'
     };
 
-    // THIS MUST RUN IMMEDIATELY AFTER USER CLICK
     const assertion = await navigator.credentials.get({
       publicKey: options,
       signal: AbortSignal.timeout(60000)
@@ -816,7 +811,6 @@ async function verifyBiometricForTransaction() {
 
     if (!assertion) throw new Error('Biometric verification cancelled');
     
-    // Return special flag for backend
     return 'biometric_verified';
   } catch (e) {
     console.error('Transaction biometric error:', e);
