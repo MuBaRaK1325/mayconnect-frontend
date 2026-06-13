@@ -530,7 +530,7 @@ function initBiometricStatus() {
   });
 } 
 
-/* ================= WEBAUTHN - DEBUG VERSION ================= */
+/* ================= WEBAUTHN - BIOMETRIC AUTH - FIXED BUFFER DECODE ================= */
 let cachedRegOptions = null;
 let biometricReady = false;
 
@@ -538,21 +538,51 @@ function showDebug(msg, isError = false) {
   const statusEl = document.getElementById('biometricStatus');
   if (statusEl) {
     statusEl.textContent = msg;
-    statusEl.style.color = isError ? '#ff4d4d' : '#ffa000';
-    statusEl.style.fontSize = '12px';
+    statusEl.style.color = isError? '#ff4d4d' : '#ffa000';
+    statusEl.style.fontSize = '11px';
   }
-  if (window.showMsg) showMsg(msg, isError ? 'error' : 'info');
+  if (window.showMsg) showMsg(msg, isError? 'error' : 'info');
 }
 
+// FIXED: Handles string, array, object, ArrayBuffer
 function bufferDecode(value) {
-  if (value === null || value === undefined) throw new Error('Invalid value');
-  if (value instanceof Uint8Array) return value;
-  if (typeof value === 'string') {
-    let base64 = value.replace(/-/g, '+').replace(/_/g, '/');
-    while (base64.length % 4) base64 += '=';
-    return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+  console.log('bufferDecode got:', typeof value, value);
+
+  if (value === null || value === undefined) {
+    throw new Error('Empty value received from server');
   }
-  throw new Error('Bad value type');
+
+  // Already a Uint8Array
+  if (value instanceof Uint8Array) return value;
+
+  // ArrayBuffer
+  if (value instanceof ArrayBuffer) return new Uint8Array(value);
+
+  // Regular Array like [1,2,3]
+  if (Array.isArray(value)) return new Uint8Array(value);
+
+  // Object like {0: 1, 1: 2, 2: 3}
+  if (typeof value === 'object') {
+    const keys = Object.keys(value);
+    if (keys.length > 0 &&!isNaN(keys[0])) {
+      const arr = Object.values(value);
+      return new Uint8Array(arr);
+    }
+    throw new Error('Invalid object format from server');
+  }
+
+  // Base64 string
+  if (typeof value === 'string') {
+    try {
+      let base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+      while (base64.length % 4) base64 += '=';
+      return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    } catch (e) {
+      throw new Error('Invalid base64: ' + value.substring(0, 20));
+    }
+  }
+
+  throw new Error('Bad value type: ' + typeof value);
 }
 
 function bufferEncode(value) {
@@ -563,7 +593,7 @@ function bufferEncode(value) {
 function updateBiometricUI() {
   const btn = document.getElementById('enableBiometricBtn');
   const statusEl = document.getElementById('biometricStatus');
-  if (!btn || !statusEl) return;
+  if (!btn ||!statusEl) return;
 
   btn.textContent = '🔓 Enable Fingerprint/Face ID';
   btn.disabled = false;
@@ -571,13 +601,13 @@ function updateBiometricUI() {
   btn.style.background = '';
 
   if (!window.PublicKeyCredential) {
-    showDebug('Browser Not Supported - Use Chrome', true);
+    showDebug('Use Chrome Browser', true);
     btn.style.display = 'none';
     return;
   }
 
   if (!window.isSecureContext) {
-    showDebug('HTTPS Required - Site must be https://', true);
+    showDebug('HTTPS Required', true);
     btn.style.display = 'none';
     return;
   }
@@ -599,13 +629,12 @@ function enableBiometric() {
   if (!biometricReady) {
     btn.disabled = true;
     btn.textContent = '🔓 Checking...';
-    showDebug('Step 1: Checking fingerprint support...');
+    showDebug('Step 1: Checking fingerprint...');
 
-    // Check if fingerprint is enrolled first
     PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
-  .then(available => {
+.then(available => {
       if (!available) {
-        throw new Error('No fingerprint enrolled. Go to Settings > Security > Add fingerprint');
+        throw new Error('No fingerprint enrolled. Settings > Security > Add fingerprint');
       }
       showDebug('Step 1: Fingerprint found. Getting challenge...');
       btn.textContent = '🔓 Preparing...';
@@ -615,12 +644,13 @@ function enableBiometric() {
         headers: { 'Authorization': 'Bearer ' + getToken() }
       });
     })
-  .then(res => {
+.then(res => {
       if (!res.ok) throw new Error('Server error: ' + res.status);
       return res.json();
     })
-  .then(data => {
+.then(data => {
       if (data.error) throw new Error(data.error);
+      console.log('Server response:', data);
       cachedRegOptions = data;
       biometricReady = true;
       btn.disabled = false;
@@ -628,7 +658,7 @@ function enableBiometric() {
       btn.style.background = '#00c853';
       showDebug('Ready! Click again to open fingerprint');
     })
-  .catch(e => {
+.catch(e => {
       showDebug('Error: ' + e.message, true);
       btn.disabled = false;
       btn.textContent = '🔓 Enable Fingerprint/Face ID';
@@ -646,23 +676,28 @@ function enableBiometric() {
 
     try {
       const data = cachedRegOptions;
+      console.log('Raw data from server:', data);
+
       const publicKey = {
-    ...data,
+  ...data,
         challenge: bufferDecode(data.challenge),
-        user: { ...data.user, id: bufferDecode(data.user.id) }
+        user: {...data.user, id: bufferDecode(data.user.id) }
       };
 
-      if (publicKey.excludeCredentials) {
-        publicKey.excludeCredentials = publicKey.excludeCredentials.map(c => ({
-     ...c, id: bufferDecode(c.id)
-        }));
+      if (publicKey.excludeCredentials && publicKey.excludeCredentials.length > 0) {
+        publicKey.excludeCredentials = publicKey.excludeCredentials.map(c => {
+          console.log('Decoding credential:', c);
+          return {...c, id: bufferDecode(c.id) };
+        });
+      } else {
+        delete publicKey.excludeCredentials;
       }
 
-      // CRITICAL: This line must run or popup won't show
-      showDebug('Calling fingerprint... If no popup, check Settings');
-      
+      console.log('Final publicKey:', publicKey);
+      showDebug('Calling fingerprint API...');
+
       navigator.credentials.create({ publicKey })
-   .then(cred => {
+ .then(cred => {
         if (!cred) throw new Error('User cancelled');
         showDebug('Fingerprint OK! Saving...');
         btn.textContent = '🔓 Saving...';
@@ -683,8 +718,8 @@ function enableBiometric() {
           body: JSON.stringify(credential)
         });
       })
-   .then(res => res.json())
-   .then(result => {
+ .then(res => res.json())
+ .then(result => {
         if (result.verified) {
           showDebug('Success! Fingerprint enabled ✓');
           btn.style.display = 'none';
@@ -694,8 +729,8 @@ function enableBiometric() {
           throw new Error(result.error || 'Verification failed');
         }
       })
-   .catch(err => {
-        console.error(err);
+ .catch(err => {
+        console.error('Full error:', err);
         if (err.name === 'NotAllowedError') {
           showDebug('Cancelled or No Fingerprint Enrolled', true);
         } else if (err.name === 'InvalidStateError') {
@@ -711,6 +746,7 @@ function enableBiometric() {
       });
 
     } catch (e) {
+      console.error('Setup error:', e);
       showDebug('Setup error: ' + e.message, true);
       btn.disabled = false;
       btn.textContent = '🔓 Enable Fingerprint/Face ID';
