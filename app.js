@@ -532,7 +532,7 @@ function initBiometricStatus() {
 
 /* ================= WEBAUTHN - BIOMETRIC AUTH - INSTANT POPUP ================= */
 let cachedRegOptions = null;
-let biometricStep = 0; // 0 = idle, 1 = challenge ready
+let biometricStep = 0;
 
 // Helper functions
 function bufferDecode(value) {
@@ -575,6 +575,7 @@ function updateBiometricUI() {
   enableBtn.style.opacity = '1';
   enableBtn.style.cursor = 'pointer';
   enableBtn.style.display = 'block';
+  enableBtn.style.background = '';
 
   if (!window.PublicKeyCredential) {
     statusEl.textContent = 'Not Supported';
@@ -591,91 +592,83 @@ function updateBiometricUI() {
   cachedRegOptions = null;
 }
 
-// Enable Biometric - 2 STEP FLOW
+// Enable Biometric - SYNCHRONOUS CREATE IN STEP 2
 function enableBiometric() {
   const btn = document.getElementById('enableBiometricBtn');
 
   if (!window.PublicKeyCredential) {
-    return showMsg('Biometric not supported on this device/browser', 'error');
+    return showMsg('Biometric not supported', 'error');
   }
 
-  // STEP 1: Get challenge first
+  // STEP 1: Get challenge
   if (biometricStep === 0) {
     biometricStep = 1;
     if (btn) {
       btn.disabled = true;
       btn.textContent = '🔓 Preparing...';
-      btn.style.opacity = '0.6';
     }
 
     fetch(API + '/api/auth/webauthn/register-start', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + getToken() }
     })
-   .then(res => {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
-    })
-   .then(start => {
+  .then(res => res.json())
+  .then(start => {
       if (start.error) throw new Error(start.error);
       cachedRegOptions = start;
       if (btn) {
         btn.disabled = false;
         btn.textContent = '🔓 Touch sensor now';
-        btn.style.opacity = '1';
         btn.style.background = '#00c853';
       }
       showMsg('Ready! Click again and touch sensor', 'success');
     })
-   .catch(e => {
-      console.error('Prepare error:', e);
-      showMsg('Failed to prepare: ' + e.message, 'error');
+  .catch(e => {
+      showMsg('Failed: ' + e.message, 'error');
       biometricStep = 0;
       if (btn) {
         btn.disabled = false;
         btn.textContent = '🔓 Enable Fingerprint/Face ID';
-        btn.style.opacity = '1';
         btn.style.background = '';
       }
     });
     return;
   }
 
-  // STEP 2: Use cached challenge - NO FETCH = INSTANT
+  // STEP 2: Create credential - NO PROMISE CHAIN BEFORE create()
   if (biometricStep === 1 && cachedRegOptions) {
     if (btn) {
       btn.disabled = true;
       btn.textContent = '🔓 Touch sensor...';
-      btn.style.opacity = '0.6';
     }
 
     const start = cachedRegOptions;
 
     try {
       const options = {
-    ...start,
+   ...start,
         challenge: bufferDecode(start.challenge),
         user: {...start.user, id: bufferDecode(start.user.id) }
       };
 
       if (options.excludeCredentials && options.excludeCredentials.length > 0) {
-        options.excludeCredentials = options.excludeCredentials.map(cred => {
-          if (!cred.id) throw new Error('Invalid credential');
-          return {...cred, id: bufferDecode(cred.id) };
-        });
+        options.excludeCredentials = options.excludeCredentials.map(cred => ({
+      ...cred,
+          id: bufferDecode(cred.id)
+        }));
       } else {
         delete options.excludeCredentials;
       }
 
-      console.log('Calling navigator.credentials.create NOW...');
+      console.log('Calling create NOW - no await before this');
 
-      // This runs instantly because no await before it
+      // CRITICAL: This must be called synchronously in click handler
       navigator.credentials.create({ publicKey: options })
-     .then(cred => {
-        if (!cred) throw new Error('Biometric cancelled');
+    .then(cred => {
+        if (!cred) throw new Error('Cancelled');
 
         if (btn) btn.textContent = '🔓 Saving...';
-        showLoader('Saving credential...');
+        showLoader('Saving...');
 
         const credential = {
           id: cred.id,
@@ -694,14 +687,11 @@ function enableBiometric() {
           body: JSON.stringify(credential)
         });
       })
-     .then(res => {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
-     .then(finish => {
+    .then(res => res.json())
+    .then(finish => {
         hideLoader();
         if (finish.verified) {
-          showMsg('Fingerprint enabled successfully!', 'success');
+          showMsg('Fingerprint enabled!', 'success');
           const statusEl = document.getElementById('biometricStatus');
           if (statusEl) {
             statusEl.textContent = 'Enabled ✓';
@@ -716,167 +706,40 @@ function enableBiometric() {
           throw new Error(finish.error || 'Verification failed');
         }
       })
-     .catch(e => {
+    .catch(e => {
         hideLoader();
-        console.error('Biometric error:', e);
-        if (e.name === 'NotAllowedError') {
-          showMsg('Biometric cancelled or timed out', 'error');
-        } else if (e.name === 'InvalidStateError') {
-          showMsg('Biometric already enabled', 'error');
-        } else {
-          showMsg('Error: ' + e.message, 'error');
-        }
+        console.error('Error:', e);
+        showMsg('Error: ' + e.message, 'error');
         biometricStep = 0;
         cachedRegOptions = null;
         if (btn) {
           btn.disabled = false;
           btn.textContent = '🔓 Enable Fingerprint/Face ID';
-          btn.style.opacity = '1';
           btn.style.background = '';
         }
       });
 
     } catch (e) {
-      console.error('Setup error:', e);
       showMsg('Error: ' + e.message, 'error');
       biometricStep = 0;
       cachedRegOptions = null;
       if (btn) {
         btn.disabled = false;
         btn.textContent = '🔓 Enable Fingerprint/Face ID';
-        btn.style.opacity = '1';
         btn.style.background = '';
       }
     }
   }
 }
 
-// Login with Biometric - 2 STEP FLOW
-let cachedLoginOptions = null;
-let loginStep = 0;
-
-function loginWithBiometric() {
-  showInputModal('Biometric Login', 'Enter your email', (email) => {
-    if (!email ||!email.includes('@')) {
-      return showMsg('Please enter a valid email', 'error');
-    }
-
-    if (loginStep === 0) {
-      loginStep = 1;
-      showLoader('Preparing...');
-
-      fetch(API + '/api/auth/webauthn/login-start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      })
-     .then(res => {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
-     .then(start => {
-        hideLoader();
-        if (start.error) throw new Error(start.error);
-        cachedLoginOptions = { start, email };
-        showMsg('Ready! Touch sensor now', 'success');
-        // Auto-trigger sensor
-        loginWithBiometric();
-      })
-     .catch(e => {
-        hideLoader();
-        showMsg('Error: ' + e.message, 'error');
-        loginStep = 0;
-      });
-      return;
-    }
-
-    if (loginStep === 1 && cachedLoginOptions) {
-      const { start, email } = cachedLoginOptions;
-      loginStep = 0;
-
-      try {
-        const options = {
-      ...start,
-          challenge: bufferDecode(start.challenge),
-          allowCredentials: start.allowCredentials?.map(cred => {
-            if (!cred.id) throw new Error('Invalid credential');
-            return {...cred, id: bufferDecode(cred.id) };
-          }) || []
-        };
-
-        navigator.credentials.get({ publicKey: options })
-       .then(assertion => {
-          if (!assertion) throw new Error('Biometric cancelled');
-          showLoader('Verifying...');
-
-          const credential = {
-            id: assertion.id,
-            rawId: bufferEncode(assertion.rawId),
-            response: {
-              authenticatorData: bufferEncode(assertion.response.authenticatorData),
-              clientDataJSON: bufferEncode(assertion.response.clientDataJSON),
-              signature: bufferEncode(assertion.response.signature),
-              userHandle: assertion.response.userHandle? bufferEncode(assertion.response.userHandle) : null
-            },
-            type: assertion.type,
-            clientExtensionResults: assertion.getClientExtensionResults()
-          };
-
-          return fetch(API + '/api/auth/webauthn/login-finish', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({...credential, email })
-          });
-        })
-       .then(res => {
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          return res.json();
-        })
-       .then(finish => {
-          hideLoader();
-          cachedLoginOptions = null;
-          if (finish.token) {
-            localStorage.setItem('token', finish.token);
-            showMsg('Login successful!', 'success');
-            setTimeout(() => location.reload(), 800);
-          } else {
-            throw new Error(finish.error || 'Unknown error');
-          }
-        })
-       .catch(e => {
-          hideLoader();
-          cachedLoginOptions = null;
-          console.error('Login error:', e);
-          if (e.name === 'NotAllowedError') {
-            showMsg('Biometric cancelled or timed out', 'error');
-          } else {
-            showMsg('Biometric error: ' + e.message, 'error');
-          }
-        });
-
-      } catch (e) {
-        showMsg('Error: ' + e.message, 'error');
-        loginStep = 0;
-        cachedLoginOptions = null;
-      }
-    }
-  });
-}
-
 // Init
 function initBiometricProfile() {
-  console.log('=== Initializing biometric profile ===');
+  console.log('=== Init biometric ===');
   updateBiometricUI();
-
   const enableBtn = document.getElementById('enableBiometricBtn');
   if (enableBtn) {
     enableBtn.onclick = enableBiometric;
-    console.log('Enable biometric button bound');
-  }
-
-  const loginBtn = document.getElementById('biometricLoginBtn');
-  if (loginBtn) {
-    loginBtn.onclick = loginWithBiometric;
+    console.log('Button bound');
   }
 }
 /* ================= PURCHASE MODAL ================= */
