@@ -540,7 +540,7 @@ function initBiometricProfile() {
   });
 }
 
-/* ================= WEBAUTHN - BIOMETRIC AUTH - FINAL ================= */
+/* ================= WEBAUTHN - BIOMETRIC AUTH - FINAL CLEAN ================= */
 const APP_NAME = 'MAYCONNECT DATA PLUG';
 const APP_LOGO = '/images/logo.png';
 let cachedRegOptions = null;
@@ -557,7 +557,7 @@ function showDebug(msg, isError = false) {
       <div style="color:${isError ? '#ff4d4d' : '#00c853'};font-size:12px;line-height:1.4;">${msg}</div>
     `;
   }
-  console.log(isError ? '[ERROR]' : '[INFO]', msg);
+  console.log(isError ? '[ERROR]' : '', msg);
 }
 
 function bufferDecode(value) {
