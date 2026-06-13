@@ -531,18 +531,46 @@ function initBiometricStatus() {
 } 
 
 /* ================= WEBAUTHN - BIOMETRIC AUTH - INSTANT POPUP ================= */
-// Helper functions - FIXED
+// Helper functions - ROBUST VERSION
 function bufferDecode(value) {
-  if (value === null || value === undefined) throw new Error('Invalid value: got empty');
-  if (typeof value !== 'string') value = String(value);
-  return Uint8Array.from(atob(value.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+  if (value === null || value === undefined) {
+    throw new Error('Invalid value: got empty');
+  }
+
+  // Already Uint8Array
+  if (value instanceof Uint8Array) return value;
+
+  // Array of numbers
+  if (Array.isArray(value)) return new Uint8Array(value);
+
+  // Object with numeric keys {0: 1, 1: 2,...}
+  if (typeof value === 'object') {
+    const arr = Object.values(value);
+    if (arr.length > 0 && typeof arr[0] === 'number') {
+      return new Uint8Array(arr);
+    }
+  }
+
+  // String - try base64url decode
+  if (typeof value === 'string') {
+    try {
+      let base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+      while (base64.length % 4) base64 += '=';
+      return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    } catch (e) {
+      console.error('Failed to decode base64:', value);
+      throw new Error('Invalid base64 encoding');
+    }
+  }
+
+  throw new Error('Unsupported value type: ' + typeof value);
 }
 
 function bufferEncode(value) {
   return btoa(String.fromCharCode(...new Uint8Array(value)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
+   .replace(/\+/g, '-')
+   .replace(/\//g, '_')
+   .replace(/=/g, '');
 }
 
 // Check if biometric is available
@@ -556,8 +584,8 @@ async function updateBiometricUI() {
   const enableBtn = document.getElementById('enableBiometricBtn');
   const loginBtn = document.getElementById('biometricLoginBtn');
   const statusEl = document.getElementById('biometricStatus');
-  
-  if (!enableBtn || !statusEl) return;
+
+  if (!enableBtn ||!statusEl) return;
 
   const available = await isBiometricAvailable();
   if (!available) {
@@ -572,10 +600,10 @@ async function updateBiometricUI() {
     const res = await fetch(API + '/api/auth/webauthn/status', {
       headers: { 'Authorization': 'Bearer ' + getToken() }
     });
-    
+
     if (!res.ok) throw new Error('Failed to check status');
     const data = await res.json();
-    
+
     if (data.enabled) {
       statusEl.textContent = 'Enabled ✓';
       statusEl.style.color = '#00c853';
@@ -595,7 +623,7 @@ async function updateBiometricUI() {
   }
 }
 
-// Enable Biometric for current user - FIXED
+// Enable Biometric for current user
 async function enableBiometric() {
   if (!window.PublicKeyCredential) {
     return showMsg('Biometric not supported on this device/browser', 'error');
@@ -616,24 +644,23 @@ async function enableBiometric() {
       const err = await startRes.json().catch(() => ({ error: `HTTP ${startRes.status}` }));
       throw new Error(err.error || err.message || "Failed to start registration");
     }
-    
+
     const start = await startRes.json();
     if (start.error) throw new Error(start.error);
 
-    // FIX: Validate server response
     if (!start.challenge) throw new Error('No challenge received from server');
-    if (!start.user || !start.user.id) throw new Error('No user data received from server');
+    if (!start.user ||!start.user.id) throw new Error('No user data received from server');
 
     const options = {
-      ...start,
+     ...start,
       challenge: bufferDecode(start.challenge),
-      user: { ...start.user, id: bufferDecode(start.user.id) }
+      user: {...start.user, id: bufferDecode(start.user.id) }
     };
 
     if (options.excludeCredentials && options.excludeCredentials.length > 0) {
       options.excludeCredentials = options.excludeCredentials.map(cred => {
         if (!cred.id) throw new Error('Invalid credential from server');
-        return { ...cred, id: bufferDecode(cred.id) };
+        return {...cred, id: bufferDecode(cred.id) };
       });
     } else {
       delete options.excludeCredentials;
@@ -669,7 +696,7 @@ async function enableBiometric() {
       const err = await finishRes.json().catch(() => ({ error: `HTTP ${finishRes.status}` }));
       throw new Error(err.error || err.message || "Failed to finish registration");
     }
-    
+
     const finish = await finishRes.json();
 
     hideLoader();
@@ -694,10 +721,10 @@ async function enableBiometric() {
   }
 }
 
-// Login with Biometric - FIXED
+// Login with Biometric
 async function loginWithBiometric() {
   showInputModal('Biometric Login', 'Enter your email', async (email) => {
-    if (!email || !email.includes('@')) {
+    if (!email ||!email.includes('@')) {
       return showMsg('Please enter a valid email', 'error');
     }
 
@@ -712,17 +739,17 @@ async function loginWithBiometric() {
         const err = await startRes.json().catch(() => ({ error: `HTTP ${startRes.status}` }));
         throw new Error(err.error || err.message || "Failed to start login");
       }
-      
+
       const start = await startRes.json();
       if (start.error) throw new Error(start.error);
       if (!start.challenge) throw new Error('No challenge from server');
 
       const options = {
-        ...start,
+       ...start,
         challenge: bufferDecode(start.challenge),
         allowCredentials: start.allowCredentials?.map(cred => {
           if (!cred.id) throw new Error('Invalid credential');
-          return { ...cred, id: bufferDecode(cred.id) };
+          return {...cred, id: bufferDecode(cred.id) };
         }) || []
       };
 
@@ -742,7 +769,7 @@ async function loginWithBiometric() {
           authenticatorData: bufferEncode(assertion.response.authenticatorData),
           clientDataJSON: bufferEncode(assertion.response.clientDataJSON),
           signature: bufferEncode(assertion.response.signature),
-          userHandle: assertion.response.userHandle ? bufferEncode(assertion.response.userHandle) : null
+          userHandle: assertion.response.userHandle? bufferEncode(assertion.response.userHandle) : null
         },
         type: assertion.type,
         clientExtensionResults: assertion.getClientExtensionResults()
@@ -751,14 +778,14 @@ async function loginWithBiometric() {
       const finishRes = await fetch(API + '/api/auth/webauthn/login-finish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...credential, email })
+        body: JSON.stringify({...credential, email })
       });
 
       if (!finishRes.ok) {
         const err = await finishRes.json().catch(() => ({ error: `HTTP ${finishRes.status}` }));
         throw new Error(err.error || err.message || "Failed to finish login");
       }
-      
+
       const finish = await finishRes.json();
 
       hideLoader();
@@ -797,7 +824,7 @@ async function verifyBiometricForTransaction() {
   try {
     const challenge = new Uint8Array(32);
     crypto.getRandomValues(challenge);
-    
+
     const options = {
       challenge: challenge,
       timeout: 60000,
@@ -810,7 +837,7 @@ async function verifyBiometricForTransaction() {
     });
 
     if (!assertion) throw new Error('Biometric verification cancelled');
-    
+
     return 'biometric_verified';
   } catch (e) {
     console.error('Transaction biometric error:', e);
@@ -830,16 +857,16 @@ async function checkBiometricStatus() {
     const res = await fetch(API + '/api/auth/webauthn/status', {
       headers: { 'Authorization': 'Bearer ' + getToken() }
     });
-    
+
     if (!res.ok) return false;
     const data = await res.json();
-    
+
     const statusEl = document.getElementById('biometricStatus');
     if (statusEl) {
-      statusEl.textContent = data.enabled ? 'Enabled ✓' : 'Not Enabled';
-      statusEl.style.color = data.enabled ? '#00c853' : '#ff4d4d';
+      statusEl.textContent = data.enabled? 'Enabled ✓' : 'Not Enabled';
+      statusEl.style.color = data.enabled? '#00c853' : '#ff4d4d';
     }
-    
+
     return data.enabled || false;
   } catch (e) {
     console.error('Biometric status check error:', e);
