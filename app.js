@@ -530,89 +530,106 @@ function initBiometricStatus() {
   });
 } 
 
-/* ================= WEBAUTHN - BIOMETRIC AUTH - INSTANT POPUP ================= */
+/* ================= WEBAUTHN - DEBUG VERSION ================= */
 let cachedRegOptions = null;
 let biometricReady = false;
 
-// Helper functions
-function bufferDecode(value) {
-  if (value === null || value === undefined) throw new Error('Invalid value: got empty');
-  if (value instanceof Uint8Array) return value;
-  if (Array.isArray(value)) return new Uint8Array(value);
-  if (typeof value === 'object') {
-    const arr = Object.values(value);
-    if (arr.length > 0 && typeof arr[0] === 'number') return new Uint8Array(arr);
+function showDebug(msg, isError = false) {
+  const statusEl = document.getElementById('biometricStatus');
+  if (statusEl) {
+    statusEl.textContent = msg;
+    statusEl.style.color = isError ? '#ff4d4d' : '#ffa000';
+    statusEl.style.fontSize = '12px';
   }
+  if (window.showMsg) showMsg(msg, isError ? 'error' : 'info');
+}
+
+function bufferDecode(value) {
+  if (value === null || value === undefined) throw new Error('Invalid value');
+  if (value instanceof Uint8Array) return value;
   if (typeof value === 'string') {
     let base64 = value.replace(/-/g, '+').replace(/_/g, '/');
     while (base64.length % 4) base64 += '=';
     return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
   }
-  throw new Error('Unsupported value type');
+  throw new Error('Bad value type');
 }
 
 function bufferEncode(value) {
   return btoa(String.fromCharCode(...new Uint8Array(value)))
-.replace(/\+/g, '-')
-.replace(/\//g, '_')
-.replace(/=/g, '');
+.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
-// Update UI
 function updateBiometricUI() {
-  const enableBtn = document.getElementById('enableBiometricBtn');
+  const btn = document.getElementById('enableBiometricBtn');
   const statusEl = document.getElementById('biometricStatus');
+  if (!btn || !statusEl) return;
 
-  if (!enableBtn ||!statusEl) return;
-
-  enableBtn.textContent = '🔓 Enable Fingerprint/Face ID';
-  enableBtn.disabled = false;
-  enableBtn.style.display = 'block';
-  enableBtn.style.background = '';
+  btn.textContent = '🔓 Enable Fingerprint/Face ID';
+  btn.disabled = false;
+  btn.style.display = 'block';
+  btn.style.background = '';
 
   if (!window.PublicKeyCredential) {
-    statusEl.textContent = 'Not Supported';
-    statusEl.style.color = '#999';
-    enableBtn.style.display = 'none';
+    showDebug('Browser Not Supported - Use Chrome', true);
+    btn.style.display = 'none';
     return;
   }
 
-  statusEl.textContent = 'Available - click to enable';
-  statusEl.style.color = '#ffa000';
+  if (!window.isSecureContext) {
+    showDebug('HTTPS Required - Site must be https://', true);
+    btn.style.display = 'none';
+    return;
+  }
+
+  showDebug('Available - click to enable');
   biometricReady = false;
   cachedRegOptions = null;
 }
 
-// CLICK 1: Get challenge | CLICK 2: Show fingerprint
 function enableBiometric() {
   const btn = document.getElementById('enableBiometricBtn');
 
   if (!window.PublicKeyCredential) {
-    showMsg('Biometric not supported', 'error');
+    showDebug('Browser Not Supported', true);
     return;
   }
 
-  // STEP 1: Fetch challenge
+  // STEP 1: Get challenge
   if (!biometricReady) {
     btn.disabled = true;
-    btn.textContent = '🔓 Preparing...';
+    btn.textContent = '🔓 Checking...';
+    showDebug('Step 1: Checking fingerprint support...');
 
-    fetch(API + '/api/auth/webauthn/register-start', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + getToken() }
+    // Check if fingerprint is enrolled first
+    PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+  .then(available => {
+      if (!available) {
+        throw new Error('No fingerprint enrolled. Go to Settings > Security > Add fingerprint');
+      }
+      showDebug('Step 1: Fingerprint found. Getting challenge...');
+      btn.textContent = '🔓 Preparing...';
+
+      return fetch(API + '/api/auth/webauthn/register-start', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + getToken() }
+      });
     })
- .then(res => res.json())
- .then(data => {
+  .then(res => {
+      if (!res.ok) throw new Error('Server error: ' + res.status);
+      return res.json();
+    })
+  .then(data => {
       if (data.error) throw new Error(data.error);
       cachedRegOptions = data;
       biometricReady = true;
       btn.disabled = false;
       btn.textContent = '🔓 Touch sensor now';
       btn.style.background = '#00c853';
-      showMsg('Ready! Click again to open fingerprint', 'success');
+      showDebug('Ready! Click again to open fingerprint');
     })
- .catch(e => {
-      showMsg('Failed: ' + e.message, 'error');
+  .catch(e => {
+      showDebug('Error: ' + e.message, true);
       btn.disabled = false;
       btn.textContent = '🔓 Enable Fingerprint/Face ID';
       btn.style.background = '';
@@ -621,39 +638,34 @@ function enableBiometric() {
     return;
   }
 
-  // STEP 2: Show fingerprint - NO AWAIT, NO FETCH, NO PROMISE BEFORE create()
+  // STEP 2: Show fingerprint
   if (biometricReady && cachedRegOptions) {
     btn.disabled = true;
     btn.textContent = '🔓 Touch sensor...';
-
-    const data = cachedRegOptions;
+    showDebug('Step 2: Opening fingerprint popup...');
 
     try {
+      const data = cachedRegOptions;
       const publicKey = {
-   ...data,
+    ...data,
         challenge: bufferDecode(data.challenge),
-        user: {
-     ...data.user,
-          id: bufferDecode(data.user.id)
-        }
+        user: { ...data.user, id: bufferDecode(data.user.id) }
       };
 
       if (publicKey.excludeCredentials) {
         publicKey.excludeCredentials = publicKey.excludeCredentials.map(c => ({
-     ...c,
-          id: bufferDecode(c.id)
+     ...c, id: bufferDecode(c.id)
         }));
       }
 
-      console.log('CREATE CALLED - FINGERPRINT SHOULD POP NOW');
-
-      // This MUST run immediately in click handler
+      // CRITICAL: This line must run or popup won't show
+      showDebug('Calling fingerprint... If no popup, check Settings');
+      
       navigator.credentials.create({ publicKey })
    .then(cred => {
-        if (!cred) throw new Error('Cancelled');
-
+        if (!cred) throw new Error('User cancelled');
+        showDebug('Fingerprint OK! Saving...');
         btn.textContent = '🔓 Saving...';
-        showLoader('Saving...');
 
         const credential = {
           id: cred.id,
@@ -673,22 +685,24 @@ function enableBiometric() {
       })
    .then(res => res.json())
    .then(result => {
-        hideLoader();
         if (result.verified) {
-          showMsg('Enabled successfully!', 'success');
-          document.getElementById('biometricStatus').textContent = 'Enabled ✓';
-          document.getElementById('biometricStatus').style.color = '#00c853';
+          showDebug('Success! Fingerprint enabled ✓');
           btn.style.display = 'none';
           biometricReady = false;
           cachedRegOptions = null;
         } else {
-          throw new Error(result.error || 'Failed');
+          throw new Error(result.error || 'Verification failed');
         }
       })
    .catch(err => {
-        hideLoader();
-        console.error('Error:', err);
-        showMsg('Error: ' + err.message, 'error');
+        console.error(err);
+        if (err.name === 'NotAllowedError') {
+          showDebug('Cancelled or No Fingerprint Enrolled', true);
+        } else if (err.name === 'InvalidStateError') {
+          showDebug('Already enabled for this account', true);
+        } else {
+          showDebug('Error: ' + err.message, true);
+        }
         btn.disabled = false;
         btn.textContent = '🔓 Enable Fingerprint/Face ID';
         btn.style.background = '';
@@ -697,7 +711,7 @@ function enableBiometric() {
       });
 
     } catch (e) {
-      showMsg('Setup error: ' + e.message, 'error');
+      showDebug('Setup error: ' + e.message, true);
       btn.disabled = false;
       btn.textContent = '🔓 Enable Fingerprint/Face ID';
       btn.style.background = '';
