@@ -539,14 +539,17 @@ const APP_LOGO = '/images/logo.png'; // Tabbatar logo.png yana nan
 function showDebug(msg, isError = false) {
   const statusEl = document.getElementById('biometricStatus');
   if (statusEl) {
+    // Gyara: Babu "Status:" manual - kawai logo + app name + message
     statusEl.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <img src="${APP_LOGO}" style="width:24px;height:24px;border-radius:4px;" onerror="this.style.display='none'">
-        <strong>${APP_NAME}</strong>
+        <strong style="font-size:14px;">${APP_NAME}</strong>
       </div>
-      <div style="color:${isError ? '#ff4d4d' : '#00c853'};font-size:12px;">${msg}</div>
+      <div style="color:${isError ? '#ff4d4d' : '#00c853'};font-size:12px;line-height:1.4;">${msg}</div>
     `;
   }
+  // Optional: console.log for debugging
+  console.log(isError ? '[ERROR]' : '[INFO]', msg);
 }
 
 function bufferDecode(value) {
@@ -568,7 +571,7 @@ function bufferDecode(value) {
 
 function bufferEncode(value) {
   return btoa(String.fromCharCode(...new Uint8Array(value)))
-.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
 function updateBiometricUI() {
@@ -584,47 +587,56 @@ function updateBiometricUI() {
   btn.style.display = 'flex';
   btn.style.alignItems = 'center';
   btn.style.justifyContent = 'center';
+  btn.style.fontWeight = '600';
 
   if (!window.PublicKeyCredential) {
-    showDebug('Browser Not Supported - Use Chrome', true);
+    showDebug('Browser Not Supported - Use Chrome/Edge', true);
     btn.style.display = 'none';
     return;
   }
 
   if (!window.isSecureContext) {
-    showDebug('HTTPS Required', true);
+    showDebug('HTTPS Required for biometric', true);
     btn.style.display = 'none';
     return;
   }
 
-  // Check if passkey enabled
+  // Check if passkey enabled for this user + domain
   fetch(API + '/api/auth/webauthn/check-enabled', {
     headers: { 'Authorization': 'Bearer ' + getToken() }
   })
- .then(res => res.json())
- .then(data => {
+  .then(res => {
+    if (!res.ok) throw new Error('Server error');
+    return res.json();
+  })
+  .then(data => {
     btn.disabled = false;
     
-    if (data.enabled) {
+    if (data.enabled === true) {
+      // Kana da passkey - nuna Login
       btn.innerHTML = `
         <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
         Login with Fingerprint
       `;
       btn.onclick = loginWithBiometric;
+      btn.style.background = '#2196F3';
       showDebug('Passkey enabled. Tap to verify your identity');
     } else {
+      // Ba ka da passkey - nuna Enable
       btn.innerHTML = `
         <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
         Enable Fingerprint/Face ID
       `;
       btn.onclick = enableBiometric;
+      btn.style.background = '#2196F3';
       showDebug('Secure your account with biometric authentication');
     }
     biometricReady = false;
     cachedRegOptions = null;
   })
- .catch(e => {
-    showDebug('Error checking status', true);
+  .catch(e => {
+    console.error('Check-enabled error:', e);
+    showDebug('Error checking status: ' + e.message, true);
     btn.style.display = 'none';
   });
 }
@@ -643,7 +655,7 @@ function enableBiometric() {
     showDebug('Checking fingerprint support...');
 
     PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
- .then(available => {
+    .then(available => {
       if (!available) {
         throw new Error('No fingerprint enrolled. Add one in Settings > Security');
       }
@@ -658,14 +670,13 @@ function enableBiometric() {
         headers: { 'Authorization': 'Bearer ' + getToken() }
       });
     })
- .then(res => {
+    .then(res => {
       if (!res.ok) throw new Error('Server error: ' + res.status);
       return res.json();
     })
- .then(data => {
+    .then(data => {
       if (data.error) throw new Error(data.error);
       
-      // DO NOT override rp.id - backend yana daidai yanzu
       cachedRegOptions = data;
       biometricReady = true;
       btn.disabled = false;
@@ -676,14 +687,14 @@ function enableBiometric() {
       btn.style.background = '#00c853';
       showDebug('Ready! Tap again to verify your identity');
     })
- .catch(e => {
+    .catch(e => {
       showDebug('Error: ' + e.message, true);
       btn.disabled = false;
       btn.innerHTML = `
         <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
         Enable Fingerprint/Face ID
       `;
-      btn.style.background = '';
+      btn.style.background = '#2196F3';
       biometricReady = false;
     });
     return;
@@ -696,14 +707,13 @@ function enableBiometric() {
       <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
       Touch sensor...
     `;
-    showDebug('Verify your identity');
+    showDebug('Verify your identity with fingerprint');
 
     try {
       const data = cachedRegOptions;
       
-      // Yi amfani da abin da server ya turo - kada ka override rp
       const publicKey = {
-   ...data,
+        ...data,
         challenge: bufferDecode(data.challenge),
         user: { ...data.user, id: bufferDecode(data.user.id) },
         timeout: 60000
@@ -726,12 +736,12 @@ function enableBiometric() {
           <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
           Enable Fingerprint/Face ID
         `;
-        btn.style.background = '';
+        btn.style.background = '#2196F3';
         biometricReady = false;
       }, 5000);
 
       navigator.credentials.create({ publicKey })
-   .then(cred => {
+      .then(cred => {
         clearTimeout(timeoutId);
         if (!cred) throw new Error('User cancelled');
         
@@ -758,8 +768,8 @@ function enableBiometric() {
           body: JSON.stringify(credential)
         });
       })
-   .then(res => res.json())
-   .then(result => {
+      .then(res => res.json())
+      .then(result => {
         if (result.verified) {
           showDebug('Success! Biometric enabled ✓');
           setTimeout(() => updateBiometricUI(), 1500);
@@ -767,7 +777,7 @@ function enableBiometric() {
           throw new Error(result.error || 'Verification failed');
         }
       })
-   .catch(err => {
+      .catch(err => {
         clearTimeout(timeoutId);
         console.error(err);
         if (err.name === 'NotAllowedError') {
@@ -782,7 +792,7 @@ function enableBiometric() {
           <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
           Enable Fingerprint/Face ID
         `;
-        btn.style.background = '';
+        btn.style.background = '#2196F3';
         biometricReady = false;
         cachedRegOptions = null;
       });
@@ -794,7 +804,7 @@ function enableBiometric() {
         <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
         Enable Fingerprint/Face ID
       `;
-      btn.style.background = '';
+      btn.style.background = '#2196F3';
       biometricReady = false;
     }
   }
@@ -811,15 +821,15 @@ function loginWithBiometric() {
   showDebug('Verify your identity');
 
   fetch(API + '/api/auth/webauthn/login-start', { method: 'POST' })
- .then(res => res.json())
- .then(options => {
+  .then(res => res.json())
+  .then(options => {
     const publicKey = {
-   ...options,
+      ...options,
       challenge: bufferDecode(options.challenge)
     };
     return navigator.credentials.get({ publicKey });
   })
- .then(cred => {
+  .then(cred => {
     showDebug('Verifying...');
     return fetch(API + '/api/auth/webauthn/login-finish', {
       method: 'POST',
@@ -837,8 +847,8 @@ function loginWithBiometric() {
       })
     });
   })
- .then(res => res.json())
- .then(result => {
+  .then(res => res.json())
+  .then(result => {
     if (result.token) {
       localStorage.setItem('token', result.token);
       showDebug('Login successful! ✓');
@@ -847,13 +857,14 @@ function loginWithBiometric() {
       throw new Error(result.error || 'Login failed');
     }
   })
- .catch(err => {
+  .catch(err => {
     showDebug('Login error: ' + err.message, true);
     btn.disabled = false;
     btn.innerHTML = `
       <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
       Login with Fingerprint
     `;
+    btn.style.background = '#2196F3';
   });
 }
 
@@ -862,7 +873,7 @@ function initBiometricProfile() {
 }
 
 // Kira wannan lokacin page ya load
-// initBiometricProfile();
+// document.addEventListener('DOMContentLoaded', initBiometricProfile);
 /* ================= PURCHASE MODAL ================= */
 async function openPurchaseModal(planId, planName, planPrice) {
   selectedPlanId = planId;
