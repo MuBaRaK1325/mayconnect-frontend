@@ -541,22 +541,14 @@ function bufferDecode(value) {
   if (value === null || value === undefined) {
     throw new Error('Invalid value: got empty');
   }
-
-  // Already Uint8Array
   if (value instanceof Uint8Array) return value;
-
-  // Array of numbers
   if (Array.isArray(value)) return new Uint8Array(value);
-
-  // Object with numeric keys {0: 1, 1: 2,...}
   if (typeof value === 'object') {
     const arr = Object.values(value);
     if (arr.length > 0 && typeof arr[0] === 'number') {
       return new Uint8Array(arr);
     }
   }
-
-  // String - try base64url decode
   if (typeof value === 'string') {
     try {
       let base64 = value.replace(/-/g, '+').replace(/_/g, '/');
@@ -567,22 +559,26 @@ function bufferDecode(value) {
       throw new Error('Invalid base64 encoding');
     }
   }
-
   throw new Error('Unsupported value type: ' + typeof value);
 }
 
 function bufferEncode(value) {
   return btoa(String.fromCharCode(...new Uint8Array(value)))
-  .replace(/\+/g, '-')
-  .replace(/\//g, '_')
-  .replace(/=/g, '');
+ .replace(/\+/g, '-')
+ .replace(/\//g, '_')
+ .replace(/=/g, '');
 }
 
 // Check if biometric is available
 async function isBiometricAvailable() {
-  if (!window.PublicKeyCredential) return false;
+  if (!window.PublicKeyCredential) {
+    console.log('PublicKeyCredential not available');
+    return false;
+  }
   try {
-    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    console.log('Biometric available:', available);
+    return available;
   } catch (e) {
     console.error('Biometric check failed:', e);
     return false;
@@ -592,7 +588,6 @@ async function isBiometricAvailable() {
 // Preload registration options for instant popup
 async function preloadBiometricOptions() {
   if (isPreloading || cachedRegOptions) return;
-
   try {
     isPreloading = true;
     console.log('Preloading biometric options...');
@@ -600,7 +595,6 @@ async function preloadBiometricOptions() {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + getToken() }
     });
-
     if (res.ok) {
       cachedRegOptions = await res.json();
       console.log('Biometric options preloaded');
@@ -614,16 +608,25 @@ async function preloadBiometricOptions() {
   }
 }
 
-// Update Biometric UI in Profile
+// Update Biometric UI in Profile - WITH FALLBACK
 async function updateBiometricUI() {
   const enableBtn = document.getElementById('enableBiometricBtn');
   const loginBtn = document.getElementById('biometricLoginBtn');
   const statusEl = document.getElementById('biometricStatus');
 
+  console.log('updateBiometricUI called');
+  console.log('enableBtn:', enableBtn, 'statusEl:', statusEl);
+
   if (!enableBtn ||!statusEl) {
-    console.warn('Biometric UI elements not found');
+    console.error('Biometric UI elements not found in DOM');
     return;
   }
+
+  // STEP 1: Reset button immediately - no more "Loading..."
+  enableBtn.textContent = '🔓 Enable Fingerprint/Face ID';
+  enableBtn.disabled = false;
+  enableBtn.style.opacity = '1';
+  enableBtn.style.cursor = 'pointer';
 
   const available = await isBiometricAvailable();
   if (!available) {
@@ -634,13 +637,18 @@ async function updateBiometricUI() {
     return;
   }
 
+  // STEP 2: Check status from server
   try {
+    console.log('Fetching status from:', API + '/api/auth/webauthn/status');
     const res = await fetch(API + '/api/auth/webauthn/status', {
       headers: { 'Authorization': 'Bearer ' + getToken() }
     });
 
-    if (!res.ok) throw new Error('Failed to check status');
+    console.log('Status response:', res.status);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
     const data = await res.json();
+    console.log('Status data:', data);
 
     if (data.enabled) {
       statusEl.textContent = 'Enabled ✓';
@@ -651,26 +659,23 @@ async function updateBiometricUI() {
       statusEl.textContent = 'Not Enabled';
       statusEl.style.color = '#ffa000';
       enableBtn.style.display = 'block';
-      enableBtn.textContent = '🔓 Enable Fingerprint/Face ID';
-      enableBtn.disabled = false;
-      enableBtn.style.opacity = '1';
-      enableBtn.style.cursor = 'pointer';
       if (loginBtn) loginBtn.style.display = 'none';
     }
   } catch (e) {
     console.error('Biometric status check error:', e);
-    statusEl.textContent = 'Error';
-    statusEl.style.color = '#ff4d4d';
+    // FALLBACK: Show button anyway if server fails
+    statusEl.textContent = 'Not Enabled';
+    statusEl.style.color = '#ffa000';
     enableBtn.style.display = 'block';
     enableBtn.textContent = '🔓 Enable Fingerprint/Face ID';
     enableBtn.disabled = false;
-    enableBtn.style.opacity = '1';
-    enableBtn.style.cursor = 'pointer';
   }
 }
 
 // Enable Biometric for current user - INSTANT POPUP
 async function enableBiometric() {
+  console.log('enableBiometric clicked');
+
   if (biometricClickLock) {
     console.log('Biometric request already in progress');
     return;
@@ -711,12 +716,11 @@ async function enableBiometric() {
 
     const start = cachedRegOptions;
     if (start.error) throw new Error(start.error);
-
     if (!start.challenge) throw new Error('No challenge received from server');
     if (!start.user ||!start.user.id) throw new Error('No user data received from server');
 
     const options = {
-    ...start,
+     ...start,
       challenge: bufferDecode(start.challenge),
       user: {...start.user, id: bufferDecode(start.user.id) }
     };
@@ -764,7 +768,6 @@ async function enableBiometric() {
     }
 
     const finish = await finishRes.json();
-
     hideLoader();
     cachedRegOptions = null;
 
@@ -798,47 +801,39 @@ async function enableBiometric() {
   }
 }
 
-// Login with Biometric - INSTANT POPUP
+// Login with Biometric
 async function loginWithBiometric() {
   showInputModal('Biometric Login', 'Enter your email', async (email) => {
     if (!email ||!email.includes('@')) {
       return showMsg('Please enter a valid email', 'error');
     }
-
     try {
       const startRes = await fetch(API + '/api/auth/webauthn/login-start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       });
-
       if (!startRes.ok) {
         const err = await startRes.json().catch(() => ({ error: `HTTP ${startRes.status}` }));
         throw new Error(err.error || err.message || "Failed to start login");
       }
-
       const start = await startRes.json();
       if (start.error) throw new Error(start.error);
       if (!start.challenge) throw new Error('No challenge from server');
-
       const options = {
-      ...start,
+       ...start,
         challenge: bufferDecode(start.challenge),
         allowCredentials: start.allowCredentials?.map(cred => {
           if (!cred.id) throw new Error('Invalid credential');
           return {...cred, id: bufferDecode(cred.id) };
         }) || []
       };
-
       const assertion = await navigator.credentials.get({
         publicKey: options,
         signal: AbortSignal.timeout(60000)
       });
-
       if (!assertion) throw new Error('Biometric authentication cancelled');
-
       showLoader('Verifying...');
-
       const credential = {
         id: assertion.id,
         rawId: bufferEncode(assertion.rawId),
@@ -851,20 +846,16 @@ async function loginWithBiometric() {
         type: assertion.type,
         clientExtensionResults: assertion.getClientExtensionResults()
       };
-
       const finishRes = await fetch(API + '/api/auth/webauthn/login-finish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({...credential, email })
       });
-
       if (!finishRes.ok) {
         const err = await finishRes.json().catch(() => ({ error: `HTTP ${finishRes.status}` }));
         throw new Error(err.error || err.message || "Failed to finish login");
       }
-
       const finish = await finishRes.json();
-
       hideLoader();
       if (finish.token) {
         localStorage.setItem('token', finish.token);
@@ -892,29 +883,23 @@ async function verifyBiometricForTransaction() {
   if (!window.PublicKeyCredential) {
     throw new Error('Biometric not supported on this device');
   }
-
   const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
   if (!available) {
     throw new Error('No fingerprint/face sensor detected');
   }
-
   try {
     const challenge = new Uint8Array(32);
     crypto.getRandomValues(challenge);
-
     const options = {
       challenge: challenge,
       timeout: 60000,
       userVerification: 'required'
     };
-
     const assertion = await navigator.credentials.get({
       publicKey: options,
       signal: AbortSignal.timeout(60000)
     });
-
     if (!assertion) throw new Error('Biometric verification cancelled');
-
     return 'biometric_verified';
   } catch (e) {
     console.error('Transaction biometric error:', e);
@@ -934,16 +919,13 @@ async function checkBiometricStatus() {
     const res = await fetch(API + '/api/auth/webauthn/status', {
       headers: { 'Authorization': 'Bearer ' + getToken() }
     });
-
     if (!res.ok) return false;
     const data = await res.json();
-
     const statusEl = document.getElementById('biometricStatus');
     if (statusEl) {
       statusEl.textContent = data.enabled? 'Enabled ✓' : 'Not Enabled';
       statusEl.style.color = data.enabled? '#00c853' : '#ff4d4d';
     }
-
     return data.enabled || false;
   } catch (e) {
     console.error('Biometric status check error:', e);
@@ -953,17 +935,19 @@ async function checkBiometricStatus() {
 
 // Call this when Profile section loads
 function initBiometricProfile() {
-  console.log('Initializing biometric profile...');
+  console.log('=== Initializing biometric profile ===');
+  console.log('API:', typeof API!== 'undefined'? API : 'UNDEFINED');
+  console.log('getToken:', typeof getToken!== 'undefined'? 'exists' : 'UNDEFINED');
+
   updateBiometricUI();
   preloadBiometricOptions();
 
-  // CRITICAL: Bind button click events
   const enableBtn = document.getElementById('enableBiometricBtn');
   if (enableBtn) {
     enableBtn.onclick = enableBiometric;
-    console.log('Enable biometric button bound');
+    console.log('Enable biometric button bound successfully');
   } else {
-    console.error('enableBiometricBtn not found in DOM');
+    console.error('ERROR: enableBiometricBtn not found in DOM');
   }
 
   const loginBtn = document.getElementById('biometricLoginBtn');
