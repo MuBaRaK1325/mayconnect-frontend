@@ -582,68 +582,104 @@ function bufferEncode(value) {
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
-function updateBiometricUI() {
-  const btn = document.getElementById('enableBiometricBtn');
+async function checkBiometricStatus() {
+  const enableBtn = document.getElementById('enableBiometricBtn');
   const statusEl = document.getElementById('biometricStatus');
-  if (!btn || !statusEl) return;
 
-  btn.disabled = true;
-  btn.innerHTML = `
+  if (!statusEl || !enableBtn) return;
+
+  enableBtn.disabled = true;
+  enableBtn.innerHTML = `
     <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;vertical-align:middle;">
     Checking...
   `;
-  btn.style.display = 'flex';
-  btn.style.alignItems = 'center';
-  btn.style.justifyContent = 'center';
-  btn.style.fontWeight = '600';
+  enableBtn.style.display = 'flex';
+  enableBtn.style.alignItems = 'center';
+  enableBtn.style.justifyContent = 'center';
+  enableBtn.style.fontWeight = '600';
+  showDebug('Checking biometric support...');
 
-  if (!window.PublicKeyCredential) {
-    showDebug('Browser Not Supported - Use Chrome/Edge', true);
-    btn.style.display = 'none';
-    return;
-  }
+  try {
+    if (!window.isSecureContext) {
+      throw new Error('HTTPS required for biometric');
+    }
 
-  if (!window.isSecureContext) {
-    showDebug('HTTPS Required for biometric', true);
-    btn.style.display = 'none';
-    return;
-  }
+    if (!window.PublicKeyCredential) {
+      throw new Error('Browser not supported. Use Chrome or Edge');
+    }
 
-  fetch(API + '/api/auth/webauthn/check-enabled', {
-    headers: { 'Authorization': 'Bearer ' + getToken() }
-  })
-  .then(res => {
-    if (!res.ok) throw new Error('Server error');
-    return res.json();
-  })
-  .then(data => {
-    btn.disabled = false;
-    
-    if (data.enabled === true) {
-      btn.innerHTML = `
+    const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    if (!available) {
+      throw new Error('No fingerprint or face ID enrolled. Add one in Settings > Security');
+    }
+
+    const token = getToken();
+    if (!token) {
+      enableBtn.disabled = false;
+      enableBtn.innerHTML = `
         <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
         Login with Fingerprint
       `;
-      btn.onclick = loginWithBiometric;
-      btn.style.background = '#2196F3';
+      enableBtn.onclick = loginWithBiometric;
+      showDebug('Login to enable biometric');
+      return false;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
+      method: 'GET',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Accept': 'application/json'
+      },
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
+
+    const data = await res.json();
+    enableBtn.disabled = false;
+    
+    if (data.enabled === true) {
+      enableBtn.innerHTML = `
+        <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
+        Login with Fingerprint
+      `;
+      enableBtn.onclick = loginWithBiometric;
+      enableBtn.style.background = '#2196F3';
       showDebug('Passkey enabled. Tap to verify your identity');
     } else {
-      btn.innerHTML = `
+      enableBtn.innerHTML = `
         <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
         Enable Fingerprint/Face ID
       `;
-      btn.onclick = enableBiometric;
-      btn.style.background = '#2196F3';
+      enableBtn.onclick = enableBiometric;
+      enableBtn.style.background = '#2196F3';
       showDebug('Secure your account with biometric authentication');
     }
-    biometricReady = false;
-    cachedRegOptions = null;
-  })
-  .catch(e => {
-    console.error('Check-enabled error:', e);
-    showDebug('Error checking status: ' + e.message, true);
-    btn.style.display = 'none';
-  });
+
+    return data.enabled || false;
+
+  } catch (e) {
+    console.error('Biometric check failed:', e.name, e.message);
+    
+    let errorMsg = e.message;
+    if (e.name === 'AbortError') {
+      errorMsg = 'Check timed out. Try again';
+    } else if (e.message.includes('Failed to fetch')) {
+      errorMsg = 'Network error. Check connection';
+    } else if (e.name === 'SecurityError') {
+      errorMsg = 'HTTPS required. Use https://';
+    }
+    
+    showDebug(errorMsg, true);
+    enableBtn.style.display = 'none';
+    return false;
+  }
 }
 
 function enableBiometric() {
@@ -774,7 +810,7 @@ function enableBiometric() {
       .then(result => {
         if (result.verified) {
           showDebug('Success! Biometric enabled ✓');
-          setTimeout(() => updateBiometricUI(), 1500);
+          setTimeout(() => checkBiometricStatus(), 1500);
         } else {
           throw new Error(result.error || 'Verification failed');
         }
@@ -870,7 +906,7 @@ function loginWithBiometric() {
 }
 
 function initBiometricProfile() {
-  updateBiometricUI();
+  checkBiometricStatus();
 }
 /* ================= PURCHASE MODAL ================= */
 async function openPurchaseModal(planId, planName, planPrice) {
