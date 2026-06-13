@@ -625,7 +625,6 @@ async function checkBiometricStatus() {
       return false;
     }
 
-    // GYARA: Idan 404 ya fito, mu nuna "Enable" maimakon faduwa
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -687,7 +686,6 @@ async function checkBiometricStatus() {
     
     showDebug(errorMsg, true);
     
-    // GYARA: Kada mu boye button idan error ya fito. Barshi ya nuna "Enable"
     enableBtn.disabled = false;
     enableBtn.innerHTML = `
       <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
@@ -772,7 +770,7 @@ function enableBiometric() {
         ...data,
         challenge: bufferDecode(data.challenge),
         user: { ...data.user, id: bufferDecode(data.user.id) },
-        timeout: 60000
+        timeout: 120000 // GYARA: 2 minti maimakon 60s
       };
 
       if (publicKey.excludeCredentials && publicKey.excludeCredentials.length > 0) {
@@ -785,7 +783,9 @@ function enableBiometric() {
         delete publicKey.excludeCredentials;
       }
 
-      const timeoutId = setTimeout(() => {
+      // GYARA: Cire 5s timeout. Bar browser ya kula da timeout
+      let timeoutId;
+      timeoutId = setTimeout(() => {
         showDebug('Timeout: Fingerprint did not respond. Check Settings > Security', true);
         btn.disabled = false;
         btn.innerHTML = `
@@ -794,7 +794,7 @@ function enableBiometric() {
         `;
         btn.style.background = '#2196F3';
         biometricReady = false;
-      }, 5000);
+      }, 120000); // 2 minti
 
       navigator.credentials.create({ publicKey })
       .then(cred => {
@@ -840,6 +840,8 @@ function enableBiometric() {
           showDebug('Cancelled or No Fingerprint Set', true);
         } else if (err.name === 'InvalidStateError') {
           showDebug('Already enabled for this account', true);
+        } else if (err.name === 'TimeoutError') {
+          showDebug('Timeout: Take your finger off and try again', true);
         } else {
           showDebug('Error: ' + err.message, true);
         }
@@ -880,7 +882,8 @@ function loginWithBiometric() {
   .then(options => {
     const publicKey = {
       ...options,
-      challenge: bufferDecode(options.challenge)
+      challenge: bufferDecode(options.challenge),
+      timeout: 120000 // GYARA: 2 minti
     };
     return navigator.credentials.get({ publicKey });
   })
