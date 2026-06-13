@@ -1499,7 +1499,6 @@ details pre {
   overflow-y: auto;
 }
 </style>
-
 <!-- PROFILE -->
 <section id="profile" class="section">
 <button onclick="showSection('home')" class="backBtn">⬅ Back</button>
@@ -1508,7 +1507,10 @@ details pre {
   <h3>Security</h3>
   <div id="biometricSection">
     <p>Status: <span id="biometricStatus">Checking...</span></p>
-    <button id="enableBiometricBtn" onclick="enableBiometric()" style="display:none">🫆 Enable Fingerprint</button>
+    <button id="enableBiometricBtn" onclick="enableBiometric()" 
+            style="display:none; width:100%; margin:8px 0; background:linear-gradient(90deg, #9333ea, #7e22ce); color:white; font-weight:600; padding:12px; border-radius:10px; border:none; cursor:pointer;">
+      🔓 Enable Fingerprint/Face ID
+    </button>
     <button id="biometricLoginBtn" onclick="loginWithBiometric()" style="display:none">🫆 Login with Fingerprint</button>
   </div>
 </div>
