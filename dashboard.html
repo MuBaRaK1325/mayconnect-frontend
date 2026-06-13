@@ -1507,26 +1507,15 @@ details pre {
 <div class="adminSection" style="background:var(--card);">
   <h3>Security</h3>
   <div id="biometricSection">
-    <p style="margin-bottom:12px;">
-      <strong>Status:</strong> 
-      <span id="biometricStatus" style="color:#ffa000; font-weight:600;">Checking...</span>
-    </p>
-    <button id="enableBiometricBtn" onclick="enableBiometric()" 
-            style="display:none; width:100%; margin-bottom:8px; background:linear-gradient(90deg, #9333ea, #7e22ce); color:white; font-weight:600; padding:12px; border-radius:10px; border:none; cursor:pointer;">
-      🔓 Enable Fingerprint/Face ID
-    </button>
-    <button id="biometricLoginBtn" onclick="loginWithBiometric()" 
-            style="display:none; width:100%; background:rgba(147,51,234,0.2); color:#c4b5fd; font-weight:600; padding:12px; border-radius:10px; border:1px solid rgba(147,51,234,0.4); cursor:pointer;">
-      👆 Login with Biometric
-    </button>
+    <p>Status: <span id="biometricStatus">Checking...</span></p>
+    <button id="enableBiometricBtn" onclick="enableBiometric()" style="display:none">🫆 Enable Fingerprint</button>
+    <button id="biometricLoginBtn" onclick="loginWithBiometric()" style="display:none">🫆 Login with Fingerprint</button>
   </div>
 </div>
 
 <button onclick="openModal('passwordModal')">Change Password</button>
 <button onclick="openModal('pinModalBox')">Change PIN</button>
 <button onclick="logout()">Logout</button>
-</section>
-<!-- PROFILE ENDS HERE -->
 
 <!-- ADMIN PANEL -->
 <div class="adminOnly">
@@ -1555,6 +1544,8 @@ details pre {
   <p>© MAYCONNECT TECHNOLOGIES NIG LTD</p>
   <p> © MAYCONNECT TECHNOLOGIES NIG LTD 2026</p>
 </div>
+
+</section>
 
 <!-- PIN MODAL -->
 <div id="pinModal" class="modal">
