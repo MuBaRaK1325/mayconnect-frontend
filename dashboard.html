@@ -1502,20 +1502,37 @@ details pre {
 
 <!-- PROFILE -->
 <section id="profile" class="section">
-<button onclick="showSection('home')" class="backBtn">⬅ Back</button>
+  <button onclick="showSection('home')" class="backBtn">⬅ Back</button>
 
-<div class="adminSection" style="background:var(--card);">
-  <h3>Security</h3>
-  <div id="biometricSection">
-    <p>Status: <span id="biometricStatus">Checking...</span></p>
-    <button id="enableBiometricBtn" onclick="enableBiometric()" style="display:none">🫆 Enable Fingerprint</button>
-    <button id="biometricLoginBtn" onclick="loginWithBiometric()" style="display:none">🫆 Login with Fingerprint</button>
+  <div class="adminSection" style="background:var(--card); margin-bottom:16px;">
+    <h3>🔐 Biometric Authentication</h3>
+    <div id="biometricSection" style="padding: 16px 0;">
+      <p style="margin-bottom:12px;">
+        <strong>Status:</strong> <span id="biometricStatus" style="color:#ffa000;">Checking...</span>
+      </p>
+      <button id="enableBiometricBtn" onclick="enableBiometric()"
+              style="display:none; width:100%; margin-bottom:8px;"
+              class="primaryBtn">
+        🔓 Enable Fingerprint/Face ID
+      </button>
+      <button id="biometricLoginBtn" onclick="loginWithBiometric()"
+              style="display:none; width:100%;"
+              class="secondaryBtn">
+        👆 Login with Biometric
+      </button>
+    </div>
+    <small style="opacity:0.6; display:block; margin-top:8px;">
+      Use fingerprint or face unlock instead of PIN for faster, secure purchases
+    </small>
   </div>
-</div>
 
-<button onclick="openModal('passwordModal')">Change Password</button>
-<button onclick="openModal('pinModalBox')">Change PIN</button>
-<button onclick="logout()">Logout</button>
+  <div class="adminSection" style="background:var(--card);">
+    <h3>Account Security</h3>
+    <button onclick="openModal('passwordModal')" class="secondaryBtn" style="width:100%; margin-bottom:10px;">Change Password</button>
+    <button onclick="openModal('pinModalBox')" class="secondaryBtn" style="width:100%; margin-bottom:10px;">Change PIN</button>
+    <button onclick="logout()" class="dangerBtn" style="width:100%;">Logout</button>
+  </div>
+</section>
 
 <!-- ADMIN PANEL -->
 <div class="adminOnly">
