@@ -540,7 +540,7 @@ function initBiometricProfile() {
   });
 }
 
-/* ================= WEBAUTHN - BIOMETRIC AUTH - FINAL CLEAN ================= */
+/* ================= WEBAUTHN - BIOMETRIC AUTH - FINAL ================= */
 const APP_NAME = 'MAYCONNECT DATA PLUG';
 const APP_LOGO = '/images/logo.png';
 let cachedRegOptions = null;
@@ -625,6 +625,7 @@ async function checkBiometricStatus() {
       return false;
     }
 
+    // GYARA: Idan 404 ya fito, mu nuna "Enable" maimakon faduwa
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -639,9 +640,17 @@ async function checkBiometricStatus() {
 
     clearTimeout(timeoutId);
 
-    if (!res.ok) throw new Error(`Server error ${res.status}`);
+    let data = { enabled: false };
+    
+    if (res.ok) {
+      data = await res.json();
+    } else if (res.status === 404) {
+      console.warn('check-enabled endpoint not found. Assuming not enabled.');
+      showDebug('Backend endpoint not ready. Use Enable to setup', true);
+    } else {
+      throw new Error(`Server error ${res.status}`);
+    }
 
-    const data = await res.json();
     enableBtn.disabled = false;
     
     if (data.enabled === true) {
@@ -677,7 +686,16 @@ async function checkBiometricStatus() {
     }
     
     showDebug(errorMsg, true);
-    enableBtn.style.display = 'none';
+    
+    // GYARA: Kada mu boye button idan error ya fito. Barshi ya nuna "Enable"
+    enableBtn.disabled = false;
+    enableBtn.innerHTML = `
+      <img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">
+      Enable Fingerprint/Face ID
+    `;
+    enableBtn.onclick = enableBiometric;
+    enableBtn.style.background = '#2196F3';
+    enableBtn.style.display = 'flex';
     return false;
   }
 }
