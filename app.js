@@ -550,6 +550,50 @@ async function isBiometricAvailable() {
   return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
 }
 
+// Update Biometric UI in Profile
+async function updateBiometricUI() {
+  const enableBtn = document.getElementById('enableBiometricBtn');
+  const loginBtn = document.getElementById('biometricLoginBtn');
+  const statusEl = document.getElementById('biometricStatus');
+  
+  if (!enableBtn || !statusEl) return;
+
+  const available = await isBiometricAvailable();
+  if (!available) {
+    statusEl.textContent = 'Not Supported';
+    statusEl.style.color = '#999';
+    enableBtn.style.display = 'none';
+    if (loginBtn) loginBtn.style.display = 'none';
+    return;
+  }
+
+  try {
+    const res = await fetch(API + '/api/auth/webauthn/status', {
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    });
+    
+    if (!res.ok) throw new Error('Failed to check status');
+    const data = await res.json();
+    
+    if (data.enabled) {
+      statusEl.textContent = 'Enabled ✓';
+      statusEl.style.color = '#00c853';
+      enableBtn.style.display = 'none';
+      if (loginBtn) loginBtn.style.display = 'block';
+    } else {
+      statusEl.textContent = 'Not Enabled';
+      statusEl.style.color = '#ffa000';
+      enableBtn.style.display = 'block';
+      if (loginBtn) loginBtn.style.display = 'none';
+    }
+  } catch (e) {
+    console.error('Biometric status check error:', e);
+    statusEl.textContent = 'Error';
+    statusEl.style.color = '#ff4d4d';
+    enableBtn.style.display = 'block';
+  }
+}
+
 // Enable Biometric for current user
 async function enableBiometric() {
   if (!window.PublicKeyCredential) {
@@ -631,7 +675,7 @@ async function enableBiometric() {
     hideLoader();
     if (finish.verified) {
       showMsg('Fingerprint enabled successfully!', 'success');
-      if (typeof checkBiometricStatus === 'function') checkBiometricStatus();
+      updateBiometricUI(); // Update UI immediately
     } else {
       showMsg('Failed: ' + (finish.error || 'Verification failed'), 'error');
     }
@@ -807,6 +851,11 @@ async function checkBiometricStatus() {
     console.error('Biometric status check error:', e);
     return false;
   }
+}
+
+// Call this when Profile section loads
+function initBiometricProfile() {
+  updateBiometricUI();
 }
 /* ================= PURCHASE MODAL ================= */
 async function openPurchaseModal(planId, planName, planPrice) {
