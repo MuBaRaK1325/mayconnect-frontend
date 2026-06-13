@@ -404,7 +404,7 @@ function renderPlans() {
 }
 
 /* ================= BIOMETRIC STATUS - FIXED ================= */
-const APP_NAME = 'MAYCONNECT DATA PLUG';
+
 const APP_LOGO = '/images/logo.png';
 
 function showDebug(msg, isError = false) {
