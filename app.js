@@ -543,7 +543,7 @@ function initBiometricProfile() {
   });
 }
 
-/* ================= WEBAUTHN - BIOMETRIC AUTH - FINAL ================= */
+/* ================= WEBAUTHN - BIOMETRIC AUTH - FINAL CLEAN ================= */
 const APP_NAME = 'MAYCONNECT DATA PLUG';
 const APP_LOGO = '/images/logo.png';
 let cachedRegOptions = null;
