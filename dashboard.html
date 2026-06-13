@@ -1506,12 +1506,18 @@ details pre {
 <div class="adminSection" style="background:var(--card);">
   <h3>Security</h3>
   <div id="biometricSection">
-    <p>Status: <span id="biometricStatus">Checking...</span></p>
-    <button id="enableBiometricBtn" onclick="enableBiometric()" 
-            style="width:100%; margin:8px 0; background:#4192e9; color:white; font-weight:600; padding:12px; border-radius:10px; border:none; cursor:pointer;">
-      🔓 Enable Fingerprint/Face ID
+    <!-- GYARA: Cire <p>Status: ...</p> gaba daya -->
+    <div id="biometricStatus" style="margin:10px 0;min-height:70px;padding:12px;background:#1a1a1a;border-radius:8px;border:1px solid #333;">
+      Checking...
+    </div>
+    
+    <!-- GYARA: Button daya kawai - JS zai canza text da onclick -->
+    <button id="enableBiometricBtn" 
+            style="display:none;width:100%;margin:8px 0;background:#2196F3;color:white;font-weight:600;padding:14px;border-radius:10px;border:none;cursor:pointer;font-size:15px;">
+      Checking...
     </button>
-    <button id="biometricLoginBtn" onclick="loginWithBiometric()" style="display:none">🫆 Login with Fingerprint</button>
+    
+    <!-- Cire biometricLoginBtn gaba daya -->
   </div>
 </div>
 
@@ -1543,8 +1549,7 @@ details pre {
     </a>
   </div>
   
-  <p>© MAYCONNECT TECHNOLOGIES NIG LTD</p>
-  <p> © MAYCONNECT TECHNOLOGIES NIG LTD 2026</p>
+  <p>© MAYCONNECT TECHNOLOGIES NIG LTD 2026</p>
 </div>
 
 </section>
