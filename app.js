@@ -545,6 +545,7 @@ const APP_NAME = 'MAYCONNECT DATA PLUG';
 const APP_LOGO = '/images/logo.png';
 let cachedRegOptions = null;
 let biometricReady = false;
+const skipExcludeOnFirstReg = true; // GYARA: Na farko mu cire excludeCredentials
 
 function showDebug(msg, isError = false) {
   const statusEl = document.getElementById('biometricStatus');
@@ -741,23 +742,24 @@ function enableBiometric() {
         timeout: 120000
       };
 
-      if (publicKey.excludeCredentials && publicKey.excludeCredentials.length > 0) {
+      // GYARA: Na farko mu cire excludeCredentials gaba daya
+      if (skipExcludeOnFirstReg || !publicKey.excludeCredentials || publicKey.excludeCredentials.length === 0) {
+        delete publicKey.excludeCredentials;
+        showDebug('Step 8: No excludeCredentials - First registration mode');
+      } else {
         publicKey.excludeCredentials = publicKey.excludeCredentials.map(c => ({
           id: bufferDecode(c.id),
           type: 'public-key',
           transports: c.transports || ['internal']
         }));
         showDebug('Step 8: excludeCredentials count = ' + publicKey.excludeCredentials.length);
-      } else {
-        delete publicKey.excludeCredentials;
-        showDebug('Step 8: No excludeCredentials');
       }
 
-      showDebug('Step 9: Calling navigator.credentials.create...\nRP ID: ' + publicKey.rp.id + '\nTimeout: 120000ms');
+      showDebug('Step 9: Calling navigator.credentials.create...\nRP ID: ' + publicKey.rp.id + '\nTimeout: 120000ms\nUser gesture: OK');
 
       let timeoutId;
       timeoutId = setTimeout(() => {
-        showDebug('Step 10 TIMEOUT: Fingerprint did not respond. Take finger off and try again', true);
+        showDebug('Step 10 TIMEOUT: Popup bai fito ba. Duba:\n1. Chrome na gaskiya ne?\n2. HTTPS ne?\n3. Share tsohon passkey?', true);
         btn.disabled = false;
         btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Enable Fingerprint/Face ID`;
         btn.style.background = '#2196F3';
@@ -802,8 +804,8 @@ function enableBiometric() {
       .catch(err => {
         clearTimeout(timeoutId);
         let msg = 'Step 10 ERROR: ' + err.name + ' - ' + err.message;
-        if (err.name === 'NotAllowedError') msg = 'Step 10 ERROR: Cancelled or No Fingerprint Set';
-        if (err.name === 'InvalidStateError') msg = 'Step 10 ERROR: Already registered on this device';
+        if (err.name === 'NotAllowedError') msg = 'Step 10 ERROR: Cancelled or No Fingerprint Set. Ka taba sensor?';
+        if (err.name === 'InvalidStateError') msg = 'Step 10 ERROR: Already registered. Share passkey na baya';
         if (err.name === 'TimeoutError') msg = 'Step 10 ERROR: Timeout. Remove finger and try again';
         
         showDebug(msg, true);
