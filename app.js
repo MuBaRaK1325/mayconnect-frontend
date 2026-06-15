@@ -403,217 +403,332 @@ function renderPlans() {
   });
 }
 
-/* ================= WEBAUTHN - BIOMETRIC PASSKEYS - PASSWORDLESS 100% ================= */
+/* ================= BIOMETRIC STATUS - FIXED 100% ================= */
+const APP_NAME = 'MAYCONNECT DATA PLUG';
+const APP_LOGO = '/images/logo.png';
+let cachedRegOptions = null;
+let biometricReady = false;
 
-function getCompanyConfig() {
-  return {
-    name: RP_NAME,
-    icon: 'https://www.mayconnectdataplug.com.ng/images/logo.png',
-    short: 'mayconnect'
-  };
+function el(id) { return document.getElementById(id); }
+function getToken() { return localStorage.getItem('token'); }
+
+function showDebug(msg, isError = false) {
+  const statusEl = el("biometricStatus");
+  if (statusEl) {
+    statusEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <img src="${APP_LOGO}" style="width:24px;height:24px;border-radius:4px;" onerror="this.style.display='none'">
+        <strong style="font-size:14px;">${APP_NAME}</strong>
+      </div>
+      <div style="color:${isError? '#ff4d4d' : '#00c853'};font-size:12px;line-height:1.4;white-space:pre-line;">${msg}</div>
+    `;
+  }
+  console.log('[Biometric]', msg);
 }
 
-app.post('/api/auth/webauthn/register-start', auth, async (req, res) => {
+function bufferDecode(value) {
+  if (value === null || value === undefined) throw new Error('Empty value');
+  if (value instanceof Uint8Array) return value;
+  if (value instanceof ArrayBuffer) return new Uint8Array(value);
+  if (Array.isArray(value)) return new Uint8Array(value);
+  if (typeof value === 'object') {
+    const keys = Object.keys(value);
+    if (keys.length > 0 &&!isNaN(keys[0])) {
+      const arr = new Uint8Array(keys.length);
+      for (let i = 0; i < keys.length; i++) arr[i] = value[i];
+      return arr;
+    }
+  }
+  if (typeof value === 'string') {
+    let base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) base64 += '=';
+    return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+  }
+  throw new Error('Bad type: ' + typeof value);
+}
+
+function bufferEncode(value) {
+  return btoa(String.fromCharCode(...new Uint8Array(value)))
+ .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+async function checkBiometricStatus() {
+  const enableBtn = el("enableBiometricBtn");
+  const statusEl = el("biometricStatus");
+  if (!statusEl ||!enableBtn) return;
+
+  if (!window.isSecureContext) {
+    showDebug("HTTPS required for biometric", true);
+    enableBtn.style.display = "none";
+    return false;
+  }
+
+  if (!window.PublicKeyCredential) {
+    showDebug("Browser not supported. Use Chrome or Edge", true);
+    enableBtn.style.display = "none";
+    return false;
+  }
+
+  enableBtn.disabled = true;
+  enableBtn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;vertical-align:middle;">Checking...`;
+  enableBtn.style.display = "flex";
+  enableBtn.style.alignItems = "center";
+  enableBtn.style.justifyContent = "center";
+  enableBtn.style.fontWeight = "600";
+  showDebug("Checking biometric support...");
+
   try {
-    const userId = Number(req.user?.id || 0);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    if (!available) {
+      showDebug("No fingerprint or face ID enrolled on device", true);
+      enableBtn.style.display = "none";
+      return false;
+    }
 
-    const userRes = await pool.query('SELECT email, username FROM users WHERE id=$1', [userId]);
-    const user = userRes.rows[0];
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    const token = getToken();
+    if (!token) {
+      showDebug("Login to enable biometric");
+      enableBtn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Login with Fingerprint`;
+      enableBtn.onclick = loginWithBiometric;
+      enableBtn.disabled = false;
+      enableBtn.style.display = "flex";
+      return false;
+    }
 
-    const userID = new TextEncoder().encode(userId.toString());
-    const company = getCompanyConfig();
-    console.log('=== REGISTER START === UserID:', userId, 'Email:', user.email, 'RP_ID:', RP_ID);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-    await pool.query('DELETE FROM webauthn_credentials WHERE user_id=$1 AND rp_id=$2', [userId, RP_ID]);
-
-    const options = await generateRegistrationOptions({
-      rpName: company.name,
-      rpID: RP_ID,
-      userID: userID,
-      userName: user.email,
-      userDisplayName: user.username || user.email,
-      attestationType: 'none',
-      authenticatorSelection: {
-        authenticatorAttachment: 'platform',
-        userVerification: 'discouraged',
-        residentKey: 'required',
-        requireResidentKey: true
+    const res = await fetch(API + '/api/auth/webauthn/check-enabled', {
+      method: 'GET',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Accept': 'application/json'
       },
-      pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
-      timeout: 60000
+      signal: controller.signal
     });
 
-    await pool.query('UPDATE users SET webauthn_challenge=$1 WHERE id=$2', [options.challenge, userId]);
-    console.log('Register challenge saved:', options.challenge.substring(0, 20) + '...');
-    return res.json(options);
-  } catch (e) {
-    console.error('Register start error:', e.message, e.stack);
-    return res.status(500).json({ error: e.message });
-  }
-});
+    clearTimeout(timeoutId);
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
 
-app.post('/api/auth/webauthn/register-finish', auth, async (req, res) => {
-  const userId = Number(req.user?.id || 0);
-  if (!userId) return res.status(401).json({ verified: false, error: 'Unauthorized' });
+    const data = await res.json();
+    enableBtn.disabled = false;
 
-  console.log('=== REGISTER FINISH === UserID:', userId);
-
-  try {
-    const userRes = await pool.query('SELECT webauthn_challenge FROM users WHERE id=$1', [userId]);
-    const challenge = userRes.rows[0]?.webauthn_challenge;
-    if (!challenge) return res.status(400).json({ verified: false, error: 'Challenge expired' });
-
-    const verification = await verifyRegistrationResponse({
-      response: req.body,
-      expectedChallenge: challenge,
-      expectedOrigin: EXPECTED_ORIGIN,
-      expectedRPID: RP_ID,
-      requireUserVerification: false
-    });
-
-    console.log('Verification result:', verification.verified);
-    if (!verification.verified) {
-      return res.status(400).json({ verified: false, error: 'Backend verification failed' });
-    }
-
-    // GYARA 100% - DUBA IDAN registrationInfo YANA WANZU
-    let credId, pubKey, counter = 0;
-
-    if (verification.registrationInfo && verification.registrationInfo.credential) {
-      credId = Buffer.from(verification.registrationInfo.credential.id).toString('base64url');
-      pubKey = Buffer.from(verification.registrationInfo.credential.publicKey).toString('base64url');
-      counter = verification.registrationInfo.credential.counter || 0;
-      console.log('Using registrationInfo');
+    if (data.enabled === true) {
+      enableBtn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Login with Fingerprint`;
+      enableBtn.onclick = loginWithBiometric;
+      enableBtn.style.background = '#2196F3';
+      enableBtn.style.display = "flex";
+      showDebug('Passkey enabled. Tap to verify your identity');
     } else {
-      // Fallback: karba daga req.body kai tsaye
-      const body = req.body;
-      credId = body.id || body.rawId;
-      const attObj = body.response?.attestationObject;
-
-      if (!credId ||!attObj) {
-        console.error('No credential data:', { hasId:!!credId, hasAttObj:!!attObj });
-        return res.status(400).json({ verified: false, error: 'No credential data from browser' });
-      }
-
-      // Convert zuwa base64url
-      credId = Buffer.from(credId, 'base64url').toString('base64url');
-      pubKey = Buffer.from(attObj, 'base64').toString('base64url');
-      console.log('Using fallback from req.body');
+      enableBtn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Enable Fingerprint/Face ID`;
+      enableBtn.onclick = enableBiometric;
+      enableBtn.style.background = '#2196F3';
+      enableBtn.style.display = "flex";
+      showDebug('Secure your account with biometric authentication');
     }
-
-    console.log('CredID saved:', credId.substring(0, 25) + '...');
-
-    await pool.query(
-      `INSERT INTO webauthn_credentials (user_id, credential_id, public_key, counter, rp_id, company)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (credential_id) DO UPDATE SET public_key=$3, counter=$4`,
-      [userId, credId, pubKey, counter, RP_ID, 'mayconnect']
-    );
-
-    await pool.query('UPDATE users SET webauthn_challenge=NULL WHERE id=$1', [userId]);
-    console.log('SUCCESS: Discoverable credential saved for user', userId);
-    return res.json({ verified: true, message: 'Biometric registered successfully' });
+    return data.enabled || false;
 
   } catch (e) {
-    console.error('Register finish error:', e.message, e.stack);
-    return res.status(400).json({ verified: false, error: e.message || 'Registration failed' });
+    console.error("Biometric status check failed:", e.name, e.message);
+    if (e.name === 'AbortError') {
+      showDebug("Check timed out. Try again", true);
+    } else if (e.message.includes('Failed to fetch')) {
+      showDebug("Network error. Check connection", true);
+    } else {
+      showDebug("Biometric unavailable on this device", true);
+    }
+    enableBtn.style.display = "none";
+    return false;
   }
-});
+}
 
-app.post('/api/auth/webauthn/login-start', async (req, res) => {
-  try {
-    console.log('=== LOGIN START === Origin:', req.get('origin'), 'RP_ID:', RP_ID);
+function enableBiometric() {
+  const btn = el("enableBiometricBtn");
+  if (!btn) return;
 
-    const options = await generateAuthenticationOptions({
-      rpID: RP_ID,
+  if (!biometricReady) {
+    btn.disabled = true;
+    btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Preparing...`;
+    showDebug('Step 1: Fetching /register-start...');
+
+    fetch(API + '/api/auth/webauthn/register-start', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    })
+   .then(r => r.json())
+   .then(data => {
+      if (data.error) throw new Error(data.error);
+      data.rp = data.rp || {};
+      data.rp.id = window.location.hostname;
+      cachedRegOptions = data;
+      biometricReady = true;
+      btn.disabled = false;
+      btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Touch Sensor Now`;
+      btn.style.background = '#00c853';
+      showDebug('Step 4: Ready! Tap again');
+    })
+   .catch(e => {
+      showDebug('ERROR Step 2: ' + e.message, true);
+      btn.disabled = false;
+      btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Enable Fingerprint/Face ID`;
+      btn.style.background = '#2196F3';
+      biometricReady = false;
+    });
+    return;
+  }
+
+  if (biometricReady && cachedRegOptions) {
+    btn.disabled = true;
+    btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Touch sensor...`;
+
+    try {
+      const data = cachedRegOptions;
+      const publicKey = {
+        challenge: bufferDecode(data.challenge),
+        rp: { name: APP_NAME, id: window.location.hostname },
+        user: {
+          id: bufferDecode(data.user.id),
+          name: data.user.name,
+          displayName: data.user.displayName || data.user.name
+        },
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+        timeout: 60000,
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          userVerification: 'discouraged',
+          requireResidentKey: false
+        },
+        attestation: 'none'
+      };
+
+      showDebug('Step 5: Calling create...\nRP: ' + publicKey.rp.id);
+
+      let timeoutId = setTimeout(() => {
+        showDebug('TIMEOUT: Popup bai fito ba', true);
+        btn.disabled = false;
+        btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Enable Fingerprint/Face ID`;
+        btn.style.background = '#2196F3';
+        biometricReady = false;
+      }, 5000);
+
+      navigator.credentials.create({ publicKey })
+     .then(cred => {
+        clearTimeout(timeoutId);
+        if (!cred) throw new Error('User cancelled');
+        showDebug('Step 6: Success! Credential ID: ' + cred.id.substring(0,20) + '...');
+        btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Saving...`;
+        showDebug('Step 7: Sending to /register-finish...');
+
+        const credential = {
+          id: cred.id,
+          rawId: bufferEncode(cred.rawId),
+          response: {
+            attestationObject: bufferEncode(cred.response.attestationObject),
+            clientDataJSON: bufferEncode(cred.response.clientDataJSON)
+          },
+          type: cred.type
+        };
+
+        return fetch(API + '/api/auth/webauthn/register-finish', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + getToken()
+          },
+          body: JSON.stringify(credential)
+        });
+      })
+     .then(r => r.json())
+     .then(result => {
+        if (result.verified === true) {
+          showDebug('SUCCESS! Biometric enabled ✓');
+          btn.style.display = 'none';
+          biometricReady = false;
+          cachedRegOptions = null;
+          setTimeout(() => checkBiometricStatus(), 1500);
+        } else {
+          throw new Error(result.error || result.message || 'Backend verification failed');
+        }
+      })
+     .catch(err => {
+        clearTimeout(timeoutId);
+        showDebug('ERROR: ' + err.message, true);
+        btn.disabled = false;
+        btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Enable Fingerprint/Face ID`;
+        btn.style.background = '#2196F3';
+        biometricReady = false;
+        cachedRegOptions = null;
+      });
+
+    } catch (e) {
+      showDebug('ERROR: ' + e.message, true);
+      btn.disabled = false;
+      biometricReady = false;
+    }
+  }
+}
+
+function loginWithBiometric() {
+  const btn = el("enableBiometricBtn");
+  if (!btn) return;
+
+  btn.disabled = true;
+  btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Touch sensor...`;
+
+  fetch(API + '/api/auth/webauthn/login-start', { method: 'POST' })
+ .then(r => r.json())
+ .then(options => {
+    const publicKey = {
+      challenge: bufferDecode(options.challenge),
+      allowCredentials: options.allowCredentials || [],
+      timeout: 60000,
       userVerification: 'discouraged',
-      timeout: 60000
+      rpId: window.location.hostname
+    };
+    return navigator.credentials.get({ publicKey });
+  })
+ .then(cred => {
+    return fetch(API + '/api/auth/webauthn/login-finish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: cred.id,
+        rawId: bufferEncode(cred.rawId),
+        response: {
+          authenticatorData: bufferEncode(cred.response.authenticatorData),
+          clientDataJSON: bufferEncode(cred.response.clientDataJSON),
+          signature: bufferEncode(cred.response.signature)
+        },
+        type: cred.type
+      })
     });
-
-    await pool.query('INSERT INTO webauthn_challenges(challenge, expires_at) VALUES($1, NOW() + INTERVAL \'5 minutes\')', [options.challenge]);
-    console.log('Login challenge saved:', options.challenge.substring(0, 20) + '...');
-    return res.json(options);
-  } catch (e) {
-    console.error('Login start error:', e.message, e.stack);
-    return res.status(500).json({ error: 'Internal error' });
-  }
-});
-
-app.post('/api/auth/webauthn/login-finish', async (req, res) => {
-  try {
-    console.log('=== LOGIN FINISH START ===');
-    console.log('Credential ID from browser:', req.body.id);
-
-    const { id: credentialId } = req.body;
-    if (!credentialId) {
-      return res.status(400).json({ error: 'No credential ID' });
-    }
-
-    const challengeRes = await pool.query('SELECT challenge FROM webauthn_challenges WHERE expires_at > NOW() ORDER BY created_at DESC LIMIT 1');
-    if (!challengeRes.rows[0]) {
-      return res.status(400).json({ error: 'Challenge expired' });
-    }
-    const challenge = challengeRes.rows[0].challenge;
-
-    const credRes = await pool.query('SELECT user_id, credential_id, public_key, counter, rp_id FROM webauthn_credentials WHERE credential_id=$1', [credentialId]);
-    if (!credRes.rows.length) {
-      return res.status(400).json({ error: 'Passkey not found' });
-    }
-
-    const cred = credRes.rows[0];
-    const userRes = await pool.query('SELECT id, username FROM users WHERE id=$1', [cred.user_id]);
-    const user = userRes.rows[0];
-    if (!user) {
-      return res.status(400).json({ error: 'User not found' });
-    }
-
-    const verification = await verifyAuthenticationResponse({
-      response: req.body,
-      expectedChallenge: challenge,
-      expectedOrigin: EXPECTED_ORIGIN,
-      expectedRPID: RP_ID,
-      credential: {
-        id: cred.credential_id,
-        publicKey: Buffer.from(cred.public_key, 'base64url'),
-        counter: cred.counter
-      },
-      requireUserVerification: false
-    });
-
-    if (verification.verified) {
-      await pool.query('UPDATE webauthn_credentials SET counter=$1 WHERE credential_id=$2', [verification.authenticationInfo.newCounter, cred.credential_id]);
-      await pool.query('DELETE FROM webauthn_challenges WHERE challenge=$1', [challenge]);
-      const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '7d' });
-      console.log('SUCCESS: Passwordless login for user', user.id);
-      return res.json({ verified: true, token, user: { id: user.id, username: user.username } });
+  })
+ .then(r => r.json())
+ .then(result => {
+    if (result.token) {
+      localStorage.setItem('token', result.token);
+      showDebug('Login Success! ✓');
+      setTimeout(() => location.reload(), 1000);
     } else {
-      return res.status(400).json({ verified: false, error: 'Auth failed' });
+      throw new Error(result.error || 'Login failed');
     }
-  } catch (e) {
-    console.error('Login finish error:', e.message, e.stack);
-    return res.status(400).json({ error: 'Internal error: ' + e.message });
-  }
-});
+  })
+ .catch(err => {
+    showDebug('Login ERROR: ' + err.message, true);
+    btn.disabled = false;
+    btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Login with Fingerprint`;
+  });
+}
 
-app.get('/api/auth/webauthn/check-enabled', auth, async (req, res) => {
-  try {
-    const userId = Number(req.user?.id || 0);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+function initBiometricProfile() {
+  checkBiometricStatus();
+}
 
-    const result = await pool.query(
-      'SELECT credential_id FROM webauthn_credentials WHERE user_id=$1 AND rp_id=$2 LIMIT 1',
-      [userId, RP_ID]
-    );
-
-    res.json({ enabled: result.rows.length > 0 });
-  } catch (e) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.get('/api/ping', (req, res) => res.send('pong'));
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initBiometricProfile);
+} else {
+  initBiometricProfile();
+}
 /* ================= PURCHASE MODAL ================= */
 async function openPurchaseModal(planId, planName, planPrice) {
   selectedPlanId = planId;
