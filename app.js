@@ -592,14 +592,17 @@ async function enableBiometric() {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      data.rp.id = window.location.hostname;
+      // KAR KA OVERRIDE RP.ID - AMFANI DA NA SERVER
+      console.log('Server RP ID:', data.rp.id, 'Browser Host:', window.location.hostname);
+      showDebug('Step 2: Got options\nRP ID: ' + data.rp.id);
+
       cachedRegOptions = data;
       biometricReady = true;
 
       btn.disabled = false;
       btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Touch Sensor Now`;
       btn.style.background = '#00c853';
-      showDebug('Step 2: Ready! Tap again');
+      showDebug('Step 3: Ready! Tap again');
     } catch (e) {
       showDebug('ERROR: ' + e.message, true);
       btn.disabled = false;
@@ -619,10 +622,7 @@ async function enableBiometric() {
 
       const publicKey = {
         challenge: bufferDecode(data.challenge),
-        rp: {
-          name: APP_NAME,
-          id: window.location.hostname
-        },
+        rp: data.rp, // <-- AMFANI DA NA SERVER KAI TSAYE
         user: {
           id: bufferDecode(data.user.id),
           name: data.user.name,
@@ -632,19 +632,29 @@ async function enableBiometric() {
         timeout: 60000,
         authenticatorSelection: {
           authenticatorAttachment: 'platform',
-          userVerification: 'discouraged',
-          residentKey: 'required', // <-- WAJIBI DON PASSWORDLESS
-          requireResidentKey: true // <-- WAJIBI
+          userVerification: 'preferred', // <-- GYARA: preferred
+          residentKey: 'required',
+          requireResidentKey: true
         },
         attestation: 'none'
       };
 
-      showDebug('Step 3: Touch sensor...');
+      showDebug('Step 4: Touch sensor now...');
+
+      let timeoutId = setTimeout(() => {
+        showDebug('TIMEOUT: Popup bai fito ba. Duba Console F12', true);
+        btn.disabled = false;
+        btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Enable Fingerprint/Face ID`;
+        btn.style.background = '#2196F3';
+        biometricReady = false;
+      }, 8000);
 
       const cred = await navigator.credentials.create({ publicKey });
+      clearTimeout(timeoutId);
+
       if (!cred) throw new Error('User cancelled');
 
-      showDebug('Step 4: Saving...');
+      showDebug('Step 5: Success! Saving...');
       btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Saving...`;
 
       const credential = {
@@ -678,7 +688,15 @@ async function enableBiometric() {
         throw new Error(result.error || 'Backend verification failed');
       }
     } catch (err) {
-      showDebug('ERROR: ' + err.message, true);
+      clearTimeout(timeoutId);
+      console.error('Full error:', err);
+
+      let msg = 'ERROR: ' + err.name + ' - ' + err.message;
+      if (err.name === 'InvalidStateError') msg = 'ERROR: Passkey already exists. Delete DB first';
+      if (err.name === 'NotAllowedError') msg = 'ERROR: Cancelled or timeout';
+      if (err.message.includes('rp.id')) msg = 'ERROR: RP ID mismatch. Server:' + cachedRegOptions.rp.id + '!= Browser:' + window.location.hostname;
+
+      showDebug(msg, true);
       btn.disabled = false;
       btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Enable Fingerprint/Face ID`;
       btn.style.background = '#2196F3';
@@ -709,7 +727,7 @@ async function loginWithBiometric() {
       challenge: bufferDecode(options.challenge),
       allowCredentials: options.allowCredentials || [],
       timeout: 60000,
-      userVerification: 'discouraged',
+      userVerification: 'preferred', // <-- GYARA
       rpId: window.location.hostname
     };
 
@@ -744,7 +762,7 @@ async function loginWithBiometric() {
       throw new Error(result.error || 'Login failed');
     }
   } catch (err) {
-    showDebug('Login ERROR: ' + err.message, true);
+    showDebug('Login ERROR: ' + err.name + ' - ' + err.message, true);
     btn.disabled = false;
     btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Login with Fingerprint`;
   }
