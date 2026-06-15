@@ -592,8 +592,7 @@ async function enableBiometric() {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      // KAR KA OVERRIDE RP.ID - AMFANI DA NA SERVER
-      console.log('Server RP ID:', data.rp.id, 'Browser Host:', window.location.hostname);
+      console.log('Server RP ID:', data.rp.id, 'Browser Host:', window.location.hostname, 'User ID:', data.user.id);
       showDebug('Step 2: Got options\nRP ID: ' + data.rp.id);
 
       cachedRegOptions = data;
@@ -620,11 +619,14 @@ async function enableBiometric() {
     try {
       const data = cachedRegOptions;
 
+      // GYARA: Tabbatar user.id ya zama string
+      const userId = String(data.user.id);
+
       const publicKey = {
         challenge: bufferDecode(data.challenge),
         rp: data.rp, // <-- AMFANI DA NA SERVER KAI TSAYE
         user: {
-          id: bufferDecode(data.user.id),
+          id: bufferDecode(userId),
           name: data.user.name,
           displayName: data.user.displayName || data.user.name
         },
@@ -642,7 +644,7 @@ async function enableBiometric() {
       showDebug('Step 4: Touch sensor now...');
 
       let timeoutId = setTimeout(() => {
-        showDebug('TIMEOUT: Popup bai fito ba. Duba Console F12', true);
+        showDebug('TIMEOUT: Popup bai fito ba. Duba Console F12 don error', true);
         btn.disabled = false;
         btn.innerHTML = `<img src="${APP_LOGO}" style="width:20px;height:20px;margin-right:8px;border-radius:3px;">Enable Fingerprint/Face ID`;
         btn.style.background = '#2196F3';
@@ -694,7 +696,8 @@ async function enableBiometric() {
       let msg = 'ERROR: ' + err.name + ' - ' + err.message;
       if (err.name === 'InvalidStateError') msg = 'ERROR: Passkey already exists. Delete DB first';
       if (err.name === 'NotAllowedError') msg = 'ERROR: Cancelled or timeout';
-      if (err.message.includes('rp.id')) msg = 'ERROR: RP ID mismatch. Server:' + cachedRegOptions.rp.id + '!= Browser:' + window.location.hostname;
+      if (err.name === 'TypeError') msg = 'ERROR: Bad encoding - check challenge/user.id';
+      if (err.message.includes('rp.id')) msg = 'ERROR: RP mismatch. Server:' + cachedRegOptions.rp.id + '!= Browser:' + window.location.hostname;
 
       showDebug(msg, true);
       btn.disabled = false;
@@ -727,7 +730,7 @@ async function loginWithBiometric() {
       challenge: bufferDecode(options.challenge),
       allowCredentials: options.allowCredentials || [],
       timeout: 60000,
-      userVerification: 'preferred', // <-- GYARA
+      userVerification: 'preferred',
       rpId: window.location.hostname
     };
 
