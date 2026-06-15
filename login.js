@@ -1,13 +1,16 @@
 const API = "https://mayconnect-backend-1.onrender.com";
 
 /* ELEMENTS */
+const usernameInput = document.getElementById("loginUsername");
+const passwordInput = document.getElementById("loginPassword");
 const loginBtn = document.getElementById("loginBtn");
+const biometricBtn = document.getElementById("biometricBtn"); // sabo button
 const loader = document.getElementById("loginLoader");
 
 /* SOUND */
 const welcomeSound = new Audio("sounds/welcome.mp3");
 
-/* AUTO REDIRECT IDAN AKO DA SESSION */
+/* AUTO LOGIN */
 document.addEventListener("DOMContentLoaded", () => {
   const token = localStorage.getItem("token");
   if (token) {
@@ -15,8 +18,19 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-/* LOGIN BUTTON CLICK - PASSWORDLESS */
-loginBtn.addEventListener("click", loginWithPasskey);
+/* PASSWORD TOGGLE */
+function togglePassword(){
+  if(!passwordInput) return;
+  passwordInput.type = passwordInput.type === "password"? "text" : "password";
+}
+
+/* LOGIN CLICK - PASSWORD */
+loginBtn.addEventListener("click", login);
+
+/* BIOMETRIC CLICK - PASSWORDLESS */
+if(biometricBtn) {
+  biometricBtn.addEventListener("click", biometricLogin);
+}
 
 /* CONVERT BASE64URL TO ARRAYBUFFER */
 function base64urlToArrayBuffer(base64url) {
@@ -25,7 +39,7 @@ function base64urlToArrayBuffer(base64url) {
   const padded = pad? base64 + '='.repeat(4 - pad) : base64;
   const binary = atob(padded);
   const buffer = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
+  for (let i = 0; i < bytes.byteLength; i++) {
     buffer[i] = binary.charCodeAt(i);
   }
   return buffer.buffer;
@@ -41,13 +55,79 @@ function arrayBufferToBase64url(buffer) {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
-/* PASSWORDLESS LOGIN FUNCTION */
-async function loginWithPasskey() {
+/* LOGIN FUNCTION - PASSWORD/EMAIL/USERNAME */
+async function login(){
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value.trim();
+
+  if(!username ||!password){
+    alert("Enter username and password");
+    return;
+  }
+
   loginBtn.disabled = true;
   loader.style.display = "flex";
 
+  try{
+    const res = await fetch(API + "/api/login",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ username, password })
+    });
+
+    let data;
+    try{
+      data = await res.json();
+    }catch{
+      throw new Error("Invalid server response");
+    }
+
+    if(!res.ok){
+      throw new Error(data.message || "Login failed");
+    }
+
+    if(!data.token){
+      throw new Error("No token received");
+    }
+
+    /* SAVE SESSION */
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("username", data.username);
+    localStorage.setItem("userId", data.userId);
+
+    /* ADMIN */
+    if(data.is_admin){
+      alert("Welcome Admin");
+    }
+
+    /* SOUND */
+    welcomeSound.play().catch(()=>{});
+
+    /* REDIRECT */
+    setTimeout(()=>{
+      window.location.href = "dashboard.html";
+    },600);
+
+  }catch(err){
+    console.error(err);
+    alert(err.message || "Server error");
+    loader.style.display = "none";
+    loginBtn.disabled = false;
+  }
+}
+
+/* BIOMETRIC LOGIN - PASSWORDLESS, BABU localStorage CHECK */
+async function biometricLogin(){
+  if(!window.PublicKeyCredential){
+    alert("Biometric not supported on this device");
+    return;
+  }
+
+  biometricBtn.disabled = true;
+  loader.style.display = "flex";
+
   try {
-    // 1. Nemi login options daga backend - BABU username/password
+    // 1. Nemi options daga backend - BABU username/password/email
     const res = await fetch(API + "/api/auth/webauthn/login-start", {
       method: "POST",
       credentials: "include",
@@ -65,17 +145,17 @@ async function loginWithPasskey() {
       throw new Error(options.error || "Failed to get login options");
     }
 
-    // 2. Convert challenge + allowCredentials IDs zuwa ArrayBuffer
+    // 2. Convert zuwa ArrayBuffer
     const publicKeyCredentialRequestOptions = {
-     ...options,
+    ...options,
       challenge: base64urlToArrayBuffer(options.challenge),
       allowCredentials: options.allowCredentials.map(cred => ({
-       ...cred,
+      ...cred,
         id: base64urlToArrayBuffer(cred.id)
       }))
     };
 
-    // 3. Buɗe fingerprint/face ID popup na Chrome/Android
+    // 3. Buɗe fingerprint/face ID popup
     const credential = await navigator.credentials.get({
       publicKey: publicKeyCredentialRequestOptions,
       mediation: "optional"
@@ -85,7 +165,7 @@ async function loginWithPasskey() {
       throw new Error("Authentication cancelled");
     }
 
-    // 4. Tura response zuwa backend don tabbatarwa
+    // 4. Tura zuwa backend don tabbatarwa
     const authRes = await fetch(API + "/api/auth/webauthn/login-finish", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -113,21 +193,20 @@ async function loginWithPasskey() {
       throw new Error("No token received");
     }
 
-    // 5. SAVE SESSION
+    /* SAVE SESSION */
     localStorage.setItem("token", data.token);
     localStorage.setItem("userId", data.userId);
 
-    // 6. SOUND + REDIRECT
-    welcomeSound.play().catch(() => {});
-
-    setTimeout(() => {
+    /* SOUND + REDIRECT */
+    welcomeSound.play().catch(()=>{});
+    setTimeout(()=>{
       window.location.href = "dashboard.html";
-    }, 600);
+    },600);
 
   } catch (err) {
-    console.error("Login ERROR:", err);
-    alert(err.message || "Login failed");
+    console.error("Biometric ERROR:", err);
+    alert(err.message || "Biometric login failed");
     loader.style.display = "none";
-    loginBtn.disabled = false;
+    biometricBtn.disabled = false;
   }
 }
