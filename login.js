@@ -21,20 +21,24 @@ function togglePassword(){
 loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
-/* CONVERT + CLEAN BASE64URL TO ARRAYBUFFER */
+/* BULLETPROOF CONVERT */
 function base64urlToArrayBuffer(base64url) {
   if (!base64url) return new ArrayBuffer(0);
 
-  // TSABTACE: share quotes, spaces, newlines
-  base64url = base64url.toString().trim().replace(/"/g, '').replace(/\s/g, '');
-  base64url = base64url.replace(/-/g, '+').replace(/_/g, '/');
+  // 1. Juya zuwa string + share quotes, spaces, newlines
+  let str = base64url.toString().trim().replace(/"/g, '').replace(/\s/g, '');
 
-  while (base64url.length % 4) base64url += '=';
+  // 2. Juya url-safe zuwa base64
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
 
-  const binaryString = atob(base64url);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
+  // 3. Saka padding
+  while (str.length % 4) str += '=';
+
+  // 4. Convert zuwa ArrayBuffer
+  const binary = atob(str);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
   }
   return bytes.buffer;
 }
@@ -55,7 +59,6 @@ async function login(){
 
   loginBtn.disabled = true;
   loader.style.display = "flex";
-
   try{
     const res = await fetch(API + "/api/login",{
       method:"POST",
@@ -64,15 +67,12 @@ async function login(){
     });
     const data = await res.json();
     if(!res.ok) throw new Error(data.message || "Login failed");
-    if(!data.token) throw new Error("No token received");
-
     localStorage.setItem("token", data.token);
     localStorage.setItem("username", data.username);
     localStorage.setItem("userId", data.userId);
     if(data.is_admin) alert("Welcome Admin");
     welcomeSound.play().catch(()=>{});
     setTimeout(()=> window.location.href = "dashboard.html", 600);
-
   }catch(err){
     console.error(err);
     alert(err.message || "Server error");
@@ -83,7 +83,7 @@ async function login(){
 
 async function biometricLogin(){
   if(!window.PublicKeyCredential){
-    alert("Biometric not supported on this device");
+    alert("Biometric not supported");
     return;
   }
 
@@ -98,26 +98,26 @@ async function biometricLogin(){
     });
 
     const options = await res.json();
-    if (!res.ok) throw new Error(options.error || "Failed to get login options");
+    if (!res.ok) throw new Error(options.error || "Failed");
 
-    // DEBUG: Bari mu ga abin da backend ke turawa
-    console.log('BACKEND CHALLENGE:', options.challenge);
-    console.log('BACKEND CRED ID RAW:', options.allowCredentials[0].id);
-    console.log('BACKEND CRED ID TYPE:', typeof options.allowCredentials[0].id);
-    console.log('BACKEND CRED ID LENGTH:', options.allowCredentials[0].id.length);
+    // DEBUG: Duba abin da backend ke turawa
+    console.log('RAW CRED ID:', JSON.stringify(options.allowCredentials[0].id));
+    console.log('RAW TYPE:', typeof options.allowCredentials[0].id);
+    console.log('RAW LENGTH:', options.allowCredentials[0].id.length);
 
-    const convertedId = base64urlToArrayBuffer(options.allowCredentials[0].id);
-    console.log('CONVERTED ID IS ARRAYBUFFER:', convertedId instanceof ArrayBuffer);
-    console.log('CONVERTED ID BYTE LENGTH:', convertedId.byteLength);
+    const cleanId = base64urlToArrayBuffer(options.allowCredentials[0].id);
+    console.log('IS ARRAYBUFFER:', cleanId instanceof ArrayBuffer);
+    console.log('BYTE LENGTH:', cleanId.byteLength);
 
     const publicKeyCredentialRequestOptions = {
       challenge: base64urlToArrayBuffer(options.challenge),
-      timeout: options.timeout || 60000,
+      timeout: 60000,
       rpId: options.rpId,
-      userVerification: options.userVerification || "preferred",
+      userVerification: "preferred",
       allowCredentials: [{
-        id: convertedId,
-        type: "public-key"
+        id: cleanId,
+        type: "public-key",
+        transports: ["internal"]
       }]
     };
 
@@ -125,7 +125,7 @@ async function biometricLogin(){
       publicKey: publicKeyCredentialRequestOptions
     });
 
-    if (!credential) throw new Error("Authentication cancelled");
+    if (!credential) throw new Error("Cancelled");
 
     const authRes = await fetch(API + "/api/auth/webauthn/login-finish", {
       method: "POST",
@@ -145,7 +145,7 @@ async function biometricLogin(){
     });
 
     const data = await authRes.json();
-    if (!authRes.ok) throw new Error(data.error || "Login verification failed");
+    if (!authRes.ok) throw new Error(data.error || "Verify failed");
 
     localStorage.setItem("token", data.token);
     localStorage.setItem("userId", data.userId);
@@ -154,7 +154,7 @@ async function biometricLogin(){
 
   } catch (err) {
     console.error("Biometric ERROR:", err);
-    alert(err.message || "Biometric login failed");
+    alert(err.message);
     loader.style.display = "none";
     biometricBtn.disabled = false;
   }
