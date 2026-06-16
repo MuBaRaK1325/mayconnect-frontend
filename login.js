@@ -4,7 +4,7 @@ const API = "https://mayconnect-backend-1.onrender.com";
 const usernameInput = document.getElementById("loginUsername");
 const passwordInput = document.getElementById("loginPassword");
 const loginBtn = document.getElementById("loginBtn");
-const biometricBtn = document.getElementById("biometricBtn"); // sabo button
+const biometricBtn = document.getElementById("biometricBtn");
 const loader = document.getElementById("loginLoader");
 
 /* SOUND */
@@ -32,14 +32,14 @@ if(biometricBtn) {
   biometricBtn.addEventListener("click", biometricLogin);
 }
 
-/* CONVERT BASE64URL TO ARRAYBUFFER */
+/* CONVERT BASE64URL TO ARRAYBUFFER - GYARRE */
 function base64urlToArrayBuffer(base64url) {
   const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
   const pad = base64.length % 4;
   const padded = pad? base64 + '='.repeat(4 - pad) : base64;
   const binary = atob(padded);
   const buffer = new Uint8Array(binary.length);
-  for (let i = 0; i < bytes.byteLength; i++) {
+  for (let i = 0; i < binary.length; i++) { // GYARA: binary.length maimakon bytes.byteLength
     buffer[i] = binary.charCodeAt(i);
   }
   return buffer.buffer;
@@ -145,13 +145,14 @@ async function biometricLogin(){
       throw new Error(options.error || "Failed to get login options");
     }
 
-    // 2. Convert zuwa ArrayBuffer
+    // 2. Convert zuwa ArrayBuffer + GYARA: saka type: "public-key"
     const publicKeyCredentialRequestOptions = {
-    ...options,
+   ...options,
       challenge: base64urlToArrayBuffer(options.challenge),
-      allowCredentials: options.allowCredentials.map(cred => ({
+      allowCredentials: (options.allowCredentials || []).map(cred => ({
       ...cred,
-        id: base64urlToArrayBuffer(cred.id)
+        id: base64urlToArrayBuffer(cred.id),
+        type: "public-key" // GYARA: Chrome yana buƙata
       }))
     };
 
