@@ -101,22 +101,25 @@ async function biometricLogin(){
     if (!res.ok) throw new Error(options.error || "Failed");
 
     // DEBUG: Duba abin da muke turawa Chrome
-    const credId = base64urlToUint8Array(options.allowCredentials[0].id);
-    console.log('CRED ID TYPE:', credId.constructor.name); // Dole ne Uint8Array
-    console.log('CRED ID LENGTH:', credId.length);
+    console.log('OPTIONS FROM SERVER:', options);
+    console.log('ALLOW CREDENTIALS COUNT:', options.allowCredentials?.length || 0);
 
     const publicKeyCredentialRequestOptions = {
       challenge: base64urlToUint8Array(options.challenge),
-      timeout: 60000,
-      rpId: "www.mayconnectdataplug.com.ng",
-      userVerification: "preferred",
-      allowCredentials: [{
-        id: credId, // DAIKE: Uint8Array, ba ArrayBuffer ba
-        type: "public-key"
-      }]
+      timeout: options.timeout || 60000,
+      rpId: window.location.hostname, // GYARA: Yi amfani da hostname maimakon hardcode
+      userVerification: options.userVerification || "preferred",
+
+      // GYARA: Map duk allowCredentials, kada ka ɗauki na farko kawai
+      allowCredentials: (options.allowCredentials || []).map(c => ({
+        type: c.type || "public-key",
+        id: base64urlToUint8Array(c.id),
+        transports: c.transports
+      }))
     };
 
     console.log('PUBLICKEY OBJECT:', publicKeyCredentialRequestOptions);
+    console.log('First cred ID is Uint8Array:', publicKeyCredentialRequestOptions.allowCredentials[0]?.id instanceof Uint8Array);
 
     const credential = await navigator.credentials.get({
       publicKey: publicKeyCredentialRequestOptions
