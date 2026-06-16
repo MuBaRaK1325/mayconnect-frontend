@@ -21,26 +21,26 @@ function togglePassword(){
 loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
-/* BULLETPROOF CONVERT */
-function base64urlToArrayBuffer(base64url) {
-  if (!base64url) return new ArrayBuffer(0);
+/* FORCE CONVERT TO UINT8ARRAY */
+function base64urlToUint8Array(base64url) {
+  if (!base64url) return new Uint8Array(0);
 
-  // 1. Juya zuwa string + share quotes, spaces, newlines
-  let str = base64url.toString().trim().replace(/"/g, '').replace(/\s/g, '');
+  // 1. Force zuwa string + share duk wani abin banza
+  let str = String(base64url).trim().replace(/"/g, '').replace(/'/g, '').replace(/\s/g, '');
 
-  // 2. Juya url-safe zuwa base64
+  // 2. Juya url-safe
   str = str.replace(/-/g, '+').replace(/_/g, '/');
 
-  // 3. Saka padding
+  // 3. Padding
   while (str.length % 4) str += '=';
 
-  // 4. Convert zuwa ArrayBuffer
+  // 4. Convert zuwa Uint8Array kai tsaye
   const binary = atob(str);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
-  return bytes.buffer;
+  return bytes; // DAIKE: Dole ne Uint8Array, ba.buffer ba
 }
 
 function arrayBufferToBase64url(buffer) {
@@ -100,26 +100,23 @@ async function biometricLogin(){
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Failed");
 
-    // DEBUG: Duba abin da backend ke turawa
-    console.log('RAW CRED ID:', JSON.stringify(options.allowCredentials[0].id));
-    console.log('RAW TYPE:', typeof options.allowCredentials[0].id);
-    console.log('RAW LENGTH:', options.allowCredentials[0].id.length);
-
-    const cleanId = base64urlToArrayBuffer(options.allowCredentials[0].id);
-    console.log('IS ARRAYBUFFER:', cleanId instanceof ArrayBuffer);
-    console.log('BYTE LENGTH:', cleanId.byteLength);
+    // DEBUG: Duba abin da muke turawa Chrome
+    const credId = base64urlToUint8Array(options.allowCredentials[0].id);
+    console.log('CRED ID TYPE:', credId.constructor.name); // Dole ne Uint8Array
+    console.log('CRED ID LENGTH:', credId.length);
 
     const publicKeyCredentialRequestOptions = {
-      challenge: base64urlToArrayBuffer(options.challenge),
+      challenge: base64urlToUint8Array(options.challenge),
       timeout: 60000,
-      rpId: options.rpId,
+      rpId: "www.mayconnectdataplug.com.ng",
       userVerification: "preferred",
       allowCredentials: [{
-        id: cleanId,
-        type: "public-key",
-        transports: ["internal"]
+        id: credId, // DAIKE: Uint8Array, ba ArrayBuffer ba
+        type: "public-key"
       }]
     };
+
+    console.log('PUBLICKEY OBJECT:', publicKeyCredentialRequestOptions);
 
     const credential = await navigator.credentials.get({
       publicKey: publicKeyCredentialRequestOptions
