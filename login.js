@@ -100,29 +100,31 @@ async function biometricLogin(){
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Failed");
 
-    // DEBUG: Duba abin da muke turawa Chrome
     console.log('OPTIONS FROM SERVER:', options);
     console.log('ALLOW CREDENTIALS COUNT:', options.allowCredentials?.length || 0);
 
-    const publicKeyCredentialRequestOptions = {
+    // GYARA 1: Convert challenge
+    const publicKeyOptions = {
       challenge: base64urlToUint8Array(options.challenge),
       timeout: options.timeout || 60000,
-      rpId: window.location.hostname, // GYARA: Yi amfani da hostname maimakon hardcode
-      userVerification: options.userVerification || "preferred",
+      rpId: window.location.hostname,
+      userVerification: options.userVerification || "preferred"
+    };
 
-      // GYARA: Map duk allowCredentials, kada ka ɗauki na farko kawai
-      allowCredentials: (options.allowCredentials || []).map(c => ({
+    // GYARA 2: Kada ka aika allowCredentials idan empty []. Idan akwai, to map zuwa Uint8Array
+    if (options.allowCredentials && options.allowCredentials.length > 0) {
+      publicKeyOptions.allowCredentials = options.allowCredentials.map(c => ({
         type: c.type || "public-key",
         id: base64urlToUint8Array(c.id),
         transports: c.transports
-      }))
-    };
+      }));
+    }
 
-    console.log('PUBLICKEY OBJECT:', publicKeyCredentialRequestOptions);
-    console.log('First cred ID is Uint8Array:', publicKeyCredentialRequestOptions.allowCredentials[0]?.id instanceof Uint8Array);
+    console.log('PUBLICKEY OBJECT:', publicKeyOptions);
+    console.log('First cred ID is Uint8Array:', publicKeyOptions.allowCredentials?.[0]?.id instanceof Uint8Array);
 
     const credential = await navigator.credentials.get({
-      publicKey: publicKeyCredentialRequestOptions
+      publicKey: publicKeyOptions
     });
 
     if (!credential) throw new Error("Cancelled");
