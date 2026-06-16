@@ -1,13 +1,11 @@
 const API = "https://mayconnect-backend-1.onrender.com";
 
-/* ELEMENTS */
 const usernameInput = document.getElementById("loginUsername");
 const passwordInput = document.getElementById("loginPassword");
 const loginBtn = document.getElementById("loginBtn");
 const biometricBtn = document.getElementById("biometricBtn");
 const loader = document.getElementById("loginLoader");
 
-/* SOUND */
 const welcomeSound = new Audio("sounds/welcome.mp3");
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -23,11 +21,16 @@ function togglePassword(){
 loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
-/* CONVERT BASE64URL TO ARRAYBUFFER */
+/* CONVERT + CLEAN BASE64URL TO ARRAYBUFFER */
 function base64urlToArrayBuffer(base64url) {
   if (!base64url) return new ArrayBuffer(0);
-  base64url = base64url.trim().replace(/-/g, '+').replace(/_/g, '/');
+
+  // TSABTACE: share quotes, spaces, newlines
+  base64url = base64url.toString().trim().replace(/"/g, '').replace(/\s/g, '');
+  base64url = base64url.replace(/-/g, '+').replace(/_/g, '/');
+
   while (base64url.length % 4) base64url += '=';
+
   const binaryString = atob(base64url);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
@@ -36,7 +39,6 @@ function base64urlToArrayBuffer(base64url) {
   return bytes.buffer;
 }
 
-/* CONVERT ARRAYBUFFER TO BASE64URL */
 function arrayBufferToBase64url(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = '';
@@ -46,7 +48,6 @@ function arrayBufferToBase64url(buffer) {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
-/* PASSWORD LOGIN */
 async function login(){
   const username = usernameInput.value.trim();
   const password = passwordInput.value.trim();
@@ -80,7 +81,6 @@ async function login(){
   }
 }
 
-/* BIOMETRIC LOGIN - CONVERT IDs DAIDAI */
 async function biometricLogin(){
   if(!window.PublicKeyCredential){
     alert("Biometric not supported on this device");
@@ -100,17 +100,25 @@ async function biometricLogin(){
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Failed to get login options");
 
-    // MUHIMMI: Kada mu yi...options. Mu sake ginawa gaba ɗaya
+    // DEBUG: Bari mu ga abin da backend ke turawa
+    console.log('BACKEND CHALLENGE:', options.challenge);
+    console.log('BACKEND CRED ID RAW:', options.allowCredentials[0].id);
+    console.log('BACKEND CRED ID TYPE:', typeof options.allowCredentials[0].id);
+    console.log('BACKEND CRED ID LENGTH:', options.allowCredentials[0].id.length);
+
+    const convertedId = base64urlToArrayBuffer(options.allowCredentials[0].id);
+    console.log('CONVERTED ID IS ARRAYBUFFER:', convertedId instanceof ArrayBuffer);
+    console.log('CONVERTED ID BYTE LENGTH:', convertedId.byteLength);
+
     const publicKeyCredentialRequestOptions = {
       challenge: base64urlToArrayBuffer(options.challenge),
       timeout: options.timeout || 60000,
       rpId: options.rpId,
       userVerification: options.userVerification || "preferred",
-      allowCredentials: (options.allowCredentials || []).map(cred => ({
-        id: base64urlToArrayBuffer(cred.id), // CONVERT NAN
-        type: "public-key",
-        transports: cred.transports || ["internal", "hybrid"]
-      }))
+      allowCredentials: [{
+        id: convertedId,
+        type: "public-key"
+      }]
     };
 
     const credential = await navigator.credentials.get({
