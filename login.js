@@ -1,17 +1,15 @@
 const API = "https://mayconnect-backend-1.onrender.com";
-const RP_ID = "www.mayconnectdataplug.com.ng"; // Dole ne ya daidaita da backend
+const RP_ID = "www.mayconnectdataplug.com.ng";
 
 const usernameInput = document.getElementById("loginUsername");
 const passwordInput = document.getElementById("loginPassword");
 const loginBtn = document.getElementById("loginBtn");
 const biometricBtn = document.getElementById("biometricBtn");
 const loader = document.getElementById("loginLoader");
-
 const welcomeSound = new Audio("sounds/welcome.mp3");
 
 document.addEventListener("DOMContentLoaded", () => {
-  const token = localStorage.getItem("token");
-  if (token) window.location.href = "dashboard.html";
+  if (localStorage.getItem("token")) window.location.href = "dashboard.html";
 });
 
 function togglePassword(){
@@ -22,14 +20,9 @@ function togglePassword(){
 async function login(){
   const username = usernameInput.value.trim();
   const password = passwordInput.value.trim();
-  if(!username ||!password){
-    alert("Saka username da password");
-    return;
-  }
+  if(!username ||!password){ alert("Saka username da password"); return; }
 
-  loginBtn.disabled = true;
-  loader.style.display = "flex";
-
+  loginBtn.disabled = true; loader.style.display = "flex";
   try{
     const res = await fetch(API + "/api/login",{
       method:"POST",
@@ -38,11 +31,9 @@ async function login(){
     });
     const data = await res.json();
     if(!res.ok) throw new Error(data.message || "Login failed");
-
     localStorage.setItem("token", data.token);
     localStorage.setItem("username", data.username);
     localStorage.setItem("userId", data.userId);
-
     if(data.is_admin) alert("Barka da zuwa Admin");
     welcomeSound.play().catch(()=>{});
     setTimeout(()=> window.location.href = "dashboard.html", 600);
@@ -93,13 +84,6 @@ async function biometricLogin() {
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Login start failed");
 
-    console.log("=== DEBUG START ===");
-    console.log("1. Raw options:", options);
-    console.log("2. Raw challenge type:", typeof options.challenge);
-    console.log("3. Raw cred id type:", typeof options.allowCredentials?.[0]?.id);
-    console.log("4. Current hostname:", window.location.hostname);
-    console.log("5. RP_ID used:", RP_ID);
-
     const publicKey = {
       challenge: base64urlToUint8Array(options.challenge),
       timeout: options.timeout || 60000,
@@ -107,22 +91,17 @@ async function biometricLogin() {
       userVerification: options.userVerification || "preferred"
     };
 
-    if (options.allowCredentials && options.allowCredentials.length > 0) {
-      publicKey.allowCredentials = options.allowCredentials.map((c, i) => {
-        const idBytes = base64urlToUint8Array(c.id);
-        console.log(`6. Cred ${i} converted:`, idBytes.constructor.name, "Length:", idBytes.length);
-        return {
-          type: "public-key",
-          id: idBytes,
-          transports: c.transports || ["internal"]
-        };
-      });
+    if (options.allowCredentials?.length > 0) {
+      publicKey.allowCredentials = options.allowCredentials.map(c => ({
+        type: "public-key",
+        id: base64urlToUint8Array(c.id),
+        transports: c.transports || ["internal"]
+      }));
     }
 
-    console.log("7. Final publicKey object:", publicKey);
-    console.log("8. Challenge instanceof Uint8Array:", publicKey.challenge instanceof Uint8Array);
-    console.log("9. First ID instanceof Uint8Array:", publicKey.allowCredentials?.[0]?.id instanceof Uint8Array);
-    console.log("=== DEBUG END ===");
+    console.log("RP_ID:", publicKey.rpId);
+    console.log("Challenge Uint8Array:", publicKey.challenge instanceof Uint8Array);
+    console.log("First ID Uint8Array:", publicKey.allowCredentials?.[0]?.id instanceof Uint8Array);
 
     const credential = await navigator.credentials.get({ publicKey });
     if (!credential) throw new Error("Cancelled");
