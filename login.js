@@ -1,5 +1,4 @@
 const API = "https://mayconnect-backend-1.onrender.com";
-const RP_ID = "www.mayconnectdataplug.com.ng";
 
 const usernameInput = document.getElementById("loginUsername");
 const passwordInput = document.getElementById("loginPassword");
@@ -84,11 +83,12 @@ async function biometricLogin() {
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Login start failed");
 
+    // GYARA NA ƘARSHE: Kada ka saka rpId idan kana shiga da www
     const publicKey = {
       challenge: base64urlToUint8Array(options.challenge),
       timeout: options.timeout || 60000,
-      rpId: RP_ID,
       userVerification: options.userVerification || "preferred"
+      // rpId: SHARE SHI - Chrome zai ɗauka da kansa daga Origin
     };
 
     if (options.allowCredentials?.length > 0) {
@@ -99,9 +99,9 @@ async function biometricLogin() {
       }));
     }
 
-    console.log("RP_ID:", publicKey.rpId);
     console.log("Challenge Uint8Array:", publicKey.challenge instanceof Uint8Array);
     console.log("First ID Uint8Array:", publicKey.allowCredentials?.[0]?.id instanceof Uint8Array);
+    console.log("RP_ID: auto from browser");
 
     const credential = await navigator.credentials.get({ publicKey });
     if (!credential) throw new Error("Cancelled");
