@@ -47,27 +47,19 @@ async function login(){
 loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
-// GYARA: Converter mai ƙarfi wanda yake jure komai
 function base64urlToUint8Array(base64url) {
-  if (base64url == null) throw new Error("Empty value");
+  if (!base64url) throw new Error("Empty value");
 
-  let str = String(base64url).trim();
+  // Idan Array ne, convert kai tsaye
+  if (Array.isArray(base64url)) {
+    return new Uint8Array(base64url);
+  }
 
-  // Share quotes da brackets idan suna ciki
-  str = str.replace(/^["']|["']$/g, '');
-
-  // base64url -> base64
-  str = str.replace(/-/g, '+').replace(/_/g, '/');
-
-  // Padding
-  const pad = str.length % 4;
-  if (pad) str += '='.repeat(4 - pad);
-
+  let str = String(base64url).trim().replace(/-/g, '+').replace(/_/g, '/');
+  while (str.length % 4) str += '=';
   const binary = atob(str);
   const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
 }
 
@@ -101,19 +93,15 @@ async function biometricLogin() {
       challenge: base64urlToUint8Array(options.challenge),
       timeout: options.timeout || 60000,
       userVerification: options.userVerification || "preferred"
-      // rpId: SHARE SHI - Chrome zai ɗauka daga Origin
     };
 
     if (options.allowCredentials?.length > 0) {
       publicKey.allowCredentials = options.allowCredentials.map(c => ({
         type: "public-key",
-        id: base64urlToUint8Array(c.id), // Uint8Array kai tsaye
+        id: base64urlToUint8Array(c.id), // Yanzu yana karɓar Array ko String
         transports: c.transports || ["internal", "hybrid"]
       }));
     }
-
-    console.log("Challenge type:", publicKey.challenge.constructor.name);
-    console.log("ID type:", publicKey.allowCredentials?.[0]?.id.constructor.name);
 
     const credential = await navigator.credentials.get({ publicKey });
     if (!credential) throw new Error("Cancelled");
