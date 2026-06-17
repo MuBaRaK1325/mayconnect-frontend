@@ -48,36 +48,32 @@ loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
 function base64urlToUint8Array(base64url) {
-  if (typeof base64url!== "string" ||!base64url.length) {
-    throw new Error("Empty value");
-  }
+  if (!base64url) throw new Error("Empty value");
 
-  let base64 = base64url
-   .trim()
-   .replace(/"/g, "")
-   .replace(/'/g, "")
-   .replace(/\s/g, "")
-   .replace(/-/g, "+")
-   .replace(/_/g, "/");
+  // Tabbatar string ne
+  const str = String(base64url).trim().replace(/"/g, '').replace(/'/g, '');
 
-  while (base64.length % 4) {
-    base64 += "=";
-  }
+  // Convert base64url -> base64
+  let base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+
+  // Add padding
+  while (base64.length % 4) base64 += "=";
 
   const binary = atob(base64);
-  return Uint8Array.from(binary, c => c.charCodeAt(0)); // Wannan Uint8Array ne
+
+  // GYARA: Yi amfani da Uint8Array.from don tabbatarwa
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
 }
 
 function arrayBufferToBase64url(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = "";
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary)
-   .replace(/\+/g, "-")
-   .replace(/\//g, "_")
-   .replace(/=/g, "");
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }
 
 async function biometricLogin() {
@@ -92,35 +88,35 @@ async function biometricLogin() {
   try {
     const res = await fetch(API + "/api/auth/webauthn/login-start", {
       method: "POST",
-      credentials: "include", // GYARA: don session cookie
+      credentials: "include",
       headers: { "Content-Type": "application/json" }
     });
 
     const options = await res.json();
-    console.log("OPTIONS FROM SERVER:", options);
+    if (!res.ok) throw new Error(options.error || "Login start failed");
 
-    if (!res.ok) {
-      throw new Error(options.error || "Login start failed");
-    }
-
-    // GYARA NA ƘARSHE: Kada ka yi.buffer - aika Uint8Array kai tsaye
+    // GYARA: challenge -> Uint8Array
     const publicKey = {
-      challenge: base64urlToUint8Array(options.challenge), // Uint8Array, ba.buffer ba
+      challenge: base64urlToUint8Array(options.challenge),
       timeout: options.timeout || 60000,
       userVerification: options.userVerification || "preferred"
-      // rpId: SHARE SHI - Chrome zai ɗauka daga Origin
+      // rpId: SHARE SHI
     };
 
-    if (Array.isArray(options.allowCredentials) && options.allowCredentials.length > 0) {
-      publicKey.allowCredentials = options.allowCredentials.map(c => ({
-        type: "public-key",
-        id: base64urlToUint8Array(c.id), // Uint8Array, ba.buffer ba
-        transports: c.transports || ["internal", "hybrid"]
-      }));
+    // GYARA: id -> Uint8Array kuma tabbatar ba komai bane
+    if (options.allowCredentials?.length > 0) {
+      publicKey.allowCredentials = options.allowCredentials
+       .filter(c => c.id && typeof c.id === 'string') // Tace komai
+       .map(c => ({
+          type: "public-key",
+          id: base64urlToUint8Array(c.id), // Uint8Array kai tsaye
+          transports: c.transports || ["internal", "hybrid"]
+        }));
     }
 
-    console.log("Challenge Uint8Array:", publicKey.challenge instanceof Uint8Array);
-    console.log("First ID Uint8Array:", publicKey.allowCredentials?.[0]?.id instanceof Uint8Array);
+    console.log("Challenge type:", publicKey.challenge.constructor.name);
+    console.log("First ID type:", publicKey.allowCredentials?.[0]?.id.constructor.name);
+    console.log("First ID length:", publicKey.allowCredentials?.[0]?.id.byteLength);
 
     const credential = await navigator.credentials.get({ publicKey });
     if (!credential) throw new Error("Cancelled");
@@ -148,7 +144,7 @@ async function biometricLogin() {
     localStorage.setItem("token", data.token);
     if (data.user?.id) localStorage.setItem("userId", data.user.id);
 
-    welcomeSound.play().catch(() => {});
+    welcomeSound.play().catch(()=>{});
     setTimeout(() => window.location.href = "dashboard.html", 500);
 
   } catch (err) {
