@@ -1,7 +1,5 @@
 const API = "https://mayconnect-backend-1.onrender.com";
-
-// GYARA: Tabbatar RP_ID ya daidaita da backend
-const RP_ID = "www.mayconnectdataplug.com.ng";
+const RP_ID = "www.mayconnectdataplug.com.ng"; // Dole ne ya daidaita da backend
 
 const usernameInput = document.getElementById("loginUsername");
 const passwordInput = document.getElementById("loginPassword");
@@ -59,38 +57,21 @@ async function login(){
 loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
-/* BASE64URL -> UINT8ARRAY */
 function base64urlToUint8Array(base64url) {
   if (!base64url) throw new Error("Empty value");
-
-  let str = String(base64url)
-  .trim()
-  .replace(/-/g, "+")
-  .replace(/_/g, "/");
-
+  let str = String(base64url).replace(/-/g, "+").replace(/_/g, "/");
   while (str.length % 4) str += "=";
-
   const binary = atob(str);
   const bytes = new Uint8Array(binary.length);
-
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
 }
 
-/* ARRAYBUFFER -> BASE64URL */
 function arrayBufferToBase64url(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary)
-  .replace(/\+/g, "-")
-  .replace(/\//g, "_")
-  .replace(/=/g, "");
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }
 
 async function biometricLogin() {
@@ -112,27 +93,36 @@ async function biometricLogin() {
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Login start failed");
 
-    console.log("OPTIONS FROM SERVER:", options);
+    console.log("=== DEBUG START ===");
+    console.log("1. Raw options:", options);
+    console.log("2. Raw challenge type:", typeof options.challenge);
+    console.log("3. Raw cred id type:", typeof options.allowCredentials?.[0]?.id);
+    console.log("4. Current hostname:", window.location.hostname);
+    console.log("5. RP_ID used:", RP_ID);
 
     const publicKey = {
       challenge: base64urlToUint8Array(options.challenge),
       timeout: options.timeout || 60000,
-      rpId: RP_ID, // GYARA: Yi amfani da RP_ID daidai maimakon hostname
+      rpId: RP_ID,
       userVerification: options.userVerification || "preferred"
     };
 
     if (options.allowCredentials && options.allowCredentials.length > 0) {
-      publicKey.allowCredentials = options.allowCredentials.map(c => ({
-        type: c.type || "public-key",
-        id: base64urlToUint8Array(c.id),
-        transports: c.transports || ["internal"]
-      }));
+      publicKey.allowCredentials = options.allowCredentials.map((c, i) => {
+        const idBytes = base64urlToUint8Array(c.id);
+        console.log(`6. Cred ${i} converted:`, idBytes.constructor.name, "Length:", idBytes.length);
+        return {
+          type: "public-key",
+          id: idBytes,
+          transports: c.transports || ["internal"]
+        };
+      });
     }
 
-    console.log("PUBLICKEY OBJECT:", publicKey);
-    console.log("RP_ID used:", publicKey.rpId);
-    console.log("Challenge Uint8Array:", publicKey.challenge instanceof Uint8Array);
-    console.log("First ID Uint8Array:", publicKey.allowCredentials?.[0]?.id instanceof Uint8Array);
+    console.log("7. Final publicKey object:", publicKey);
+    console.log("8. Challenge instanceof Uint8Array:", publicKey.challenge instanceof Uint8Array);
+    console.log("9. First ID instanceof Uint8Array:", publicKey.allowCredentials?.[0]?.id instanceof Uint8Array);
+    console.log("=== DEBUG END ===");
 
     const credential = await navigator.credentials.get({ publicKey });
     if (!credential) throw new Error("Cancelled");
