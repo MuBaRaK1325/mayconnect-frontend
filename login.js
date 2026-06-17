@@ -1,7 +1,59 @@
-function base64urlToUint8Array(base64url) {
-  if (!base64url) throw new Error("Empty value");
+const API = "https://mayconnect-backend-1.onrender.com";
 
-  let str = String(base64url)
+const usernameInput = document.getElementById("loginUsername");
+const passwordInput = document.getElementById("loginPassword");
+const loginBtn = document.getElementById("loginBtn");
+const biometricBtn = document.getElementById("biometricBtn");
+const loader = document.getElementById("loginLoader");
+const welcomeSound = new Audio("sounds/welcome.mp3");
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (localStorage.getItem("token")) window.location.href = "dashboard.html";
+});
+
+function togglePassword(){
+  if(!passwordInput) return;
+  passwordInput.type = passwordInput.type === "password"? "text" : "password";
+}
+
+async function login(){
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value.trim();
+  if(!username ||!password){ alert("Saka username da password"); return; }
+
+  loginBtn.disabled = true; loader.style.display = "flex";
+  try{
+    const res = await fetch(API + "/api/login",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.message || "Login failed");
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("username", data.username);
+    localStorage.setItem("userId", data.userId);
+    if(data.is_admin) alert("Barka da zuwa Admin");
+    welcomeSound.play().catch(()=>{});
+    setTimeout(()=> window.location.href = "dashboard.html", 600);
+  }catch(err){
+    console.error(err);
+    alert(err.message || "Server error");
+    loader.style.display = "none";
+    loginBtn.disabled = false;
+  }
+}
+
+loginBtn.addEventListener("click", login);
+if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
+
+function base64urlToUint8Array(base64url) {
+
+  if (typeof base64url !== "string" || !base64url.length) {
+    throw new Error("Empty value");
+  }
+
+  let base64 = base64url
     .trim()
     .replace(/"/g, "")
     .replace(/'/g, "")
@@ -9,22 +61,19 @@ function base64urlToUint8Array(base64url) {
     .replace(/-/g, "+")
     .replace(/_/g, "/");
 
-  while (str.length % 4) {
-    str += "=";
+  while (base64.length % 4) {
+    base64 += "=";
   }
 
-  const binary = atob(str);
-  const bytes = new Uint8Array(binary.length);
+  const binary = atob(base64);
 
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-
-  return bytes;
+  return Uint8Array.from(binary, c => c.charCodeAt(0));
 }
 
 function arrayBufferToBase64url(buffer) {
+
   const bytes = new Uint8Array(buffer);
+
   let binary = "";
 
   for (let i = 0; i < bytes.length; i++) {
@@ -62,23 +111,36 @@ async function biometricLogin() {
       throw new Error(options.error || "Login start failed");
     }
 
-    // DEBUG
-    alert(JSON.stringify(options, null, 2));
+    // Build allowCredentials separately
+    let allowCredentials = [];
+
+    if (
+      Array.isArray(options.allowCredentials) &&
+      options.allowCredentials.length > 0
+    ) {
+
+      allowCredentials = options.allowCredentials.map(c => {
+
+        const idBytes = base64urlToUint8Array(c.id);
+
+        return {
+          type: "public-key",
+          id: idBytes.buffer, // <-- ArrayBuffer
+          transports: c.transports || ["internal"]
+        };
+
+      });
+
+    }
 
     const publicKey = {
-      challenge: base64urlToUint8Array(options.challenge),
+      challenge: base64urlToUint8Array(options.challenge).buffer,
       timeout: options.timeout || 60000,
       userVerification: options.userVerification || "preferred"
     };
 
-    if (Array.isArray(options.allowCredentials) && options.allowCredentials.length > 0) {
-
-      publicKey.allowCredentials = options.allowCredentials.map(c => ({
-        type: "public-key",
-        id: base64urlToUint8Array(c.id),
-        transports: c.transports || ["internal"]
-      }));
-
+    if (allowCredentials.length > 0) {
+      publicKey.allowCredentials = allowCredentials;
     }
 
     const credential = await navigator.credentials.get({
@@ -138,9 +200,11 @@ async function biometricLogin() {
   } catch (err) {
 
     console.error("Biometric ERROR:", err);
+
     alert(err.message);
 
     loader.style.display = "none";
     biometricBtn.disabled = false;
   }
+
 }
