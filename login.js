@@ -106,7 +106,12 @@ async function biometricLogin() {
     });
 
     const options = await res.json();
+console.log(
+  "OPTIONS FROM SERVER:",
+  JSON.stringify(options, null, 2)
+);
 
+alert(JSON.stringify(options, null, 2));
     if (!res.ok) {
       throw new Error(options.error || "Login start failed");
     }
