@@ -47,20 +47,15 @@ async function login(){
 loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
+// GYARA: Converter 100% wanda Chrome yake karba
 function base64urlToUint8Array(base64url) {
-  if (!base64url) throw new Error("Empty value");
+  const str = String(base64url).trim();
+  const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, "=");
+  const binary = atob(padded);
 
-  // Idan Array ne, convert kai tsaye
-  if (Array.isArray(base64url)) {
-    return new Uint8Array(base64url);
-  }
-
-  let str = String(base64url).trim().replace(/-/g, '+').replace(/_/g, '/');
-  while (str.length % 4) str += '=';
-  const binary = atob(str);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
+  // GYARA: Yi amfani da Uint8Array.from don tabbatarwa
+  return Uint8Array.from(binary, c => c.charCodeAt(0));
 }
 
 function arrayBufferToBase64url(buffer) {
@@ -89,21 +84,28 @@ async function biometricLogin() {
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Login start failed");
 
-    const publicKey = {
+    const publicKeyCredentialRequestOptions = {
       challenge: base64urlToUint8Array(options.challenge),
       timeout: options.timeout || 60000,
       userVerification: options.userVerification || "preferred"
     };
 
     if (options.allowCredentials?.length > 0) {
-      publicKey.allowCredentials = options.allowCredentials.map(c => ({
-        type: "public-key",
-        id: base64urlToUint8Array(c.id), // Yanzu yana karɓar Array ko String
-        transports: c.transports || ["internal", "hybrid"]
-      }));
+      publicKeyCredentialRequestOptions.allowCredentials = options.allowCredentials.map(c => {
+        const uint8Id = base64urlToUint8Array(c.id);
+        console.log("ID converted to:", uint8Id.constructor.name, "length:", uint8Id.byteLength);
+        return {
+          type: "public-key",
+          id: uint8Id,
+          transports: c.transports || ["internal", "hybrid"]
+        };
+      });
     }
 
-    const credential = await navigator.credentials.get({ publicKey });
+    const credential = await navigator.credentials.get({
+      publicKey: publicKeyCredentialRequestOptions
+    });
+
     if (!credential) throw new Error("Cancelled");
 
     const authRes = await fetch(API + "/api/auth/webauthn/login-finish", {
