@@ -1,14 +1,15 @@
 const API = "https://mayconnect-backend-1.onrender.com";
 
+// GYARA: Tabbatar RP_ID ya daidaita da backend
+const RP_ID = "www.mayconnectdataplug.com.ng";
+
 const usernameInput = document.getElementById("loginUsername");
 const passwordInput = document.getElementById("loginPassword");
 const loginBtn = document.getElementById("loginBtn");
 const biometricBtn = document.getElementById("biometricBtn");
 const loader = document.getElementById("loginLoader");
 
-// GYARA: Idan file babu, sai a share play. Zaka iya komawa daga baya
 const welcomeSound = new Audio("sounds/welcome.mp3");
-welcomeSound.volume = 0.5;
 
 document.addEventListener("DOMContentLoaded", () => {
   const token = localStorage.getItem("token");
@@ -20,7 +21,6 @@ function togglePassword(){
   passwordInput.type = passwordInput.type === "password"? "text" : "password";
 }
 
-/* GYARA: Ayyana login() function da kake kira a addEventListener */
 async function login(){
   const username = usernameInput.value.trim();
   const password = passwordInput.value.trim();
@@ -64,16 +64,11 @@ function base64urlToUint8Array(base64url) {
   if (!base64url) throw new Error("Empty value");
 
   let str = String(base64url)
-   .trim()
-   .replace(/"/g, "")
-   .replace(/'/g, "")
-   .replace(/\s/g, "")
-   .replace(/-/g, "+")
-   .replace(/_/g, "/");
+  .trim()
+  .replace(/-/g, "+")
+  .replace(/_/g, "/");
 
-  while (str.length % 4) {
-    str += "=";
-  }
+  while (str.length % 4) str += "=";
 
   const binary = atob(str);
   const bytes = new Uint8Array(binary.length);
@@ -82,7 +77,7 @@ function base64urlToUint8Array(base64url) {
     bytes[i] = binary.charCodeAt(i);
   }
 
-  return bytes; // DAIKE: Uint8Array
+  return bytes;
 }
 
 /* ARRAYBUFFER -> BASE64URL */
@@ -93,9 +88,9 @@ function arrayBufferToBase64url(buffer) {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary)
-   .replace(/\+/g, "-")
-   .replace(/\//g, "_")
-   .replace(/=/g, "");
+  .replace(/\+/g, "-")
+  .replace(/\//g, "_")
+  .replace(/=/g, "");
 }
 
 async function biometricLogin() {
@@ -119,30 +114,25 @@ async function biometricLogin() {
 
     console.log("OPTIONS FROM SERVER:", options);
 
-    /* GYARA: Gini publicKey object. Kada ka aika allowCredentials idan empty */
     const publicKey = {
       challenge: base64urlToUint8Array(options.challenge),
       timeout: options.timeout || 60000,
-      rpId: window.location.hostname,
+      rpId: RP_ID, // GYARA: Yi amfani da RP_ID daidai maimakon hostname
       userVerification: options.userVerification || "preferred"
     };
 
-    // Idan akwai allowCredentials, convert kowane id zuwa Uint8Array
     if (options.allowCredentials && options.allowCredentials.length > 0) {
-      publicKey.allowCredentials = options.allowCredentials.map((c, i) => {
-        const idBytes = base64urlToUint8Array(c.id);
-        console.log("Cred", i, "Uint8Array:", idBytes instanceof Uint8Array, "Len:", idBytes.length);
-        return {
-          type: c.type || "public-key",
-          id: idBytes,
-          transports: c.transports || ["internal"]
-        };
-      });
+      publicKey.allowCredentials = options.allowCredentials.map(c => ({
+        type: c.type || "public-key",
+        id: base64urlToUint8Array(c.id),
+        transports: c.transports || ["internal"]
+      }));
     }
 
     console.log("PUBLICKEY OBJECT:", publicKey);
-    console.log("Challenge is Uint8Array:", publicKey.challenge instanceof Uint8Array);
-    console.log("First ID is Uint8Array:", publicKey.allowCredentials?.[0]?.id instanceof Uint8Array);
+    console.log("RP_ID used:", publicKey.rpId);
+    console.log("Challenge Uint8Array:", publicKey.challenge instanceof Uint8Array);
+    console.log("First ID Uint8Array:", publicKey.allowCredentials?.[0]?.id instanceof Uint8Array);
 
     const credential = await navigator.credentials.get({ publicKey });
     if (!credential) throw new Error("Cancelled");
@@ -165,7 +155,6 @@ async function biometricLogin() {
     });
 
     const data = await authRes.json();
-    console.log("VERIFY RESPONSE:", data);
     if (!authRes.ok) throw new Error(data.error || "Verification failed");
 
     localStorage.setItem("token", data.token);
