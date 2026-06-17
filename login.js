@@ -48,20 +48,18 @@ loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
 function base64urlToUint8Array(base64url) {
-  if (!base64url) throw new Error("Empty value");
+  if (base64url == null) throw new Error("Empty value");
 
-  // Tabbatar string ne
-  const str = String(base64url).trim().replace(/"/g, '').replace(/'/g, '');
+  // Share quotes, spaces, brackets
+  let str = String(base64url).trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '');
 
-  // Convert base64url -> base64
-  let base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  // base64url -> base64
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
 
-  // Add padding
-  while (base64.length % 4) base64 += "=";
+  // Padding
+  while (str.length % 4) str += '=';
 
-  const binary = atob(base64);
-
-  // GYARA: Yi amfani da Uint8Array.from don tabbatarwa
+  const binary = atob(str);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
@@ -95,28 +93,22 @@ async function biometricLogin() {
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Login start failed");
 
-    // GYARA: challenge -> Uint8Array
     const publicKey = {
       challenge: base64urlToUint8Array(options.challenge),
       timeout: options.timeout || 60000,
       userVerification: options.userVerification || "preferred"
-      // rpId: SHARE SHI
     };
 
-    // GYARA: id -> Uint8Array kuma tabbatar ba komai bane
     if (options.allowCredentials?.length > 0) {
-      publicKey.allowCredentials = options.allowCredentials
-       .filter(c => c.id && typeof c.id === 'string') // Tace komai
-       .map(c => ({
+      publicKey.allowCredentials = options.allowCredentials.map(c => {
+        console.log("Converting id:", typeof c.id, String(c.id).substring(0,20));
+        return {
           type: "public-key",
-          id: base64urlToUint8Array(c.id), // Uint8Array kai tsaye
+          id: base64urlToUint8Array(c.id),
           transports: c.transports || ["internal", "hybrid"]
-        }));
+        };
+      });
     }
-
-    console.log("Challenge type:", publicKey.challenge.constructor.name);
-    console.log("First ID type:", publicKey.allowCredentials?.[0]?.id.constructor.name);
-    console.log("First ID length:", publicKey.allowCredentials?.[0]?.id.byteLength);
 
     const credential = await navigator.credentials.get({ publicKey });
     if (!credential) throw new Error("Cancelled");
