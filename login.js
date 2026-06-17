@@ -6,7 +6,9 @@ const loginBtn = document.getElementById("loginBtn");
 const biometricBtn = document.getElementById("biometricBtn");
 const loader = document.getElementById("loginLoader");
 
+// GYARA: Idan file babu, sai a share play. Zaka iya komawa daga baya
 const welcomeSound = new Audio("sounds/welcome.mp3");
+welcomeSound.volume = 0.5;
 
 document.addEventListener("DOMContentLoaded", () => {
   const token = localStorage.getItem("token");
@@ -18,47 +20,18 @@ function togglePassword(){
   passwordInput.type = passwordInput.type === "password"? "text" : "password";
 }
 
-loginBtn.addEventListener("click", login);
-if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
-
-/* FORCE CONVERT TO UINT8ARRAY */
-function base64urlToUint8Array(base64url) {
-  if (!base64url) return new Uint8Array(0);
-
-  // 1. Force zuwa string + share duk wani abin banza
-  let str = String(base64url).trim().replace(/"/g, '').replace(/'/g, '').replace(/\s/g, '');
-
-  // 2. Juya url-safe
-  str = str.replace(/-/g, '+').replace(/_/g, '/');
-
-  // 3. Padding
-  while (str.length % 4) str += '=';
-
-  // 4. Convert zuwa Uint8Array kai tsaye
-  const binary = atob(str);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes; // DAIKE: Dole ne Uint8Array, ba.buffer ba
-}
-
-function arrayBufferToBase64url(buffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-}
-
+/* GYARA: Ayyana login() function da kake kira a addEventListener */
 async function login(){
   const username = usernameInput.value.trim();
   const password = passwordInput.value.trim();
-  if(!username ||!password){ alert("Enter username and password"); return; }
+  if(!username ||!password){
+    alert("Saka username da password");
+    return;
+  }
 
   loginBtn.disabled = true;
   loader.style.display = "flex";
+
   try{
     const res = await fetch(API + "/api/login",{
       method:"POST",
@@ -67,10 +40,12 @@ async function login(){
     });
     const data = await res.json();
     if(!res.ok) throw new Error(data.message || "Login failed");
+
     localStorage.setItem("token", data.token);
     localStorage.setItem("username", data.username);
     localStorage.setItem("userId", data.userId);
-    if(data.is_admin) alert("Welcome Admin");
+
+    if(data.is_admin) alert("Barka da zuwa Admin");
     welcomeSound.play().catch(()=>{});
     setTimeout(()=> window.location.href = "dashboard.html", 600);
   }catch(err){
@@ -81,8 +56,50 @@ async function login(){
   }
 }
 
-async function biometricLogin(){
-  if(!window.PublicKeyCredential){
+loginBtn.addEventListener("click", login);
+if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
+
+/* BASE64URL -> UINT8ARRAY */
+function base64urlToUint8Array(base64url) {
+  if (!base64url) throw new Error("Empty value");
+
+  let str = String(base64url)
+   .trim()
+   .replace(/"/g, "")
+   .replace(/'/g, "")
+   .replace(/\s/g, "")
+   .replace(/-/g, "+")
+   .replace(/_/g, "/");
+
+  while (str.length % 4) {
+    str += "=";
+  }
+
+  const binary = atob(str);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return bytes; // DAIKE: Uint8Array
+}
+
+/* ARRAYBUFFER -> BASE64URL */
+function arrayBufferToBase64url(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
+   .replace(/\+/g, "-")
+   .replace(/\//g, "_")
+   .replace(/=/g, "");
+}
+
+async function biometricLogin() {
+  if (!window.PublicKeyCredential) {
     alert("Biometric not supported");
     return;
   }
@@ -98,33 +115,36 @@ async function biometricLogin(){
     });
 
     const options = await res.json();
-    if (!res.ok) throw new Error(options.error || "Failed");
+    if (!res.ok) throw new Error(options.error || "Login start failed");
 
-    // DEBUG: Duba abin da muke turawa Chrome
-    console.log('OPTIONS FROM SERVER:', options);
-    console.log('ALLOW CREDENTIALS COUNT:', options.allowCredentials?.length || 0);
+    console.log("OPTIONS FROM SERVER:", options);
 
-    const publicKeyCredentialRequestOptions = {
+    /* GYARA: Gini publicKey object. Kada ka aika allowCredentials idan empty */
+    const publicKey = {
       challenge: base64urlToUint8Array(options.challenge),
       timeout: options.timeout || 60000,
-      rpId: window.location.hostname, // GYARA: Yi amfani da hostname maimakon hardcode
-      userVerification: options.userVerification || "preferred",
-
-      // GYARA: Map duk allowCredentials, kada ka ɗauki na farko kawai
-      allowCredentials: (options.allowCredentials || []).map(c => ({
-        type: c.type || "public-key",
-        id: base64urlToUint8Array(c.id),
-        transports: c.transports
-      }))
+      rpId: window.location.hostname,
+      userVerification: options.userVerification || "preferred"
     };
 
-    console.log('PUBLICKEY OBJECT:', publicKeyCredentialRequestOptions);
-    console.log('First cred ID is Uint8Array:', publicKeyCredentialRequestOptions.allowCredentials[0]?.id instanceof Uint8Array);
+    // Idan akwai allowCredentials, convert kowane id zuwa Uint8Array
+    if (options.allowCredentials && options.allowCredentials.length > 0) {
+      publicKey.allowCredentials = options.allowCredentials.map((c, i) => {
+        const idBytes = base64urlToUint8Array(c.id);
+        console.log("Cred", i, "Uint8Array:", idBytes instanceof Uint8Array, "Len:", idBytes.length);
+        return {
+          type: c.type || "public-key",
+          id: idBytes,
+          transports: c.transports || ["internal"]
+        };
+      });
+    }
 
-    const credential = await navigator.credentials.get({
-      publicKey: publicKeyCredentialRequestOptions
-    });
+    console.log("PUBLICKEY OBJECT:", publicKey);
+    console.log("Challenge is Uint8Array:", publicKey.challenge instanceof Uint8Array);
+    console.log("First ID is Uint8Array:", publicKey.allowCredentials?.[0]?.id instanceof Uint8Array);
 
+    const credential = await navigator.credentials.get({ publicKey });
     if (!credential) throw new Error("Cancelled");
 
     const authRes = await fetch(API + "/api/auth/webauthn/login-finish", {
@@ -145,12 +165,14 @@ async function biometricLogin(){
     });
 
     const data = await authRes.json();
-    if (!authRes.ok) throw new Error(data.error || "Verify failed");
+    console.log("VERIFY RESPONSE:", data);
+    if (!authRes.ok) throw new Error(data.error || "Verification failed");
 
     localStorage.setItem("token", data.token);
-    localStorage.setItem("userId", data.userId);
+    if (data.user?.id) localStorage.setItem("userId", data.user.id);
+
     welcomeSound.play().catch(()=>{});
-    setTimeout(()=> window.location.href = "dashboard.html", 600);
+    setTimeout(() => window.location.href = "dashboard.html", 500);
 
   } catch (err) {
     console.error("Biometric ERROR:", err);
