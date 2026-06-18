@@ -47,14 +47,25 @@ async function login(){
 loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
-// GYARA 100%: Base64url -> Uint8Array ta fetch. Wannan kadai Chrome yake karba
-async function base64urlToUint8Array(base64url) {
+// GYARA 100%: Base64url -> Uint8Array. Chrome/Firefox/Safari duk suna karba
+function base64urlToUint8Array(base64url) {
   if (!base64url || typeof base64url!== 'string') return null;
 
+  // 1. Convert base64url -> base64
   const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+
+  // 2. Add padding
   const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
-  const res = await fetch('data:application/octet-stream;base64,' + padded);
-  return new Uint8Array(await res.arrayBuffer());
+
+  // 3. Decode to binary string
+  const rawData = atob(padded);
+
+  // 4. Convert to Uint8Array
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
 }
 
 function arrayBufferToBase64url(buffer) {
@@ -68,7 +79,7 @@ function arrayBufferToBase64url(buffer) {
 
 async function biometricLogin() {
   if (!window.PublicKeyCredential) {
-    alert("Biometric not supported on this device");
+    alert("Biometric not supported on this device/browser");
     return;
   }
 
@@ -91,32 +102,31 @@ async function biometricLogin() {
       throw new Error("Cryptographic challenge is missing from backend response.");
     }
 
+    console.log('Challenge type:', typeof serverKey.challenge);
+    console.log('AllowCredentials count:', serverKey.allowCredentials?.length || 0);
+
     const publicKey = {
-      challenge: await base64urlToUint8Array(serverKey.challenge),
+      challenge: base64urlToUint8Array(serverKey.challenge), // ✅ NO await needed
       timeout: serverKey.timeout || 60000,
-      rpId: "www.mayconnectdataplug.com.ng",
+      rpId: "www.mayconnectdataplug.com.ng", // ✅ Must match backend RP_ID
       userVerification: serverKey.userVerification || "preferred"
     };
 
-    // MUHIMMI: Idan babu allowCredentials, kar aiko []
+    // MUHIMMI: Convert allowCredentials.id daga string -> Uint8Array
     if (serverKey.allowCredentials?.length > 0) {
-      const credIds = await Promise.all(
-        serverKey.allowCredentials.map(c => base64urlToUint8Array(c.id))
-      );
-
-      publicKey.allowCredentials = serverKey.allowCredentials.map((c, i) => ({
+      publicKey.allowCredentials = serverKey.allowCredentials.map(c => ({
         type: "public-key",
-        id: credIds[i],
-        transports: c.transports || ["internal", "hybrid", "usb", "nfc"]
+        id: base64urlToUint8Array(c.id), // ✅ Convert nan take
+        transports: c.transports || ["internal", "hybrid"]
       }));
 
-      console.log("Using allowCredentials, ID type:", credIds[0].constructor.name);
+      console.log("Using allowCredentials, ID type:", publicKey.allowCredentials[0].id.constructor.name);
     } else {
       console.log("No allowCredentials - Chrome will show all passkeys");
     }
 
     const credential = await navigator.credentials.get({ publicKey });
-    if (!credential) throw new Error("Cancelled");
+    if (!credential) throw new Error("Cancelled by user");
 
     const authRes = await fetch(API + "/api/auth/webauthn/login-finish", {
       method: "POST",
@@ -147,7 +157,9 @@ async function biometricLogin() {
   } catch (err) {
     console.error("Biometric ERROR:", err);
     if (err.name === "NotAllowedError") {
-      alert("No passkey found. Please register biometric first from Profile.");
+      alert("No passkey found or user cancelled. Please register biometric first from Profile.");
+    } else if (err.name === "InvalidStateError") {
+      alert("This passkey is already registered on this device.");
     } else {
       alert(err.message || "Biometric login failed");
     }
