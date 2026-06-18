@@ -47,31 +47,27 @@ async function login(){
 loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
-// GYARA 100%: base64url -> Uint8Array mai tsabta
-function base64urlToUint8Array(base64url) {
+// GYARA 100%: Base64url -> Uint8Array ta hanyar fetch
+async function base64urlToUint8Array(base64url) {
   const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-  const pad = base64.length % 4;
-  const padded = pad? base64 + '='.repeat(4 - pad) : base64;
-  const raw = atob(padded);
-  const bytes = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-  return bytes;
+  const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
+  const res = await fetch('data:application/octet-stream;base64,' + padded);
+  return new Uint8Array(await res.arrayBuffer());
 }
 
-// GYARA: Uint8Array/ArrayBuffer -> base64url mai tsabta
+// Uint8Array/ArrayBuffer -> base64url
 function arrayBufferToBase64url(buffer) {
-  const bytes = buffer instanceof Uint8Array? buffer : new Uint8Array(buffer);
+  const bytes = new Uint8Array(buffer);
   let binary = '';
-  const chunkSize = 0x8000; // 32KB chunk don gujewa stack overflow
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
 async function biometricLogin() {
   if (!window.PublicKeyCredential) {
-    alert("Biometric not supported on this browser/device");
+    alert("Biometric not supported");
     return;
   }
 
@@ -88,21 +84,32 @@ async function biometricLogin() {
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Login start failed");
 
+    // Convert challenge
+    const challenge = await base64urlToUint8Array(options.challenge);
+
+    // Convert allowCredentials - MUHIMMI: await Promise.all
+    let allowCredentials = undefined;
+    if (options.allowCredentials?.length > 0) {
+      const ids = await Promise.all(
+        options.allowCredentials.map(c => base64urlToUint8Array(c.id))
+      );
+
+      allowCredentials = options.allowCredentials.map((c, i) => ({
+        type: "public-key",
+        id: ids[i],
+        transports: c.transports || ["internal", "hybrid"]
+      }));
+
+      console.log("ID type:", ids[0].constructor.name, "length:", ids[0].byteLength);
+    }
+
     const publicKey = {
-      challenge: base64urlToUint8Array(options.challenge),
+      challenge: challenge,
       timeout: options.timeout || 60000,
       rpId: "www.mayconnectdataplug.com.ng",
-      userVerification: options.userVerification || "preferred"
+      userVerification: options.userVerification || "preferred",
+      allowCredentials: allowCredentials
     };
-
-    if (options.allowCredentials?.length > 0) {
-      publicKey.allowCredentials = options.allowCredentials.map(c => ({
-        type: "public-key",
-        id: base64urlToUint8Array(c.id),
-        transports: c.transports || ["internal", "hybrid", "usb", "nfc"]
-      }));
-      console.log("ID converted to: Uint8Array length:", publicKey.allowCredentials[0].id.byteLength);
-    }
 
     const credential = await navigator.credentials.get({ publicKey });
     if (!credential) throw new Error("Cancelled");
@@ -135,7 +142,7 @@ async function biometricLogin() {
 
   } catch (err) {
     console.error("Biometric ERROR:", err);
-    alert(err.message || "Biometric login failed");
+    alert(err.message);
     loader.style.display = "none";
     biometricBtn.disabled = false;
   }
