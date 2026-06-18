@@ -51,11 +51,14 @@ if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 function base64urlToUint8Array(base64url) {
   if (!base64url) return new Uint8Array(0);
   
+  // Idan riga Uint8Array ne ko ArrayBuffer, kar a sake sawa a string
+  if (base64url instanceof Uint8Array) return base64url;
+  if (base64url.buffer instanceof ArrayBuffer) return new Uint8Array(base64url.buffer);
+  
   const str = String(base64url).trim();
   const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
   const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, "=");
   
-  // Amfani da atob() kai tsaye maimakon async fetch()
   const binary = atob(padded);
   const bytes = new Uint8Array(binary.length);
   
@@ -95,7 +98,7 @@ async function biometricLogin() {
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Login start failed");
 
-    // 1. Parse your cryptographic challenge synchronously (Removed 'await')
+    // 1. Parse your cryptographic challenge synchronously
     const publicKey = {
       challenge: base64urlToUint8Array(options.challenge),
       timeout: options.timeout || 60000,
@@ -103,23 +106,36 @@ async function biometricLogin() {
       userVerification: options.userVerification || "preferred"
     };
 
-    // 2. Format allowCredentials synchronously using standard array mapping
+    // 2. Format allowCredentials safely ensuring proper types
     if (options.allowCredentials && options.allowCredentials.length > 0) {
       
       publicKey.allowCredentials = options.allowCredentials.map((c) => {
-        // Handle variations in shape if they exist
-        const rawIdString = typeof c.id === 'string' ? c.id : (c.id?.id || c.id);
+        // DEFENSIVE CHECK: SimpleWebAuthn structures ID in different formats. 
+        // We find the string wherever it is hidden.
+        let rawIdString = "";
         
-        if (!rawIdString) {
-          throw new Error("Malformatted credential ID encountered from backend options.");
+        if (typeof c.id === 'string') {
+          rawIdString = c.id;
+        } else if (c.id && typeof c.id === 'object') {
+          // If SimpleWebAuthn wrapped it inside an object array or Buffer reference
+          rawIdString = c.id.id || Object.values(c.id).join('');
+        } else {
+          rawIdString = c.id;
         }
+        
+        // Final fallback if the structure is completely custom
+        if (!rawIdString && c.credentialID) {
+          rawIdString = c.credentialID;
+        }
+
+        console.log("Extracting String target:", rawIdString);
 
         // Convert directly to Uint8Array without Promise wrapping
         const parsedBuffer = base64urlToUint8Array(rawIdString);
         
         return {
           type: "public-key",
-          id: parsedBuffer, // Strictly a true Uint8Array buffer
+          id: parsedBuffer, // MUST be Uint8Array object instance
           transports: c.transports || ["internal", "hybrid", "usb", "nfc"]
         };
       });
@@ -129,7 +145,7 @@ async function biometricLogin() {
       publicKey.allowCredentials = [];
     }
 
-    // 3. Trigger the browser biometric prompt - this will now open properly
+    // 3. Trigger the browser biometric prompt
     const credential = await navigator.credentials.get({ publicKey });
     if (!credential) throw new Error("Cancelled");
 
