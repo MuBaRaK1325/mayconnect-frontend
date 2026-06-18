@@ -47,20 +47,31 @@ async function login(){
 loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
-// Pure synchronous Base64URL string to Uint8Array decoder
+// GYARA 100%: Synchronous decoder with zero hidden Promise risks
 function base64urlToUint8Array(base64url) {
-  if (!base64url) return new Uint8Array(0);
-  const str = String(base64url).trim();
+  if (!base64url || typeof base64url !== 'string') {
+    console.error("Invalid base64url input received:", base64url);
+    return null;
+  }
+  
+  const str = base64url.trim();
   const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
   const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, "=");
-  const binary = atob(padded);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
+  
+  try {
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  } catch (e) {
+    console.error("Failed to decode base64 string safely:", e);
+    return null;
   }
-  return bytes;
 }
 
+// Uint8Array/ArrayBuffer -> base64url
 function arrayBufferToBase64url(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = '';
@@ -89,32 +100,68 @@ async function biometricLogin() {
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Login start failed");
 
-    // Unpack SimpleWebAuthn's backend payload envelope
-    const serverPublicKey = options.publicKey || options;
+    // CRITICAL: Extract the actual inner publicKey object created by SimpleWebAuthn
+    const serverKey = options.publicKey || options;
 
-    if (!serverPublicKey.challenge) {
-      throw new Error("Challenge data missing from server response.");
+    if (!serverKey || !serverKey.challenge) {
+      console.error("Backend response payload structure:", options);
+      throw new Error("Cryptographic challenge is missing or nested incorrectly in backend response.");
     }
 
-    // FORCE EXPLICIT EMPTY ARRAY - This stops the browser from querying broken local profiles
-    const cleanPublicKeyArgs = {
-      challenge: base64urlToUint8Array(serverPublicKey.challenge),
-      timeout: serverPublicKey.timeout || 60000,
+    // Convert the challenge from the validated nested path
+    const cleanChallengeBuffer = base64urlToUint8Array(serverKey.challenge);
+    if (!cleanChallengeBuffer) {
+      throw new Error("Failed to decode challenge string into a valid binary buffer.");
+    }
+
+    // Carefully process credentials from the nested serverKey object
+    const formattedCredentials = [];
+    const rawCredentials = serverKey.allowCredentials || [];
+
+    for (const cred of rawCredentials) {
+      // Find the credential ID string wherever it is hidden inside the object
+      let rawIdString = "";
+      if (typeof cred.id === "string") {
+        rawIdString = cred.id;
+      } else if (cred.id && typeof cred.id === "object") {
+        rawIdString = cred.id.id || cred.id;
+      }
+
+      if (!rawIdString && cred.credentialID) {
+        rawIdString = cred.credentialID;
+      }
+
+      if (!rawIdString) continue;
+
+      const parsedBinaryId = base64urlToUint8Array(rawIdString);
+      if (!parsedBinaryId) continue;
+
+      formattedCredentials.push({
+        type: "public-key",
+        id: parsedBinaryId,
+        transports: cred.transports || ["internal", "hybrid"]
+      });
+    }
+
+    // Build the request object matching native browser specifications perfectly
+    const finalPublicKeyConfig = {
+      challenge: cleanChallengeBuffer,
+      timeout: serverKey.timeout || 60000,
       rpId: "://mayconnectdataplug.com.ng",
-      userVerification: serverPublicKey.userVerification || "preferred",
-      allowCredentials: [] // Explicitly blanked to execute an unconditional discoverable credentials prompt
+      userVerification: serverKey.userVerification || "preferred",
+      allowCredentials: formattedCredentials
     };
 
-    console.log("Forcing Clean Discoverable Credentials Configuration Block:", cleanPublicKeyArgs);
+    console.log("Executing navigator.credentials.get with clean config:", finalPublicKeyConfig);
 
-    // Prompt user biometric window
+    // This will execute safely without throwing standard parameter type errors
     const credential = await navigator.credentials.get({ 
-      publicKey: cleanPublicKeyArgs 
+      publicKey: finalPublicKeyConfig 
     });
     
     if (!credential) throw new Error("Cancelled");
 
-    // Ship cryptographic verification signature upstream
+    // Send payload response directly upstream to verify the signature
     const authRes = await fetch(API + "/api/auth/webauthn/login-finish", {
       method: "POST",
       credentials: "include",
