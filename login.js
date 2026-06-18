@@ -47,31 +47,16 @@ async function login(){
 loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
-// GYARA 100%: Synchronous decoder with zero hidden Promise risks
-function base64urlToUint8Array(base64url) {
-  if (!base64url || typeof base64url !== 'string') {
-    console.error("Invalid base64url input received:", base64url);
-    return null;
-  }
-  
-  const str = base64url.trim();
-  const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, "=");
-  
-  try {
-    const binary = atob(padded);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
-  } catch (e) {
-    console.error("Failed to decode base64 string safely:", e);
-    return null;
-  }
+// GYARA 100%: Base64url -> Uint8Array ta fetch. Wannan kadai Chrome yake karba
+async function base64urlToUint8Array(base64url) {
+  if (!base64url || typeof base64url!== 'string') return null;
+
+  const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
+  const res = await fetch('data:application/octet-stream;base64,' + padded);
+  return new Uint8Array(await res.arrayBuffer());
 }
 
-// Uint8Array/ArrayBuffer -> base64url
 function arrayBufferToBase64url(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = '';
@@ -100,68 +85,39 @@ async function biometricLogin() {
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Login start failed");
 
-    // CRITICAL: Extract the actual inner publicKey object created by SimpleWebAuthn
     const serverKey = options.publicKey || options;
 
-    if (!serverKey || !serverKey.challenge) {
-      console.error("Backend response payload structure:", options);
-      throw new Error("Cryptographic challenge is missing or nested incorrectly in backend response.");
+    if (!serverKey ||!serverKey.challenge) {
+      throw new Error("Cryptographic challenge is missing from backend response.");
     }
 
-    // Convert the challenge from the validated nested path
-    const cleanChallengeBuffer = base64urlToUint8Array(serverKey.challenge);
-    if (!cleanChallengeBuffer) {
-      throw new Error("Failed to decode challenge string into a valid binary buffer.");
-    }
-
-    // Carefully process credentials from the nested serverKey object
-    const formattedCredentials = [];
-    const rawCredentials = serverKey.allowCredentials || [];
-
-    for (const cred of rawCredentials) {
-      // Find the credential ID string wherever it is hidden inside the object
-      let rawIdString = "";
-      if (typeof cred.id === "string") {
-        rawIdString = cred.id;
-      } else if (cred.id && typeof cred.id === "object") {
-        rawIdString = cred.id.id || cred.id;
-      }
-
-      if (!rawIdString && cred.credentialID) {
-        rawIdString = cred.credentialID;
-      }
-
-      if (!rawIdString) continue;
-
-      const parsedBinaryId = base64urlToUint8Array(rawIdString);
-      if (!parsedBinaryId) continue;
-
-      formattedCredentials.push({
-        type: "public-key",
-        id: parsedBinaryId,
-        transports: cred.transports || ["internal", "hybrid"]
-      });
-    }
-
-    // Build the request object matching native browser specifications perfectly
-    const finalPublicKeyConfig = {
-      challenge: cleanChallengeBuffer,
+    const publicKey = {
+      challenge: await base64urlToUint8Array(serverKey.challenge),
       timeout: serverKey.timeout || 60000,
-      rpId: "://mayconnectdataplug.com.ng",
-      userVerification: serverKey.userVerification || "preferred",
-      allowCredentials: formattedCredentials
+      rpId: "www.mayconnectdataplug.com.ng",
+      userVerification: serverKey.userVerification || "preferred"
     };
 
-    console.log("Executing navigator.credentials.get with clean config:", finalPublicKeyConfig);
+    // MUHIMMI: Idan babu allowCredentials, kar aiko []
+    if (serverKey.allowCredentials?.length > 0) {
+      const credIds = await Promise.all(
+        serverKey.allowCredentials.map(c => base64urlToUint8Array(c.id))
+      );
 
-    // This will execute safely without throwing standard parameter type errors
-    const credential = await navigator.credentials.get({ 
-      publicKey: finalPublicKeyConfig 
-    });
-    
+      publicKey.allowCredentials = serverKey.allowCredentials.map((c, i) => ({
+        type: "public-key",
+        id: credIds[i],
+        transports: c.transports || ["internal", "hybrid", "usb", "nfc"]
+      }));
+
+      console.log("Using allowCredentials, ID type:", credIds[0].constructor.name);
+    } else {
+      console.log("No allowCredentials - Chrome will show all passkeys");
+    }
+
+    const credential = await navigator.credentials.get({ publicKey });
     if (!credential) throw new Error("Cancelled");
 
-    // Send payload response directly upstream to verify the signature
     const authRes = await fetch(API + "/api/auth/webauthn/login-finish", {
       method: "POST",
       credentials: "include",
@@ -173,7 +129,7 @@ async function biometricLogin() {
           authenticatorData: arrayBufferToBase64url(credential.response.authenticatorData),
           clientDataJSON: arrayBufferToBase64url(credential.response.clientDataJSON),
           signature: arrayBufferToBase64url(credential.response.signature),
-          userHandle: credential.response.userHandle ? arrayBufferToBase64url(credential.response.userHandle) : null
+          userHandle: credential.response.userHandle? arrayBufferToBase64url(credential.response.userHandle) : null
         },
         type: credential.type
       })
@@ -190,7 +146,11 @@ async function biometricLogin() {
 
   } catch (err) {
     console.error("Biometric ERROR:", err);
-    alert(err.message || "An unexpected error occurred during Biometric sign-in.");
+    if (err.name === "NotAllowedError") {
+      alert("No passkey found. Please register biometric first from Profile.");
+    } else {
+      alert(err.message || "Biometric login failed");
+    }
     loader.style.display = "none";
     biometricBtn.disabled = false;
   }
