@@ -47,21 +47,16 @@ async function login(){
 loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
+/* ================= WEBAUTHN - BIOMETRIC PASSKEYS - PASSWORDLESS 100% ================= */
+
 // GYARA 100%: Base64url -> Uint8Array. Chrome/Firefox/Safari duk suna karba
 function base64urlToUint8Array(base64url) {
   if (!base64url || typeof base64url!== 'string') return null;
 
-  // base64url -> base64
   const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
 
-  // add padding
-  const pad = base64.length % 4;
-  const padded = base64 + (pad? '='.repeat(4 - pad) : '');
-
-  // decode
   const rawData = atob(padded);
-
-  // to Uint8Array
   const outputArray = new Uint8Array(rawData.length);
   for (let i = 0; i < rawData.length; i++) {
     outputArray[i] = rawData.charCodeAt(i);
@@ -72,8 +67,7 @@ function base64urlToUint8Array(base64url) {
 function arrayBufferToBase64url(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = '';
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
+  for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
@@ -98,30 +92,31 @@ async function biometricLogin() {
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Login start failed");
 
-    // Backend yana aika {challenge, allowCredentials, rpId...} kai tsaye
-    if (!options.challenge) {
-      throw new Error("Cryptographic challenge is missing from backend response.");
+    console.log('=== LOGIN START === RP_ID:', options.rpId || 'www.mayconnectdataplug.com.ng');
+    console.log('AllowCredentials found:', options.allowCredentials?.length || 0);
+    if (options.allowCredentials?.length > 0) {
+      console.log('First cred id sample:', options.allowCredentials[0].id.substring(0, 30));
     }
 
+    // ✅ MUHIMMI: Convert challenge da allowCredentials.id zuwa Uint8Array
     const publicKey = {
       challenge: base64urlToUint8Array(options.challenge),
       timeout: options.timeout || 60000,
-      rpId: "www.mayconnectdataplug.com.ng",
+      rpId: options.rpId || "www.mayconnectdataplug.com.ng",
       userVerification: options.userVerification || "preferred"
     };
 
     if (options.allowCredentials && options.allowCredentials.length > 0) {
       publicKey.allowCredentials = options.allowCredentials.map(c => ({
         type: "public-key",
-        id: base64urlToUint8Array(c.id),
+        id: base64urlToUint8Array(c.id), // ← Kai tsaye Uint8Array
         transports: c.transports || ["internal", "hybrid"]
       }));
 
-      // DEBUG: Dole ya buga Uint8Array
-      console.log("ID type:", publicKey.allowCredentials[0].id.constructor.name);
-      console.log("ID length:", publicKey.allowCredentials[0].id.byteLength);
+      console.log("ID type:", publicKey.allowCredentials[0].id.constructor.name); // Dole: Uint8Array
+      console.log("ID byteLength:", publicKey.allowCredentials[0].id.byteLength); // Dole: 32-64
     } else {
-      console.log("No allowCredentials - browser will show all passkeys");
+      console.log("No allowCredentials - Chrome will show all passkeys");
     }
 
     const credential = await navigator.credentials.get({ publicKey });
@@ -158,7 +153,7 @@ async function biometricLogin() {
     if (err.name === "NotAllowedError") {
       alert("Cancelled or no passkey found. Register first from Profile.");
     } else if (err.name === "InvalidStateError") {
-      alert("Passkey already registered on this device.");
+      alert("This passkey is already registered on this device.");
     } else {
       alert(err.message || "Biometric login failed");
     }
