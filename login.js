@@ -47,27 +47,31 @@ async function login(){
 loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
-// GYARA: Converter 100% wanda Chrome yake karba
+// GYARA 100%: base64url -> Uint8Array mai tsabta
 function base64urlToUint8Array(base64url) {
-  const str = String(base64url).trim();
-  const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, "=");
-  const binary = atob(padded);
-
-  // GYARA: Yi amfani da Uint8Array.from don tabbatarwa
-  return Uint8Array.from(binary, c => c.charCodeAt(0));
+  const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = base64.length % 4;
+  const padded = pad? base64 + '='.repeat(4 - pad) : base64;
+  const raw = atob(padded);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  return bytes;
 }
 
+// GYARA: Uint8Array/ArrayBuffer -> base64url mai tsabta
 function arrayBufferToBase64url(buffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+  const bytes = buffer instanceof Uint8Array? buffer : new Uint8Array(buffer);
+  let binary = '';
+  const chunkSize = 0x8000; // 32KB chunk don gujewa stack overflow
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
 async function biometricLogin() {
   if (!window.PublicKeyCredential) {
-    alert("Biometric not supported");
+    alert("Biometric not supported on this browser/device");
     return;
   }
 
@@ -84,28 +88,23 @@ async function biometricLogin() {
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Login start failed");
 
-    const publicKeyCredentialRequestOptions = {
+    const publicKey = {
       challenge: base64urlToUint8Array(options.challenge),
       timeout: options.timeout || 60000,
+      rpId: "www.mayconnectdataplug.com.ng",
       userVerification: options.userVerification || "preferred"
     };
 
     if (options.allowCredentials?.length > 0) {
-      publicKeyCredentialRequestOptions.allowCredentials = options.allowCredentials.map(c => {
-        const uint8Id = base64urlToUint8Array(c.id);
-        console.log("ID converted to:", uint8Id.constructor.name, "length:", uint8Id.byteLength);
-        return {
-          type: "public-key",
-          id: uint8Id,
-          transports: c.transports || ["internal", "hybrid"]
-        };
-      });
+      publicKey.allowCredentials = options.allowCredentials.map(c => ({
+        type: "public-key",
+        id: base64urlToUint8Array(c.id),
+        transports: c.transports || ["internal", "hybrid", "usb", "nfc"]
+      }));
+      console.log("ID converted to: Uint8Array length:", publicKey.allowCredentials[0].id.byteLength);
     }
 
-    const credential = await navigator.credentials.get({
-      publicKey: publicKeyCredentialRequestOptions
-    });
-
+    const credential = await navigator.credentials.get({ publicKey });
     if (!credential) throw new Error("Cancelled");
 
     const authRes = await fetch(API + "/api/auth/webauthn/login-finish", {
@@ -136,7 +135,7 @@ async function biometricLogin() {
 
   } catch (err) {
     console.error("Biometric ERROR:", err);
-    alert(err.message);
+    alert(err.message || "Biometric login failed");
     loader.style.display = "none";
     biometricBtn.disabled = false;
   }
