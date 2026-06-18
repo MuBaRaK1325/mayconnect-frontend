@@ -47,12 +47,23 @@ async function login(){
 loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
-// GYARA 100%: Base64url -> Uint8Array ta hanyar fetch
-async function base64urlToUint8Array(base64url) {
-  const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
-  const res = await fetch('data:application/octet-stream;base64,' + padded);
-  return new Uint8Array(await res.arrayBuffer());
+// GYARA 100%: Wannan baya amfani da fetch() don kada ya dawo da Promise maimakon Uint8Array
+function base64urlToUint8Array(base64url) {
+  if (!base64url) return new Uint8Array(0);
+  
+  const str = String(base64url).trim();
+  const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, "=");
+  
+  // Amfani da atob() kai tsaye maimakon async fetch()
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  
+  return bytes;
 }
 
 // Uint8Array/ArrayBuffer -> base64url
@@ -84,43 +95,41 @@ async function biometricLogin() {
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Login start failed");
 
-    // 1. Parse your cryptographic challenge safely
+    // 1. Parse your cryptographic challenge synchronously (Removed 'await')
     const publicKey = {
-      challenge: await base64urlToUint8Array(options.challenge),
+      challenge: base64urlToUint8Array(options.challenge),
       timeout: options.timeout || 60000,
       rpId: "www.mayconnectdataplug.com.ng",
       userVerification: options.userVerification || "preferred"
     };
 
-    // 2. Format allowCredentials safely ensuring proper types
+    // 2. Format allowCredentials synchronously using standard array mapping
     if (options.allowCredentials && options.allowCredentials.length > 0) {
       
-      // Process every credential inside the array asynchronously
-      publicKey.allowCredentials = await Promise.all(
-        options.allowCredentials.map(async (c) => {
-          // Fallback check: handle nested formats or variations if they occur
-          const rawIdString = typeof c.id === 'string' ? c.id : (c.id?.id || c.id);
-          
-          if (!rawIdString) {
-            throw new Error("Malformatted credential ID encountered from backend options.");
-          }
+      publicKey.allowCredentials = options.allowCredentials.map((c) => {
+        // Handle variations in shape if they exist
+        const rawIdString = typeof c.id === 'string' ? c.id : (c.id?.id || c.id);
+        
+        if (!rawIdString) {
+          throw new Error("Malformatted credential ID encountered from backend options.");
+        }
 
-          const parsedBuffer = await base64urlToUint8Array(rawIdString);
-          
-          return {
-            type: "public-key",
-            id: parsedBuffer, // Must be Uint8Array
-            transports: c.transports || ["internal", "hybrid", "usb", "nfc"]
-          };
-        })
-      );
+        // Convert directly to Uint8Array without Promise wrapping
+        const parsedBuffer = base64urlToUint8Array(rawIdString);
+        
+        return {
+          type: "public-key",
+          id: parsedBuffer, // Strictly a true Uint8Array buffer
+          transports: c.transports || ["internal", "hybrid", "usb", "nfc"]
+        };
+      });
 
       console.log("Processed credentials array successfully:", publicKey.allowCredentials);
     } else {
       publicKey.allowCredentials = [];
     }
 
-    // 3. Trigger the browser biometric prompt
+    // 3. Trigger the browser biometric prompt - this will now open properly
     const credential = await navigator.credentials.get({ publicKey });
     if (!credential) throw new Error("Cancelled");
 
