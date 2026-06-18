@@ -67,7 +67,7 @@ function arrayBufferToBase64url(buffer) {
 
 async function biometricLogin() {
   if (!window.PublicKeyCredential) {
-    alert("Biometric not supported");
+    alert("Biometric not supported on this device");
     return;
   }
 
@@ -84,36 +84,47 @@ async function biometricLogin() {
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Login start failed");
 
-    // Convert challenge
-    const challenge = await base64urlToUint8Array(options.challenge);
-
-    // Convert allowCredentials - MUHIMMI: await Promise.all
-    let allowCredentials = undefined;
-    if (options.allowCredentials?.length > 0) {
-      const ids = await Promise.all(
-        options.allowCredentials.map(c => base64urlToUint8Array(c.id))
-      );
-
-      allowCredentials = options.allowCredentials.map((c, i) => ({
-        type: "public-key",
-        id: ids[i],
-        transports: c.transports || ["internal", "hybrid"]
-      }));
-
-      console.log("ID type:", ids[0].constructor.name, "length:", ids[0].byteLength);
-    }
-
+    // 1. Parse your cryptographic challenge safely
     const publicKey = {
-      challenge: challenge,
+      challenge: await base64urlToUint8Array(options.challenge),
       timeout: options.timeout || 60000,
       rpId: "www.mayconnectdataplug.com.ng",
-      userVerification: options.userVerification || "preferred",
-      allowCredentials: allowCredentials
+      userVerification: options.userVerification || "preferred"
     };
 
+    // 2. Format allowCredentials safely ensuring proper types
+    if (options.allowCredentials && options.allowCredentials.length > 0) {
+      
+      // Process every credential inside the array asynchronously
+      publicKey.allowCredentials = await Promise.all(
+        options.allowCredentials.map(async (c) => {
+          // Fallback check: handle nested formats or variations if they occur
+          const rawIdString = typeof c.id === 'string' ? c.id : (c.id?.id || c.id);
+          
+          if (!rawIdString) {
+            throw new Error("Malformatted credential ID encountered from backend options.");
+          }
+
+          const parsedBuffer = await base64urlToUint8Array(rawIdString);
+          
+          return {
+            type: "public-key",
+            id: parsedBuffer, // Must be Uint8Array
+            transports: c.transports || ["internal", "hybrid", "usb", "nfc"]
+          };
+        })
+      );
+
+      console.log("Processed credentials array successfully:", publicKey.allowCredentials);
+    } else {
+      publicKey.allowCredentials = [];
+    }
+
+    // 3. Trigger the browser biometric prompt
     const credential = await navigator.credentials.get({ publicKey });
     if (!credential) throw new Error("Cancelled");
 
+    // 4. Send the biometric signature to the backend to complete authentication
     const authRes = await fetch(API + "/api/auth/webauthn/login-finish", {
       method: "POST",
       credentials: "include",
@@ -125,7 +136,7 @@ async function biometricLogin() {
           authenticatorData: arrayBufferToBase64url(credential.response.authenticatorData),
           clientDataJSON: arrayBufferToBase64url(credential.response.clientDataJSON),
           signature: arrayBufferToBase64url(credential.response.signature),
-          userHandle: credential.response.userHandle? arrayBufferToBase64url(credential.response.userHandle) : null
+          userHandle: credential.response.userHandle ? arrayBufferToBase64url(credential.response.userHandle) : null
         },
         type: credential.type
       })
@@ -134,6 +145,7 @@ async function biometricLogin() {
     const data = await authRes.json();
     if (!authRes.ok) throw new Error(data.error || "Verification failed");
 
+    // Store credentials and switch views
     localStorage.setItem("token", data.token);
     if (data.user?.id) localStorage.setItem("userId", data.user.id);
 
@@ -142,7 +154,7 @@ async function biometricLogin() {
 
   } catch (err) {
     console.error("Biometric ERROR:", err);
-    alert(err.message);
+    alert(err.message || "An unexpected error occurred during Biometric sign-in.");
     loader.style.display = "none";
     biometricBtn.disabled = false;
   }
