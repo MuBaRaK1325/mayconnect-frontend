@@ -47,12 +47,9 @@ async function login(){
 loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
-// GYARA 100%: Wannan yana canza Base64URL string zuwa Uint8Array ba tare da kuskure ba
+// GYARA 100%: Pure synchronous conversion. Converts Base64URL straight to Uint8Array buffer
 function base64urlToUint8Array(base64url) {
   if (!base64url) return new Uint8Array(0);
-  
-  // Idan an riga an canza shi, dawo da shi kai tsaye
-  if (base64url instanceof Uint8Array) return base64url;
   
   const str = String(base64url).trim();
   const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
@@ -97,63 +94,51 @@ async function biometricLogin() {
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Login start failed");
 
-    console.log("RAW Backend Options Payload:", JSON.stringify(options));
+    // CRITICAL FIX: Extract properties directly out of the SimpleWebAuthn .publicKey envelope
+    const serverPublicKey = options.publicKey || options;
 
-    // 1. Gano inda Challenge yake da gaskiya (ko a tushe ko a cikin options)
-    const rawChallenge = options.challenge || options.publicKey?.challenge;
-    if (!rawChallenge) {
-      throw new Error("Challenge missing from server options payload.");
+    if (!serverPublicKey.challenge) {
+      throw new Error("Cryptographic challenge missing from server options payload.");
     }
 
-    // 2. Gano inda allowCredentials yake
-    const rawAllowCredentials = options.allowCredentials || options.publicKey?.allowCredentials || [];
+    // 1. Convert the challenge safely to binary
+    const cleanChallenge = base64urlToUint8Array(serverPublicKey.challenge);
 
-    // 3. Tace kuma a canza kowane ID zuwa Uint8Array
-    const formattedCredentials = [];
-    for (const cred of rawAllowCredentials) {
-      // Nemo ID ko ta wani yanayi ya zo daga SimpleWebAuthn
-      let idStr = "";
-      if (typeof cred.id === "string") {
-        idStr = cred.id;
-      } else if (cred.id && typeof cred.id === "object") {
-        idStr = cred.id.id || cred.id;
-      }
+    // 2. Loop through credentials explicitly targeting serverPublicKey.allowCredentials
+    const formattedAllowCredentials = [];
+    const rawCredentials = serverPublicKey.allowCredentials || [];
 
-      if (!idStr && cred.credentialID) {
-        idStr = cred.credentialID;
-      }
+    for (const cred of rawCredentials) {
+      if (!cred.id) continue;
 
-      if (!idStr) {
-        console.warn("Skipping unreadable credential object:", cred);
-        continue;
-      }
+      // Ensure the incoming credential ID string value is targeted natively
+      const rawIdString = typeof cred.id === "string" ? cred.id : (cred.id.id || cred.id);
 
-      formattedCredentials.push({
+      formattedAllowCredentials.push({
         type: "public-key",
-        id: base64urlToUint8Array(idStr), // Canzawa zuwa binary buffer na gaskiya
+        id: base64urlToUint8Array(rawIdString), // Casts straight to target Uint8Array buffer
         transports: cred.transports || ["internal", "hybrid"]
       });
     }
 
-    // 4. GINA `publicKey` DAGA TUSHE (Kada a yi kuskuren nesting)
-    const cleanPublicKeyConfig = {
-      challenge: base64urlToUint8Array(rawChallenge),
-      timeout: options.timeout || options.publicKey?.timeout || 60000,
-      rpId: "://mayconnectdataplug.com.ng",
-      userVerification: options.userVerification || options.publicKey?.userVerification || "preferred",
-      allowCredentials: formattedCredentials
+    // 3. Assemble the payload option tree from scratch (No references inherited from backend layout)
+    const webAuthnRequestArgs = {
+      publicKey: {
+        challenge: cleanChallenge,
+        timeout: serverPublicKey.timeout || 60000,
+        rpId: "://mayconnectdataplug.com.ng",
+        userVerification: serverPublicKey.userVerification || "preferred",
+        allowCredentials: formattedAllowCredentials
+      }
     };
 
-    console.log("Final WebAuthn Request Object:", cleanPublicKeyConfig);
+    console.log("Passing clean configuration to API:", webAuthnRequestArgs);
 
-    // 5. Kira WebAuthn prompt (Wannan ba zai sake yin crash ba!)
-    const credential = await navigator.credentials.get({ 
-      publicKey: cleanPublicKeyConfig 
-    });
-    
+    // 4. Fire the biometric authorization panel
+    const credential = await navigator.credentials.get(webAuthnRequestArgs);
     if (!credential) throw new Error("Cancelled");
 
-    // 6. Tura sakamako zuwa backend don gamawa
+    // 5. Send payload response directly upstream to verify the authentication challenge signature
     const authRes = await fetch(API + "/api/auth/webauthn/login-finish", {
       method: "POST",
       credentials: "include",
@@ -174,6 +159,7 @@ async function biometricLogin() {
     const data = await authRes.json();
     if (!authRes.ok) throw new Error(data.error || "Verification failed");
 
+    // Save tokens and navigate inside dashboard
     localStorage.setItem("token", data.token);
     if (data.user?.id) localStorage.setItem("userId", data.user.id);
 
