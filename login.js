@@ -47,9 +47,13 @@ async function login(){
 loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
-// GYARA 100%: Pure synchronous conversion. Converts Base64URL straight to Uint8Array buffer
+// GYARA 100%: Safe synchronous base64url decoding
 function base64urlToUint8Array(base64url) {
   if (!base64url) return new Uint8Array(0);
+  
+  // If it's somehow already a binary view, return a clean instance copy
+  if (base64url instanceof Uint8Array) return base64url;
+  if (base64url.buffer instanceof ArrayBuffer) return new Uint8Array(base64url.buffer);
   
   const str = String(base64url).trim();
   const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
@@ -94,34 +98,59 @@ async function biometricLogin() {
     const options = await res.json();
     if (!res.ok) throw new Error(options.error || "Login start failed");
 
-    // CRITICAL FIX: Extract properties directly out of the SimpleWebAuthn .publicKey envelope
+    // Extract the inner publicKey envelope sent by SimpleWebAuthn
     const serverPublicKey = options.publicKey || options;
 
     if (!serverPublicKey.challenge) {
       throw new Error("Cryptographic challenge missing from server options payload.");
     }
 
-    // 1. Convert the challenge safely to binary
+    // 1. Process the challenge into a pure binary buffer
     const cleanChallenge = base64urlToUint8Array(serverPublicKey.challenge);
 
-    // 2. Loop through credentials explicitly targeting serverPublicKey.allowCredentials
-    const formattedAllowCredentials = [];
+    // 2. Extract and rigorously sanitize allowCredentials
     const rawCredentials = serverPublicKey.allowCredentials || [];
+    
+    // BACKEND BOTTLENECK CHECK: If this triggers, your database has no credentials for this RP_ID!
+    if (rawCredentials.length === 0) {
+      console.warn("WARNING: Backend returned zero allowCredentials rows.");
+      alert("No biometric keys found registered for this account. Please register your biometric security key first.");
+      throw new Error("No allowed credentials provided by backend database query.");
+    }
 
+    const formattedAllowCredentials = [];
     for (const cred of rawCredentials) {
-      if (!cred.id) continue;
+      let rawIdString = "";
+      
+      if (typeof cred.id === "string") {
+        rawIdString = cred.id;
+      } else if (cred.id && typeof cred.id === "object") {
+        rawIdString = cred.id.id || Object.values(cred.id).join('');
+      }
 
-      // Ensure the incoming credential ID string value is targeted natively
-      const rawIdString = typeof cred.id === "string" ? cred.id : (cred.id.id || cred.id);
+      if (!rawIdString && cred.credentialID) {
+        rawIdString = cred.credentialID;
+      }
 
+      if (!rawIdString) {
+        console.error("Skipping totally unreadable credential object:", cred);
+        continue;
+      }
+
+      // BRUTE FORCE CLEANUP: Construct a 100% brand-new, plain object free of hidden properties
+      const parsedBinaryId = base64urlToUint8Array(rawIdString);
+      
       formattedAllowCredentials.push({
         type: "public-key",
-        id: base64urlToUint8Array(rawIdString), // Casts straight to target Uint8Array buffer
+        id: parsedBinaryId, // Guaranteed pristine Uint8Array instance
         transports: cred.transports || ["internal", "hybrid"]
       });
     }
 
-    // 3. Assemble the payload option tree from scratch (No references inherited from backend layout)
+    // Double-check the final verification format right before sending
+    console.log("Is final ID a Uint8Array?", formattedAllowCredentials[0]?.id instanceof Uint8Array);
+
+    // 3. Assemble the request options exactly how the native browser engine requires them
     const webAuthnRequestArgs = {
       publicKey: {
         challenge: cleanChallenge,
@@ -132,13 +161,11 @@ async function biometricLogin() {
       }
     };
 
-    console.log("Passing clean configuration to API:", webAuthnRequestArgs);
-
-    // 4. Fire the biometric authorization panel
+    // 4. Fire the biometric authorization prompt
     const credential = await navigator.credentials.get(webAuthnRequestArgs);
     if (!credential) throw new Error("Cancelled");
 
-    // 5. Send payload response directly upstream to verify the authentication challenge signature
+    // 5. Send response payload back up to verify signature
     const authRes = await fetch(API + "/api/auth/webauthn/login-finish", {
       method: "POST",
       credentials: "include",
@@ -159,7 +186,6 @@ async function biometricLogin() {
     const data = await authRes.json();
     if (!authRes.ok) throw new Error(data.error || "Verification failed");
 
-    // Save tokens and navigate inside dashboard
     localStorage.setItem("token", data.token);
     if (data.user?.id) localStorage.setItem("userId", data.user.id);
 
