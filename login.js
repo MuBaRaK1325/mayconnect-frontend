@@ -51,16 +51,10 @@ if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 function base64urlToUint8Array(base64url) {
   if (!base64url || typeof base64url!== 'string') return null;
 
-  // 1. Convert base64url -> base64
   const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-
-  // 2. Add padding
   const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
-
-  // 3. Decode to binary string
   const rawData = atob(padded);
 
-  // 4. Convert to Uint8Array
   const outputArray = new Uint8Array(rawData.length);
   for (let i = 0; i < rawData.length; i++) {
     outputArray[i] = rawData.charCodeAt(i);
@@ -102,27 +96,20 @@ async function biometricLogin() {
       throw new Error("Cryptographic challenge is missing from backend response.");
     }
 
-    console.log('Challenge type:', typeof serverKey.challenge);
-    console.log('AllowCredentials count:', serverKey.allowCredentials?.length || 0);
-
     const publicKey = {
-      challenge: base64urlToUint8Array(serverKey.challenge), // ✅ NO await needed
+      challenge: base64urlToUint8Array(serverKey.challenge),
       timeout: serverKey.timeout || 60000,
-      rpId: "www.mayconnectdataplug.com.ng", // ✅ Must match backend RP_ID
+      rpId: "www.mayconnectdataplug.com.ng",
       userVerification: serverKey.userVerification || "preferred"
     };
 
-    // MUHIMMI: Convert allowCredentials.id daga string -> Uint8Array
     if (serverKey.allowCredentials?.length > 0) {
       publicKey.allowCredentials = serverKey.allowCredentials.map(c => ({
         type: "public-key",
-        id: base64urlToUint8Array(c.id), // ✅ Convert nan take
+        id: base64urlToUint8Array(c.id),
         transports: c.transports || ["internal", "hybrid"]
       }));
-
-      console.log("Using allowCredentials, ID type:", publicKey.allowCredentials[0].id.constructor.name);
-    } else {
-      console.log("No allowCredentials - Chrome will show all passkeys");
+      console.log("ID type:", publicKey.allowCredentials[0].id.constructor.name); // Dole Uint8Array
     }
 
     const credential = await navigator.credentials.get({ publicKey });
@@ -156,13 +143,7 @@ async function biometricLogin() {
 
   } catch (err) {
     console.error("Biometric ERROR:", err);
-    if (err.name === "NotAllowedError") {
-      alert("No passkey found or user cancelled. Please register biometric first from Profile.");
-    } else if (err.name === "InvalidStateError") {
-      alert("This passkey is already registered on this device.");
-    } else {
-      alert(err.message || "Biometric login failed");
-    }
+    alert(err.message || "Biometric login failed");
     loader.style.display = "none";
     biometricBtn.disabled = false;
   }
