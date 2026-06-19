@@ -162,7 +162,27 @@ async function biometricLogin() {
       await navigator.credentials.get({
         publicKey
       });
+console.log("PUBLICKEY:", publicKey);
 
+console.log(
+  "ALLOW ID:",
+  publicKey.allowCredentials[0].id
+);
+
+console.log(
+  "TYPE:",
+  publicKey.allowCredentials[0].id.constructor.name
+);
+
+console.log(
+  "IS UINT8ARRAY:",
+  publicKey.allowCredentials[0].id instanceof Uint8Array
+);
+
+console.log(
+  "BYTE LENGTH:",
+  publicKey.allowCredentials[0].id.byteLength
+);
     if (!credential) {
       throw new Error("Cancelled");
     }
