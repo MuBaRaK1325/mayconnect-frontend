@@ -63,7 +63,7 @@ function base64urlToArrayBuffer(base64url) {
       .replace(/-/g, "+")
       .replace(/_/g, "/");
 
-  const binary = window.atob(base64);
+  const binary = atob(base64);
 
   const bytes = new Uint8Array(binary.length);
 
@@ -112,11 +112,24 @@ async function biometricLogin() {
       throw new Error(options.error || "Login start failed");
     }
 
-    console.log("=== login-start response ===");
-    console.log(options);
+    alert(
+      "allowCredentials count = " +
+      (options.allowCredentials?.length || 0)
+    );
+
+    if (options.allowCredentials?.length > 0) {
+
+      alert(
+        "id sample = " +
+        options.allowCredentials[0].id.substring(0, 30)
+      );
+
+    }
 
     const publicKey = {
-      challenge: base64urlToArrayBuffer(options.challenge),
+      challenge: base64urlToArrayBuffer(
+        options.challenge
+      ),
       rpId: options.rpId,
       timeout: options.timeout,
       userVerification:
@@ -146,42 +159,37 @@ async function biometricLogin() {
 
     }
 
-    console.log("=== publicKey ===");
-    console.log(publicKey);
-
-    console.log("=== allowCredential[0] ===");
-    console.log(
-      publicKey.allowCredentials?.[0]
+    alert(
+      "typeof id = " +
+      typeof publicKey.allowCredentials[0].id
     );
 
-    console.log("=== id object ===");
-    console.log(
-      publicKey.allowCredentials?.[0]?.id
+    alert(
+      "constructor = " +
+      publicKey.allowCredentials[0].id.constructor.name
     );
 
-    console.log(
-      "instanceof ArrayBuffer:",
-      publicKey.allowCredentials?.[0]?.id instanceof ArrayBuffer
+    alert(
+      "instanceof ArrayBuffer = " +
+      (
+        publicKey.allowCredentials[0].id
+        instanceof ArrayBuffer
+      )
     );
 
-    console.log(
-      "constructor:",
-      publicKey.allowCredentials?.[0]?.id?.constructor?.name
+    alert(
+      "byteLength = " +
+      publicKey.allowCredentials[0].id.byteLength
     );
 
-    console.log(
-      "byteLength:",
-      publicKey.allowCredentials?.[0]?.id?.byteLength
+    alert(
+      "About to call navigator.credentials.get()"
     );
-
-    console.log("About to call navigator.credentials.get()");
 
     const credential =
       await navigator.credentials.get({
         publicKey
       });
-
-    console.log("Credential received:", credential);
 
     if (!credential) {
       throw new Error("Cancelled");
@@ -192,6 +200,7 @@ async function biometricLogin() {
       {
         method: "POST",
         credentials: "include",
+
         headers: {
           "Content-Type": "application/json"
         },
@@ -228,6 +237,7 @@ async function biometricLogin() {
                     credential.response.userHandle
                   )
                 : null
+
           },
 
           type: credential.type
@@ -249,26 +259,17 @@ async function biometricLogin() {
       data.token
     );
 
-    if (data.user?.id) {
-      localStorage.setItem(
-        "userId",
-        data.user.id
-      );
-    }
-
-    window.location.href = "dashboard.html";
+    location.href = "dashboard.html";
 
   }
   catch (err) {
 
-    console.error(
-      "Biometric ERROR:",
-      err
+    alert(
+      "ERROR:\n" +
+      err.message
     );
 
-    alert(
-      err.message || "Biometric login failed"
-    );
+    console.error(err);
 
   }
 
