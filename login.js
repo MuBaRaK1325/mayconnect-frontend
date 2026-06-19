@@ -50,13 +50,20 @@ if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 /* ================= HELPERS ================= */
 
 function base64urlToArrayBuffer(base64url) {
-  const base64 = base64url
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
 
-  const padding = '='.repeat((4 - base64.length % 4) % 4);
+  if (!base64url) {
+    throw new Error("Missing base64url value");
+  }
 
-  const binary = atob(base64 + padding);
+  const padding =
+    "=".repeat((4 - (base64url.length % 4)) % 4);
+
+  const base64 =
+    (base64url + padding)
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+
+  const binary = window.atob(base64);
 
   const bytes = new Uint8Array(binary.length);
 
@@ -68,18 +75,20 @@ function base64urlToArrayBuffer(base64url) {
 }
 
 function arrayBufferToBase64url(buffer) {
+
   const bytes = new Uint8Array(buffer);
 
-  let binary = '';
+  let binary = "";
 
   for (const b of bytes) {
     binary += String.fromCharCode(b);
   }
 
   return btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
+
 }
 
 
@@ -100,14 +109,18 @@ async function biometricLogin() {
     const options = await res.json();
 
     if (!res.ok) {
-      throw new Error(options.error);
+      throw new Error(options.error || "Login start failed");
     }
+
+    console.log("=== login-start response ===");
+    console.log(options);
 
     const publicKey = {
       challenge: base64urlToArrayBuffer(options.challenge),
       rpId: options.rpId,
       timeout: options.timeout,
-      userVerification: options.userVerification
+      userVerification:
+        options.userVerification || "preferred"
     };
 
     if (
@@ -117,38 +130,80 @@ async function biometricLogin() {
 
       publicKey.allowCredentials =
         options.allowCredentials.map(c => ({
+
           type: "public-key",
 
-          // IMPORTANT
-          id: base64urlToArrayBuffer(c.id),
+          id: base64urlToArrayBuffer(
+            String(c.id).trim()
+          ),
 
-          transports: c.transports
+          transports:
+            Array.isArray(c.transports)
+              ? c.transports
+              : ["internal", "hybrid"]
+
         }));
 
     }
 
+    console.log("=== publicKey ===");
     console.log(publicKey);
+
+    console.log("=== allowCredential[0] ===");
+    console.log(
+      publicKey.allowCredentials?.[0]
+    );
+
+    console.log("=== id object ===");
+    console.log(
+      publicKey.allowCredentials?.[0]?.id
+    );
+
+    console.log(
+      "instanceof ArrayBuffer:",
+      publicKey.allowCredentials?.[0]?.id instanceof ArrayBuffer
+    );
+
+    console.log(
+      "constructor:",
+      publicKey.allowCredentials?.[0]?.id?.constructor?.name
+    );
+
+    console.log(
+      "byteLength:",
+      publicKey.allowCredentials?.[0]?.id?.byteLength
+    );
+
+    console.log("About to call navigator.credentials.get()");
 
     const credential =
       await navigator.credentials.get({
         publicKey
       });
 
+    console.log("Credential received:", credential);
+
+    if (!credential) {
+      throw new Error("Cancelled");
+    }
+
     const authRes = await fetch(
       API + "/api/auth/webauthn/login-finish",
       {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json"
         },
-        credentials: "include",
+
         body: JSON.stringify({
 
           id: credential.id,
 
-          rawId: arrayBufferToBase64url(
-            credential.rawId
-          ),
+          rawId:
+            arrayBufferToBase64url(
+              credential.rawId
+            ),
 
           response: {
 
@@ -176,6 +231,7 @@ async function biometricLogin() {
           },
 
           type: credential.type
+
         })
       }
     );
@@ -183,18 +239,36 @@ async function biometricLogin() {
     const data = await authRes.json();
 
     if (!authRes.ok) {
-      throw new Error(data.error);
+      throw new Error(
+        data.error || "Verification failed"
+      );
     }
 
-    localStorage.setItem("token", data.token);
+    localStorage.setItem(
+      "token",
+      data.token
+    );
 
-    location.href = "dashboard.html";
+    if (data.user?.id) {
+      localStorage.setItem(
+        "userId",
+        data.user.id
+      );
+    }
 
-  } catch (err) {
+    window.location.href = "dashboard.html";
 
-    console.error("Login ERROR:", err);
+  }
+  catch (err) {
 
-    alert(err.message);
+    console.error(
+      "Biometric ERROR:",
+      err
+    );
+
+    alert(
+      err.message || "Biometric login failed"
+    );
 
   }
 
