@@ -47,35 +47,47 @@ async function login(){
 loginBtn.addEventListener("click", login);
 if(biometricBtn) biometricBtn.addEventListener("click", biometricLogin);
 
-/* ================= WEBAUTHN - BIOMETRIC PASSKEYS - PASSWORDLESS 100% ================= */
+/* ================= WEBAUTHN HELPERS ================= */
 
-// GYARA 100%: Base64url -> Uint8Array. Chrome/Firefox/Safari duk suna karba
 function base64urlToUint8Array(base64url) {
-  if (!base64url || typeof base64url!== 'string') return null;
+  if (!base64url) throw new Error("Missing base64url value");
 
-  const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
+  const base64 = base64url
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
 
-  const rawData = atob(padded);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; i++) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
+  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+
+  const binary = atob(base64 + padding);
+
+  return Uint8Array.from(
+    binary,
+    c => c.charCodeAt(0)
+  );
 }
 
 function arrayBufferToBase64url(buffer) {
   const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
+
+  let binary = "";
+
+  for (const b of bytes) {
+    binary += String.fromCharCode(b);
   }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
 }
 
+
+/* ================= LOGIN ================= */
+
 async function biometricLogin() {
+
   if (!window.PublicKeyCredential) {
-    alert("Biometric not supported on this device/browser");
+    alert("Biometric not supported");
     return;
   }
 
@@ -83,81 +95,158 @@ async function biometricLogin() {
   loader.style.display = "flex";
 
   try {
-    const res = await fetch(API + "/api/auth/webauthn/login-start", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" }
-    });
+
+    const res = await fetch(
+      API + "/api/auth/webauthn/login-start",
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
 
     const options = await res.json();
-    if (!res.ok) throw new Error(options.error || "Login start failed");
 
-    console.log('=== LOGIN START === RP_ID:', options.rpId || 'www.mayconnectdataplug.com.ng');
-    console.log('AllowCredentials found:', options.allowCredentials?.length || 0);
-    if (options.allowCredentials?.length > 0) {
-      console.log('First cred id sample:', options.allowCredentials[0].id.substring(0, 30));
+    if (!res.ok) {
+      throw new Error(options.error || "Login start failed");
     }
 
-    // ✅ MUHIMMI: Convert challenge da allowCredentials.id zuwa Uint8Array
     const publicKey = {
       challenge: base64urlToUint8Array(options.challenge),
-      timeout: options.timeout || 60000,
-      rpId: options.rpId || "www.mayconnectdataplug.com.ng",
+      rpId: options.rpId,
+      timeout: options.timeout,
       userVerification: options.userVerification || "preferred"
     };
 
-    if (options.allowCredentials && options.allowCredentials.length > 0) {
-      publicKey.allowCredentials = options.allowCredentials.map(c => ({
-        type: "public-key",
-        id: base64urlToUint8Array(c.id), // ← Kai tsaye Uint8Array
-        transports: c.transports || ["internal", "hybrid"]
-      }));
+    if (
+      Array.isArray(options.allowCredentials) &&
+      options.allowCredentials.length > 0
+    ) {
 
-      console.log("ID type:", publicKey.allowCredentials[0].id.constructor.name); // Dole: Uint8Array
-      console.log("ID byteLength:", publicKey.allowCredentials[0].id.byteLength); // Dole: 32-64
-    } else {
-      console.log("No allowCredentials - Chrome will show all passkeys");
+      publicKey.allowCredentials =
+        options.allowCredentials.map(c => ({
+
+          type: "public-key",
+
+          id: base64urlToUint8Array(
+            String(c.id).trim()
+          ),
+
+          transports: Array.isArray(c.transports)
+            ? c.transports
+            : ["internal", "hybrid"]
+
+        }));
+
     }
 
-    const credential = await navigator.credentials.get({ publicKey });
-    if (!credential) throw new Error("Cancelled by user");
+    console.log(publicKey);
 
-    const authRes = await fetch(API + "/api/auth/webauthn/login-finish", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: credential.id,
-        rawId: arrayBufferToBase64url(credential.rawId),
-        response: {
-          authenticatorData: arrayBufferToBase64url(credential.response.authenticatorData),
-          clientDataJSON: arrayBufferToBase64url(credential.response.clientDataJSON),
-          signature: arrayBufferToBase64url(credential.response.signature),
-          userHandle: credential.response.userHandle? arrayBufferToBase64url(credential.response.userHandle) : null
+    console.log(
+      publicKey.allowCredentials?.[0]?.id
+    );
+
+    console.log(
+      publicKey.allowCredentials?.[0]?.id
+        ?.constructor?.name
+    );
+
+    console.log(
+      publicKey.allowCredentials?.[0]?.id
+        ?.byteLength
+    );
+
+    const credential =
+      await navigator.credentials.get({
+        publicKey
+      });
+
+    if (!credential) {
+      throw new Error("Cancelled");
+    }
+
+    const authRes = await fetch(
+      API + "/api/auth/webauthn/login-finish",
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
         },
-        type: credential.type
-      })
-    });
+        body: JSON.stringify({
+
+          id: credential.id,
+
+          rawId: arrayBufferToBase64url(
+            credential.rawId
+          ),
+
+          response: {
+
+            authenticatorData:
+              arrayBufferToBase64url(
+                credential.response.authenticatorData
+              ),
+
+            clientDataJSON:
+              arrayBufferToBase64url(
+                credential.response.clientDataJSON
+              ),
+
+            signature:
+              arrayBufferToBase64url(
+                credential.response.signature
+              ),
+
+            userHandle:
+              credential.response.userHandle
+                ? arrayBufferToBase64url(
+                    credential.response.userHandle
+                  )
+                : null
+
+          },
+
+          type: credential.type
+
+        })
+      }
+    );
 
     const data = await authRes.json();
-    if (!authRes.ok) throw new Error(data.error || "Verification failed");
 
-    localStorage.setItem("token", data.token);
-    if (data.user?.id) localStorage.setItem("userId", data.user.id);
+    if (!authRes.ok) {
+      throw new Error(
+        data.error || "Verification failed"
+      );
+    }
 
-    welcomeSound.play().catch(()=>{});
-    setTimeout(() => window.location.href = "dashboard.html", 500);
+    localStorage.setItem(
+      "token",
+      data.token
+    );
+
+    if (data.user?.id) {
+      localStorage.setItem(
+        "userId",
+        data.user.id
+      );
+    }
+
+    window.location.href = "dashboard.html";
 
   } catch (err) {
-    console.error("Biometric ERROR:", err);
-    if (err.name === "NotAllowedError") {
-      alert("Cancelled or no passkey found. Register first from Profile.");
-    } else if (err.name === "InvalidStateError") {
-      alert("This passkey is already registered on this device.");
-    } else {
-      alert(err.message || "Biometric login failed");
-    }
-    loader.style.display = "none";
+
+    console.error(err);
+
+    alert(
+      err.message || "Biometric login failed"
+    );
+
     biometricBtn.disabled = false;
+    loader.style.display = "none";
+
   }
 }
