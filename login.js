@@ -60,8 +60,8 @@ function base64urlToArrayBuffer(base64url) {
 
   const base64 =
     (base64url + padding)
-      .replace(/-/g, "+")
-      .replace(/_/g, "/");
+     .replace(/-/g, "+")
+     .replace(/_/g, "/");
 
   const binary = atob(base64);
 
@@ -85,12 +85,11 @@ function arrayBufferToBase64url(buffer) {
   }
 
   return btoa(binary)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, "");
+   .replace(/\+/g, "-")
+   .replace(/\//g, "_")
+   .replace(/=/g, "");
 
 }
-
 
 /* ================= LOGIN ================= */
 
@@ -110,20 +109,6 @@ async function biometricLogin() {
 
     if (!res.ok) {
       throw new Error(options.error || "Login start failed");
-    }
-
-    alert(
-      "allowCredentials count = " +
-      (options.allowCredentials?.length || 0)
-    );
-
-    if (options.allowCredentials?.length > 0) {
-
-      alert(
-        "id sample = " +
-        options.allowCredentials[0].id.substring(0, 30)
-      );
-
     }
 
     const publicKey = {
@@ -152,39 +137,12 @@ async function biometricLogin() {
 
           transports:
             Array.isArray(c.transports)
-              ? c.transports
+             ? c.transports
               : ["internal", "hybrid"]
 
         }));
 
     }
-
-    alert(
-      "typeof id = " +
-      typeof publicKey.allowCredentials[0].id
-    );
-
-    alert(
-      "constructor = " +
-      publicKey.allowCredentials[0].id.constructor.name
-    );
-
-    alert(
-      "instanceof ArrayBuffer = " +
-      (
-        publicKey.allowCredentials[0].id
-        instanceof ArrayBuffer
-      )
-    );
-
-    alert(
-      "byteLength = " +
-      publicKey.allowCredentials[0].id.byteLength
-    );
-
-    alert(
-      "About to call navigator.credentials.get()"
-    );
 
     const credential =
       await navigator.credentials.get({
@@ -233,7 +191,7 @@ async function biometricLogin() {
 
             userHandle:
               credential.response.userHandle
-                ? arrayBufferToBase64url(
+               ? arrayBufferToBase64url(
                     credential.response.userHandle
                   )
                 : null
@@ -263,11 +221,6 @@ async function biometricLogin() {
 
   }
   catch (err) {
-
-    alert(
-      "ERROR:\n" +
-      err.message
-    );
 
     console.error(err);
 
