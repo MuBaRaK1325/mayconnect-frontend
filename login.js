@@ -212,10 +212,30 @@ async function biometricLogin() {
       );
     }
 
+   
     localStorage.setItem(
-      "token",
-      data.token
-    );
+  "token",
+  data.token
+);
+
+if (data.user) {
+
+  localStorage.setItem(
+    "userId",
+    data.user.id
+  );
+
+  localStorage.setItem(
+    "username",
+    data.user.username
+  );
+
+  localStorage.setItem(
+    "email",
+    data.user.email || ""
+  );
+
+}
 
     location.href = "dashboard.html";
 
