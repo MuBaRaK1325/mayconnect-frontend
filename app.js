@@ -264,7 +264,9 @@ async function fetchTransactions() {
           price: t.amount,
           status: t.status,
           txnId: t.reference,
-          id: t.id
+          id: t.id,
+          balance_before: t.balance_before,  // <-- ƙara nan snake_case
+          balance_after: t.balance_after     // <-- ƙara nan snake_case
         });
         el("transactionHistory").appendChild(card);
       });
@@ -283,7 +285,9 @@ async function fetchTransactions() {
           price: t.amount,
           status: t.status,
           txnId: t.reference,
-          id: t.id
+          id: t.id,
+          balance_before: t.balance_before,  // <-- ƙara nan snake_case
+          balance_after: t.balance_after     // <-- ƙara nan snake_case
         });
         el("allTransactions").appendChild(card);
       });
