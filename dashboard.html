@@ -1631,6 +1631,20 @@ function showReceipt(data) {
   const amount = Number(data.amount || data.price || 0);
   document.getElementById('receiptPrice').textContent = '₦' + amount.toLocaleString();
   
+  // FIX: Add Balance Before and Balance After
+  const balBeforeEl = document.getElementById('receiptBalanceBefore');
+  const balAfterEl = document.getElementById('receiptBalanceAfter');
+  
+  if (balBeforeEl) {
+    const balBefore = data.balance_before != null ? Number(data.balance_before) : null;
+    balBeforeEl.textContent = balBefore != null ? '₦' + balBefore.toLocaleString('en-NG', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-';
+  }
+  
+  if (balAfterEl) {
+    const balAfter = data.balance_after != null ? Number(data.balance_after) : null;
+    balAfterEl.textContent = balAfter != null ? '₦' + balAfter.toLocaleString('en-NG', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-';
+  }
+  
   currentTxnId = data.txnId || data.id || 'TVS' + Date.now().toString().slice(-8);
   document.getElementById('txnId').textContent = 'Transaction ID: ' + currentTxnId;
 
