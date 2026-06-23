@@ -246,6 +246,7 @@ if (list) {
     });
   });
 }
+}
 
 // Helper for copy button
 function copyToClipboard(text) {
