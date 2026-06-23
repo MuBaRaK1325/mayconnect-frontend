@@ -1642,22 +1642,28 @@ function showReceipt(data) {
   document.getElementById('receiptPlan').textContent = data.plan || data.type || 'N/A';
   document.getElementById('receiptDate').textContent = data.date;
   
-  // Safe amount formatting
+  // Safe amount formatting - supports both amount and price
   const amount = Number(data.amount || data.price || 0);
   document.getElementById('receiptPrice').textContent = '₦' + amount.toLocaleString();
   
-  // FIX: Add Balance Before and Balance After
+  // Balance Before and Balance After - supports both snake_case and camelCase
   const balBeforeEl = document.getElementById('receiptBalanceBefore');
   const balAfterEl = document.getElementById('receiptBalanceAfter');
   
   if (balBeforeEl) {
-    const balBefore = data.balance_before != null ? Number(data.balance_before) : null;
-    balBeforeEl.textContent = balBefore != null ? '₦' + balBefore.toLocaleString('en-NG', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-';
+    const balBefore = data.balance_before != null ? Number(data.balance_before) 
+                     : data.balanceBefore != null ? Number(data.balanceBefore) : null;
+    balBeforeEl.textContent = balBefore != null 
+      ? '₦' + balBefore.toLocaleString('en-NG', {minimumFractionDigits: 2, maximumFractionDigits: 2}) 
+      : '-';
   }
   
   if (balAfterEl) {
-    const balAfter = data.balance_after != null ? Number(data.balance_after) : null;
-    balAfterEl.textContent = balAfter != null ? '₦' + balAfter.toLocaleString('en-NG', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-';
+    const balAfter = data.balance_after != null ? Number(data.balance_after) 
+                    : data.balanceAfter != null ? Number(data.balanceAfter) : null;
+    balAfterEl.textContent = balAfter != null 
+      ? '₦' + balAfter.toLocaleString('en-NG', {minimumFractionDigits: 2, maximumFractionDigits: 2}) 
+      : '-';
   }
   
   currentTxnId = data.txnId || data.id || 'TVS' + Date.now().toString().slice(-8);
