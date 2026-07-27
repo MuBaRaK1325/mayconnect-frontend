@@ -162,6 +162,7 @@ button:disabled{opacity:0.5;cursor:not-allowed;}
   gap:12px;
   margin-top:15px;
 }
+
 .networkItem{
   background:var(--card);
   backdrop-filter:blur(10px);
@@ -177,17 +178,20 @@ button:disabled{opacity:0.5;cursor:not-allowed;}
   justify-content:center;
   transition:0.2s;
 }
+
 .networkItem.active{
   border:3px solid var(--primary);
   transform:scale(1.05);
-  box-shadow:0 0 20px rgba(14, 165, 233, 0.4);
+  box-shadow:0 0 20px rgba(14, 165, 233, 0.4); /* Blue glow */
 }
+
 .networkItem img{
   width:45px;
   height:45px;
   border-radius:50%;
   object-fit:cover;
 }
+
 /* PLAN */
 .planItem{
   background:var(--card);
@@ -200,7 +204,10 @@ button:disabled{opacity:0.5;cursor:not-allowed;}
   position:relative;
   transition:0.2s;
 }
-.planItem:active{background:rgba(255, 255, 255, 0.2);}
+.planItem:active{
+  background:rgba(14, 165, 233, 0.1); /* Blue tint on tap */
+}
+
 .topUserBadge{
   position:absolute;
   top:8px;
@@ -209,6 +216,50 @@ button:disabled{opacity:0.5;cursor:not-allowed;}
   padding:2px 6px;
   border-radius:4px;
   font-size:10px;
+  font-weight:600;
+}
+
+/* PLAN TABS */
+.planTabs { 
+  display: flex; 
+  gap: 8px; 
+  margin-bottom: 14px; 
+  overflow-x: auto; 
+  padding-bottom: 4px;
+}
+.planTabs::-webkit-scrollbar { display: none; } /* hide scroll on mobile */
+
+.planTab { 
+  padding: 8px 16px; 
+  border: 1px solid var(--glass-border); 
+  border-radius: 20px; 
+  background: rgba(14, 165, 233, 0.05); /* Light blue bg */
+  color: var(--text);
+  cursor: pointer; 
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: 0.2s;
+  backdrop-filter: blur(10px);
+}
+.planTab.active { 
+  background: #0ea5e9; /* Sky Blue */
+  color: #fff; 
+  border-color: #0ea5e9; 
+  box-shadow: 0 0 10px rgba(14, 165, 233, 0.3);
+}
+.planTab:active { transform: scale(0.95); }
+
+.regularUserBadge {
+  position:absolute;
+  top:8px;
+  right:8px;
+  background:#0ea5e9; /* Changed to blue instead of orange */
+  padding:2px 6px;
+  border-radius:4px;
+  font-size:10px;
+  color:#fff; /* White text for blue bg */
+  font-weight:600;
 }
 /* TRANSACTION */
 .transactionCard{
@@ -1219,16 +1270,19 @@ document.getElementById('kycModal').addEventListener('click', function(e) {
 
 <!-- DATA -->
 <section id="data" class="section">
-<button onclick="showSection('home')" class="backBtn">⬅ Back</button>
-<h3>Select Network</h3>
-<div class="networkGrid">
-<div class="networkItem" onclick="selectNetwork('mtn', this)"><img src="images/mtn.png" alt="MTN"></div>
-<div class="networkItem" onclick="selectNetwork('glo', this)"><img src="images/glo.png" alt="GLO"></div>
-<div class="networkItem" onclick="selectNetwork('airtel', this)"><img src="images/airtel.png" alt="AIRTEL"></div>
-</div>
+  <button onclick="showSection('home')" class="backBtn">⬅ Back</button>
+  <h3>Select Network</h3>
+  
+  <div class="networkGrid">
+    <div class="networkItem" onclick="selectNetwork('mtn', this)"><img src="images/mtn.png" alt="MTN"></div>
+    <div class="networkItem" onclick="selectNetwork('glo', this)"><img src="images/glo.png" alt="GLO"></div>
+    <div class="networkItem" onclick="selectNetwork('airtel', this)"><img src="images/airtel.png" alt="AIRTEL"></div>
+  </div>
 
-<input id="dataPhone" type="tel" placeholder="Phone Number">
-<div id="planList"></div>
+  <input id="dataPhone" type="tel" placeholder="Phone Number">
+
+  <div id="planTabs" class="planTabs"></div> <!-- THIS IS NEW - TABS GO HERE -->
+  <div id="planList"></div>
 </section>
 
 <!-- AIRTIME -->
