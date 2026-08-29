@@ -1055,57 +1055,257 @@ async function purchaseWithBiometric() {
 
 }
 
-/* ================= BUY DATA - WITH TEEVERSH RECEIPT ================= */
+/* ================= BUY DATA - MAYCONNECT + TEEVERSH RECEIPT ================= */
 async function buyData(pin) {
   const phone = selectedPhone || el("dataPhone")?.value;
 
-  if (!phone || !selectedPlanId) return showMsg("Select plan & enter phone", "error");
-  if (!pin) return showMsg("Enter PIN", "error");
+  if (!phone || !selectedPlanId) {
+    return showMsg("Select plan & enter phone", "error");
+  }
+
+  if (!pin) {
+    return showMsg("Enter PIN", "error");
+  }
 
   showLoader("Purchasing data...");
 
   try {
-    const res = await fetch(API + "/api/mayconnect/buy-data", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
-      body: JSON.stringify({ phone, plan_id: selectedPlanId, pin })
-    });
+    const res = await fetch(
+      API + "/api/mayconnect/buy-data",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:
+            "Bearer " + getToken()
+        },
+
+        body: JSON.stringify({
+          phone,
+          plan_id: selectedPlanId,
+          pin
+        })
+      }
+    );
+
 
     const data = await res.json();
+
     hideLoader();
 
-    if (res.ok && data.success !== false) {
-      updateWallet(data.balance);
+
+    /* ========================================================
+       PENDING
+       --------------------------------------------------------
+       Mayconnect backend does NOT debit wallet when pending.
+       ======================================================== */
+
+    if (
+      res.ok &&
+      data.status === "PENDING"
+    ) {
+
+      // Wallet remains exactly as returned by backend
+      if (data.balance != null) {
+        updateWallet(Number(data.balance));
+      }
+
       fetchTransactions();
-      
-      // Show TEEVERSH receipt
+
+
+      showMsg(
+        data.message ||
+        "Transaction is pending. Your data will be delivered shortly.",
+        "success"
+      );
+
+
+      // Show receipt as PENDING
       showReceipt({
-        phone: data.phone || phone,
-        number: data.phone || phone, // fallback for old code
-        network: data.network || selectedNetwork?.toUpperCase(),
-        plan_name: data.plan_name || selectedPlan?.name,
-        plan: data.plan_name || selectedPlan?.name, // fallback
-        amount: Number(data.amount),
-        created_at: data.created_at || new Date().toISOString(),
-        date: data.created_at || new Date().toISOString(), // fallback
-        reference: data.reference || data.transaction_id || data.tx_id,
-        txnId: data.reference || data.transaction_id || data.tx_id, // fallback
-        status: data.status || 'SUCCESS',
-        balance_before: data.balance_before != null ? Number(data.balance_before) : null,
-        balance_after: data.balance_after != null ? Number(data.balance_after) : null
+
+        phone:
+          data.phone || phone,
+
+        number:
+          data.phone || phone,
+
+        network:
+          data.network ||
+          selectedNetwork?.toUpperCase(),
+
+        plan_name:
+          data.plan_name ||
+          selectedPlan?.name,
+
+        plan:
+          data.plan_name ||
+          selectedPlan?.name,
+
+        amount:
+          Number(data.amount || 0),
+
+        created_at:
+          data.created_at ||
+          new Date().toISOString(),
+
+        date:
+          data.created_at ||
+          new Date().toISOString(),
+
+        reference:
+          data.reference ||
+          data.transaction_id ||
+          data.tx_id,
+
+        txnId:
+          data.reference ||
+          data.transaction_id ||
+          data.tx_id,
+
+        status:
+          "PENDING",
+
+        balance_before:
+          data.balance_before != null
+            ? Number(data.balance_before)
+            : null,
+
+        balance_after:
+          data.balance_after != null
+            ? Number(data.balance_after)
+            : null
+
       });
 
-      if (el("dataPhone")) el("dataPhone").value = '';
+
+      return;
+    }
+
+
+    /* ========================================================
+       SUCCESS
+       --------------------------------------------------------
+       Backend has already debited wallet and applied cashback
+       if the purchase qualifies.
+       ======================================================== */
+
+    if (
+      res.ok &&
+      data.success === true &&
+      data.status === "SUCCESS"
+    ) {
+
+      updateWallet(
+        Number(data.balance)
+      );
+
+      fetchTransactions();
+
+
+      showReceipt({
+
+        phone:
+          data.phone || phone,
+
+        number:
+          data.phone || phone,
+
+        network:
+          data.network ||
+          selectedNetwork?.toUpperCase(),
+
+        plan_name:
+          data.plan_name ||
+          selectedPlan?.name,
+
+        plan:
+          data.plan_name ||
+          selectedPlan?.name,
+
+        amount:
+          Number(data.amount || 0),
+
+        created_at:
+          data.created_at ||
+          new Date().toISOString(),
+
+        date:
+          data.created_at ||
+          new Date().toISOString(),
+
+        reference:
+          data.reference ||
+          data.transaction_id ||
+          data.tx_id,
+
+        txnId:
+          data.reference ||
+          data.transaction_id ||
+          data.tx_id,
+
+        status:
+          "SUCCESS",
+
+        balance_before:
+          data.balance_before != null
+            ? Number(data.balance_before)
+            : null,
+
+        balance_after:
+          data.balance_after != null
+            ? Number(data.balance_after)
+            : null,
+
+        cashback:
+          data.cashback != null
+            ? Number(data.cashback)
+            : 0,
+
+        cashback_credited:
+          data.cashback_credited === true
+
+      });
+
+
+      if (el("dataPhone")) {
+        el("dataPhone").value = "";
+      }
+
       selectedPhone = null;
       selectedPlanId = null;
       selectedPlan = null;
-    } else {
-      showMsg(data.message || "Purchase failed", "error");
+
+      return;
     }
-  } catch (err) {
+
+
+    /* ========================================================
+       FAILED
+       ======================================================== */
+
+    showMsg(
+      data.message ||
+      "Purchase failed",
+      "error"
+    );
+
+  }
+
+  catch (err) {
+
     hideLoader();
-    console.error('Buy Data Error:', err);
-    showMsg("Network error. Try again.", "error");
+
+    console.error(
+      "Mayconnect Buy Data Error:",
+      err
+    );
+
+    showMsg(
+      "Network error. Try again.",
+      "error"
+    );
+
   }
 }
 
