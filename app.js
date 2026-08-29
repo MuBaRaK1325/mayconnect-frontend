@@ -1065,7 +1065,7 @@ async function buyData(pin) {
   showLoader("Purchasing data...");
 
   try {
-    const res = await fetch(API + "/api/buy-data", {
+    const res = await fetch(API + "/api/mayconnect/buy-data", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
       body: JSON.stringify({ phone, plan_id: selectedPlanId, pin })
