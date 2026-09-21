@@ -97,6 +97,15 @@ let biometricReady = false;
 /* ================= HELPERS ================= */
 function getToken() { return localStorage.getItem("token"); }
 function el(id) { return document.getElementById(id); }
+
+function escapeHtmlAttribute(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
 function formatNaira(num) { return "₦" + Number(num || 0).toLocaleString(); }
 function formatDate(date) { return new Date(date).toLocaleDateString('en-GB'); }
 function openModal(id) { const m = el(id); if (m) m.style.display = "flex"; }
